@@ -8,4 +8,6 @@ require 'db_schema'
 
 # (If you use this, don't forget to add pry to your Gemfile!)
 require 'pry'
+require 'awesome_print'
+AwesomePrint.pry!
 Pry.start
