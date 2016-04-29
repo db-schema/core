@@ -1,6 +1,7 @@
 require 'sequel'
 
 require 'db_schema/configuration'
+require 'db_schema/definitions'
 require 'db_schema/version'
 
 module DbSchema
