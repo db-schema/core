@@ -1,11 +1,22 @@
 module DbSchema
   module Definitions
     class Field
-      attr_reader :name, :type
+      attr_reader :name, :type, :default
 
-      def initialize(name:, type:)
-        @name = name.to_sym
-        @type = type.to_sym
+      def initialize(name:, type:, primary_key: false, null: true, default: nil)
+        @name        = name.to_sym
+        @type        = type.to_sym
+        @primary_key = primary_key
+        @null        = null
+        @default     = default
+      end
+
+      def primary_key?
+        @primary_key
+      end
+
+      def null?
+        @null
       end
     end
 
