@@ -8,3 +8,5 @@ RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
   config.disable_monkey_patching!
 end
+
+DbSchema.configure(database: 'db_schema_test')

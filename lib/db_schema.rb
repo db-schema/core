@@ -3,6 +3,7 @@ require 'sequel'
 require 'db_schema/configuration'
 require 'db_schema/definitions'
 require 'db_schema/dsl'
+require 'db_schema/runner'
 require 'db_schema/version'
 
 module DbSchema
