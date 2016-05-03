@@ -2,6 +2,7 @@ $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 require 'db_schema'
 require 'pry'
 require 'awesome_print'
+AwesomePrint.pry!
 
 RSpec.configure do |config|
   config.filter_run focus: true
