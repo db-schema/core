@@ -14,12 +14,16 @@ RSpec.describe DbSchema::Reader do
           column :id, :integer, primary_key: true
           column :name, :varchar, null: false
           column :email, :varchar, default: 'mail@example.com'
+
+          index :email, unique: true
         end
 
         DbSchema.connection.create_table :posts do
           column :id, :integer, primary_key: true
           column :title, :varchar
           column :user_id, :integer, null: false
+
+          index :user_id
         end
       end
 
@@ -48,6 +52,16 @@ RSpec.describe DbSchema::Reader do
         expect(user_id.name).to eq(:user_id)
         expect(user_id.type).to eq(:integer)
         expect(user_id).not_to be_null
+
+        expect(users.indices.count).to eq(1)
+        email_index = users.indices.first
+        expect(email_index.fields).to eq([:email])
+        expect(email_index).to be_unique
+
+        expect(posts.indices.count).to eq(1)
+        user_id_index = posts.indices.first
+        expect(user_id_index.fields).to eq([:user_id])
+        expect(user_id_index).not_to be_unique
       end
 
       after(:each) do

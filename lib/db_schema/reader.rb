@@ -32,7 +32,15 @@ module DbSchema
               )
             end
 
-            Definitions::Table.new(name: table_name, fields: fields)
+            indices = DbSchema.connection.indexes(table_name).map do |index_name, index_details|
+              Definitions::Index.new(
+                name:   index_name,
+                fields: index_details[:columns],
+                unique: index_details[:unique]
+              )
+            end
+
+            Definitions::Table.new(name: table_name, fields: fields, indices: indices)
           end
         end
 
