@@ -8,6 +8,13 @@ require 'db_schema/version'
 
 module DbSchema
   class << self
+    def describe(&block)
+      raise ArgumentError if block.nil?
+
+      schema = DSL.new(block).schema
+      Runner.new(schema).run!
+    end
+
     def connection
       @connection ||= Sequel.connect(
         adapter:  configuration.adapter,
