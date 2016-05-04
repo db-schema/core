@@ -14,7 +14,12 @@ module DbSchema
 
     def table(name, &block)
       table_yielder = TableYielder.new(block)
-      tables << Definitions::Table.new(name: name, fields: table_yielder.fields)
+
+      tables << Definitions::Table.new(
+        name:    name,
+        fields:  table_yielder.fields,
+        indices: table_yielder.indices
+      )
     end
 
   private
@@ -43,8 +48,20 @@ module DbSchema
         )
       end
 
+      def index(fields, name:, unique: false)
+        indices << Definitions::Index.new(
+          name:   name,
+          fields: Array(fields),
+          unique: unique
+        )
+      end
+
       def fields
         @fields ||= []
+      end
+
+      def indices
+        @indices ||= []
       end
     end
   end
