@@ -22,13 +22,16 @@ module DbSchema
       class << self
         def read_schema
           DbSchema.connection.tables.map do |table_name|
+            has_sequence = !DbSchema.connection.primary_key_sequence(table_name).nil?
+
             fields = DbSchema.connection.schema(table_name).map do |field_name, field_details|
               Definitions::Field.new(
-                name:        field_name,
-                type:        translate_type(field_details[:db_type]),
-                primary_key: field_details[:primary_key],
-                null:        field_details[:null],
-                default:     field_details[:ruby_default]
+                name:         field_name,
+                type:         translate_type(field_details[:db_type]),
+                primary_key:  field_details[:primary_key],
+                null:         field_details[:null],
+                default:      field_details[:ruby_default],
+                has_sequence: field_details[:primary_key] && has_sequence
               )
             end
 

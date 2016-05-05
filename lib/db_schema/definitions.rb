@@ -3,12 +3,13 @@ module DbSchema
     class Field
       attr_reader :name, :type, :default
 
-      def initialize(name:, type:, primary_key: false, null: true, default: nil)
-        @name        = name.to_sym
-        @type        = type.to_sym
-        @primary_key = primary_key
-        @null        = null
-        @default     = default
+      def initialize(name:, type:, primary_key: false, null: true, default: nil, has_sequence: false)
+        @name         = name.to_sym
+        @type         = type.to_sym
+        @primary_key  = primary_key
+        @null         = null
+        @default      = default
+        @has_sequence = has_sequence
       end
 
       def primary_key?
@@ -17,6 +18,10 @@ module DbSchema
 
       def null?
         @null
+      end
+
+      def has_sequence?
+        @has_sequence
       end
     end
 
