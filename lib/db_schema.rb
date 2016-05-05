@@ -29,6 +29,7 @@ module DbSchema
 
     def configure(connection_parameters)
       @configuration = Configuration.new(connection_parameters)
+      @connection    = nil
     end
 
     def configuration
