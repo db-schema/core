@@ -38,13 +38,14 @@ module DbSchema
         end
       end
 
-      def field(name, type, primary_key: false, null: true, default: nil)
+      def field(name, type, primary_key: false, null: true, default: nil, has_sequence: false)
         fields << Definitions::Field.new(
-          name:        name,
-          type:        type,
-          primary_key: primary_key,
-          null:        null,
-          default:     default
+          name:         name,
+          type:         type,
+          primary_key:  primary_key,
+          null:         null,
+          default:      default,
+          has_sequence: has_sequence
         )
       end
 
