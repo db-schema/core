@@ -1,3 +1,5 @@
+require 'dry/equalizer'
+
 module DbSchema
   module Definitions
     class Field
@@ -40,6 +42,7 @@ module DbSchema
     end
 
     class Table
+      include Dry::Equalizer(:name, :fields, :indices)
       attr_reader :name, :fields, :indices
 
       def initialize(name:, fields: [], indices: [])
