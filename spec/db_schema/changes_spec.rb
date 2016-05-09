@@ -60,13 +60,19 @@ RSpec.describe DbSchema::Changes do
       end
 
       let(:desired_schema) do
-        fields = remaining_fields + [DbSchema::Definitions::Field.new(name: :email, type: :varchar, null: false)]
+        fields = remaining_fields + [
+          DbSchema::Definitions::Field.new(name: :email, type: :varchar, null: false),
+          DbSchema::Definitions::Field.new(name: :type, type: :varchar, null: false)
+        ]
 
         [DbSchema::Definitions::Table.new(name: :users, fields: fields)]
       end
 
       let(:actual_schema) do
-        fields = remaining_fields + [DbSchema::Definitions::Field.new(name: :age, type: :integer)]
+        fields = remaining_fields + [
+          DbSchema::Definitions::Field.new(name: :age, type: :integer),
+          DbSchema::Definitions::Field.new(name: :type, type: :integer)
+        ]
 
         [DbSchema::Definitions::Table.new(name: :users, fields: fields)]
       end
@@ -78,8 +84,10 @@ RSpec.describe DbSchema::Changes do
         alter_table = changes.first
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
-        add_email, drop_age = alter_table.fields
+        add_email, change_type_dbtype, disallow_null_type, drop_age = alter_table.fields
         expect(add_email).to eq(DbSchema::Changes::CreateColumn.new(name: :email, type: :varchar, null: false))
+        expect(change_type_dbtype).to eq(DbSchema::Changes::AlterColumnType.new(name: :type, new_type: :varchar))
+        expect(disallow_null_type).to eq(DbSchema::Changes::DisallowNull.new(name: :type))
         expect(drop_age).to eq(DbSchema::Changes::DropColumn.new(name: :age))
       end
     end

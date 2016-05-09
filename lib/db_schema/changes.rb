@@ -43,6 +43,18 @@ module DbSchema
             )
           elsif actual && !desired
             table_changes << DropColumn.new(name: field_name)
+          elsif actual != desired
+            if actual.type != desired.type
+              table_changes << AlterColumnType.new(name: field_name, new_type: desired.type)
+            end
+
+            if desired.null? && !actual.null?
+              table_changes << AllowNull.new(name: field_name)
+            end
+
+            if actual.null? && !desired.null?
+              table_changes << DisallowNull.new(name: field_name)
+            end
           end
         end
       end
@@ -96,6 +108,7 @@ module DbSchema
     end
 
     class AlterColumnType
+      include Dry::Equalizer(:name, :new_type)
       attr_reader :name, :new_type
 
       def initialize(name:, new_type:)
