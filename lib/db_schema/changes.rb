@@ -15,7 +15,7 @@ module DbSchema
             changes << CreateTable.new(name: table_name, fields: desired.fields, indices: desired.indices)
           elsif actual && !desired
             changes << DropTable.new(name: table_name)
-          else
+          elsif actual != desired
             field_operations = field_changes(desired.fields, actual.fields)
             index_operations = []
 

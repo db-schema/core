@@ -10,8 +10,19 @@ RSpec.describe DbSchema::Changes do
         ]
       end
 
+      let(:cities_fields) do
+        [
+          DbSchema::Definitions::Field.new(name: :id, type: :integer),
+          DbSchema::Definitions::Field.new(name: :name, type: :varchar, null: false),
+          DbSchema::Definitions::Field.new(name: :country_id, type: :integer, null: false)
+        ]
+      end
+
       let(:desired_schema) do
-        [DbSchema::Definitions::Table.new(name: :users, fields: users_fields)]
+        [
+          DbSchema::Definitions::Table.new(name: :users, fields: users_fields),
+          DbSchema::Definitions::Table.new(name: :cities, fields: cities_fields)
+        ]
       end
 
       let(:actual_schema) do
@@ -20,7 +31,10 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field.new(name: :title, type: :varchar)
         ]
 
-        [DbSchema::Definitions::Table.new(name: :posts, fields: fields)]
+        [
+          DbSchema::Definitions::Table.new(name: :posts, fields: fields),
+          DbSchema::Definitions::Table.new(name: :cities, fields: cities_fields)
+        ]
       end
 
       it 'returns changes between two schemas' do
@@ -28,6 +42,12 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes).to include(DbSchema::Changes::CreateTable.new(name: :users, fields: users_fields))
         expect(changes).to include(DbSchema::Changes::DropTable.new(name: :posts))
+      end
+
+      it 'ignores matching tables' do
+        changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+        expect(changes.count).to eq(2)
       end
     end
 
