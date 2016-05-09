@@ -16,7 +16,33 @@ module DbSchema
           elsif actual && !desired
             changes << DropTable.new(name: table_name)
           else
-            # TODO: alter table
+            field_operations = field_changes(desired.fields, actual.fields)
+            index_operations = []
+
+            changes << AlterTable.new(name: table_name, fields: field_operations, indices: index_operations)
+          end
+        end
+      end
+
+    private
+      def field_changes(desired_fields, actual_fields)
+        field_names = [desired_fields, actual_fields].flatten.map(&:name).uniq
+
+        field_names.each.with_object([]) do |field_name, table_changes|
+          desired = desired_fields.find { |field| field.name == field_name }
+          actual  = actual_fields.find { |field| field.name == field_name }
+
+          if desired && !actual
+            table_changes << CreateColumn.new(
+              name:         field_name,
+              type:         desired.type,
+              primary_key:  desired.primary_key?,
+              null:         desired.null?,
+              default:      desired.default,
+              has_sequence: desired.has_sequence?
+            )
+          elsif actual && !desired
+            table_changes << DropColumn.new(name: field_name)
           end
         end
       end
@@ -46,6 +72,7 @@ module DbSchema
 
     # Abstract base class for single-column toggle operations.
     class ColumnOperation
+      include Dry::Equalizer(:name)
       attr_reader :name
 
       def initialize(name:)
