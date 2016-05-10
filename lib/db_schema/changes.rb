@@ -48,12 +48,24 @@ module DbSchema
               table_changes << AlterColumnType.new(name: field_name, new_type: desired.type)
             end
 
+            if desired.primary_key? && !actual.primary_key?
+              table_changes << CreatePrimaryKey.new(name: field_name)
+            end
+
+            if actual.primary_key? && !desired.primary_key?
+              table_changes << DropPrimaryKey.new(name: field_name)
+            end
+
             if desired.null? && !actual.null?
               table_changes << AllowNull.new(name: field_name)
             end
 
             if actual.null? && !desired.null?
               table_changes << DisallowNull.new(name: field_name)
+            end
+
+            if actual.default != desired.default
+              table_changes << AlterColumnDefault.new(name: field_name, new_default: desired.default)
             end
           end
         end
@@ -130,6 +142,7 @@ module DbSchema
     end
 
     class AlterColumnDefault
+      include Dry::Equalizer(:name, :new_default)
       attr_reader :name, :new_default
 
       def initialize(name:, new_default:)

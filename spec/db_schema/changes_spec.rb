@@ -52,24 +52,21 @@ RSpec.describe DbSchema::Changes do
     end
 
     context 'with table changed' do
-      let(:remaining_fields) do
-        [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :name, type: :varchar)
-        ]
-      end
-
       let(:desired_schema) do
-        fields = remaining_fields + [
+        fields = [
+          DbSchema::Definitions::Field.new(name: :id, type: :integer, primary_key: true),
+          DbSchema::Definitions::Field.new(name: :name, type: :varchar),
           DbSchema::Definitions::Field.new(name: :email, type: :varchar, null: false),
-          DbSchema::Definitions::Field.new(name: :type, type: :varchar, null: false)
+          DbSchema::Definitions::Field.new(name: :type, type: :varchar, null: false, default: 'guest')
         ]
 
         [DbSchema::Definitions::Table.new(name: :users, fields: fields)]
       end
 
       let(:actual_schema) do
-        fields = remaining_fields + [
+        fields = [
+          DbSchema::Definitions::Field.new(name: :id, type: :integer),
+          DbSchema::Definitions::Field.new(name: :name, type: :varchar),
           DbSchema::Definitions::Field.new(name: :age, type: :integer),
           DbSchema::Definitions::Field.new(name: :type, type: :integer)
         ]
@@ -84,11 +81,14 @@ RSpec.describe DbSchema::Changes do
         alter_table = changes.first
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
-        add_email, change_type_dbtype, disallow_null_type, drop_age = alter_table.fields
-        expect(add_email).to eq(DbSchema::Changes::CreateColumn.new(name: :email, type: :varchar, null: false))
-        expect(change_type_dbtype).to eq(DbSchema::Changes::AlterColumnType.new(name: :type, new_type: :varchar))
-        expect(disallow_null_type).to eq(DbSchema::Changes::DisallowNull.new(name: :type))
-        expect(drop_age).to eq(DbSchema::Changes::DropColumn.new(name: :age))
+        expect(alter_table.fields).to eq([
+          DbSchema::Changes::CreatePrimaryKey.new(name: :id),
+          DbSchema::Changes::CreateColumn.new(name: :email, type: :varchar, null: false),
+          DbSchema::Changes::AlterColumnType.new(name: :type, new_type: :varchar),
+          DbSchema::Changes::DisallowNull.new(name: :type),
+          DbSchema::Changes::AlterColumnDefault.new(name: :type, new_default: 'guest'),
+          DbSchema::Changes::DropColumn.new(name: :age)
+        ])
       end
     end
   end
