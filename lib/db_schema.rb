@@ -11,10 +11,7 @@ require 'db_schema/version'
 module DbSchema
   class << self
     def describe(&block)
-      raise ArgumentError if block.nil?
-
-      schema = DSL.new(block).schema
-      Runner.new(schema).run!
+      raise NotImplementedError # temporarily
     end
 
     def connection

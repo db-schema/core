@@ -7,6 +7,8 @@ RSpec.describe DbSchema do
 
   describe '.describe' do
     it 'applies the schema to the database' do
+      pending 'Refactoring Runner & DbSchema.describe'
+
       subject.describe do |db|
         db.table :users do |t|
           t.integer :id, primary_key: true
