@@ -56,6 +56,39 @@ RSpec.describe DbSchema::Runner do
         expect(email.last[:default]).to eq("'mail@example.com'::character varying")
       end
     end
+
+    context 'with AlterTable' do
+      context 'with CreateColumn & DropColumn' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::CreateColumn.new(name: :first_name, type: :varchar),
+            DbSchema::Changes::CreateColumn.new(name: :last_name, type: :varchar),
+            DbSchema::Changes::CreateColumn.new(name: :age, type: :integer, null: false),
+            DbSchema::Changes::DropColumn.new(name: :name)
+          ]
+        end
+
+        let(:changes) do
+          [
+            DbSchema::Changes::AlterTable.new(name: :people, fields: field_changes, indices: [])
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          id, first_name, last_name, age = DbSchema.connection.schema(:people)
+          expect(id.first).to eq(:id)
+          expect(first_name.first).to eq(:first_name)
+          expect(first_name.last[:db_type]).to eq('character varying(255)')
+          expect(last_name.first).to eq(:last_name)
+          expect(last_name.last[:db_type]).to eq('character varying(255)')
+          expect(age.first).to eq(:age)
+          expect(age.last[:db_type]).to eq('integer')
+          expect(age.last[:allow_null]).to eq(false)
+        end
+      end
+    end
   end
 
   after(:each) do
