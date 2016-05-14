@@ -42,6 +42,8 @@ module DbSchema
             drop_column(field.name)
           when Changes::RenameColumn
             rename_column(field.old_name, field.new_name)
+          when Changes::AlterColumnType
+            set_column_type(field.name, field.new_type)
           end
         end
       end

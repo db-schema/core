@@ -58,6 +58,19 @@ RSpec.describe DbSchema::Runner do
     end
 
     context 'with AlterTable' do
+      let(:changes) do
+        [
+          DbSchema::Changes::AlterTable.new(
+            name:    :people,
+            fields:  field_changes,
+            indices: index_changes
+          )
+        ]
+      end
+
+      let(:field_changes) { [] }
+      let(:index_changes) { [] }
+
       context 'with CreateColumn & DropColumn' do
         let(:field_changes) do
           [
@@ -65,12 +78,6 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Changes::CreateColumn.new(name: :last_name, type: :varchar),
             DbSchema::Changes::CreateColumn.new(name: :age, type: :integer, null: false),
             DbSchema::Changes::DropColumn.new(name: :name)
-          ]
-        end
-
-        let(:changes) do
-          [
-            DbSchema::Changes::AlterTable.new(name: :people, fields: field_changes, indices: [])
           ]
         end
 
@@ -90,15 +97,9 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'with RenameColumn' do
-        let(:changes) do
+        let(:field_changes) do
           [
-            DbSchema::Changes::AlterTable.new(
-              name: :people,
-              fields: [
-                DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
-              ],
-              indices: []
-            )
+            DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
           ]
         end
 
@@ -109,6 +110,21 @@ RSpec.describe DbSchema::Runner do
           expect(id.first).to eq(:id)
           expect(full_name.first).to eq(:full_name)
           expect(full_name.last[:db_type]).to eq('character varying(255)')
+        end
+      end
+
+      context 'with AlterColumnType' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::AlterColumnType.new(name: :name, new_type: :text)
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          id, name = DbSchema.connection.schema(:people)
+          expect(name.last[:db_type]).to eq('text')
         end
       end
     end
