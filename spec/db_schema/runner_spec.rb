@@ -88,6 +88,29 @@ RSpec.describe DbSchema::Runner do
           expect(age.last[:allow_null]).to eq(false)
         end
       end
+
+      context 'with RenameColumn' do
+        let(:changes) do
+          [
+            DbSchema::Changes::AlterTable.new(
+              name: :people,
+              fields: [
+                DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
+              ],
+              indices: []
+            )
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          id, full_name = DbSchema.connection.schema(:people)
+          expect(id.first).to eq(:id)
+          expect(full_name.first).to eq(:full_name)
+          expect(full_name.last[:db_type]).to eq('character varying(255)')
+        end
+      end
     end
   end
 

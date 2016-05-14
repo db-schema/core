@@ -40,6 +40,8 @@ module DbSchema
             add_column(field.name, field.type, field.options)
           when Changes::DropColumn
             drop_column(field.name)
+          when Changes::RenameColumn
+            rename_column(field.old_name, field.new_name)
           end
         end
       end
