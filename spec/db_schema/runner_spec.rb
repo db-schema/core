@@ -127,6 +127,23 @@ RSpec.describe DbSchema::Runner do
           expect(name.last[:db_type]).to eq('text')
         end
       end
+
+      context 'with CreatePrimaryKey & DropPrimaryKey' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::DropPrimaryKey.new(name: :id),
+            DbSchema::Changes::CreatePrimaryKey.new(name: :name)
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          id, name = DbSchema.connection.schema(:people)
+          expect(id.last[:primary_key]).to eq(false)
+          expect(name.last[:primary_key]).to eq(true)
+        end
+      end
     end
   end
 

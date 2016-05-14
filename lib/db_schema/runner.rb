@@ -44,6 +44,10 @@ module DbSchema
             rename_column(field.old_name, field.new_name)
           when Changes::AlterColumnType
             set_column_type(field.name, field.new_type)
+          when Changes::CreatePrimaryKey
+            add_primary_key([field.name])
+          when Changes::DropPrimaryKey
+            drop_constraint("#{change.name}_pkey")
           end
         end
       end
