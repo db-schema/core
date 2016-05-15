@@ -48,6 +48,10 @@ module DbSchema
             add_primary_key([field.name])
           when Changes::DropPrimaryKey
             drop_constraint("#{change.name}_pkey")
+          when Changes::AllowNull
+            set_column_allow_null(field.name)
+          when Changes::DisallowNull
+            set_column_not_null(field.name)
           end
         end
       end

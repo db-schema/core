@@ -5,6 +5,7 @@ RSpec.describe DbSchema::Runner do
     DbSchema.connection.create_table :people do
       column :id, :integer, primary_key: true
       column :name, :varchar
+      column :address, :varchar, null: false
     end
   end
 
@@ -84,8 +85,9 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          id, first_name, last_name, age = DbSchema.connection.schema(:people)
+          id, address, first_name, last_name, age = DbSchema.connection.schema(:people)
           expect(id.first).to eq(:id)
+          expect(address.first).to eq(:address)
           expect(first_name.first).to eq(:first_name)
           expect(first_name.last[:db_type]).to eq('character varying(255)')
           expect(last_name.first).to eq(:last_name)
@@ -142,6 +144,23 @@ RSpec.describe DbSchema::Runner do
           id, name = DbSchema.connection.schema(:people)
           expect(id.last[:primary_key]).to eq(false)
           expect(name.last[:primary_key]).to eq(true)
+        end
+      end
+
+      context 'with AllowNull & DisallowNull' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::AllowNull.new(name: :address),
+            DbSchema::Changes::DisallowNull.new(name: :name)
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          id, name, address = DbSchema.connection.schema(:people)
+          expect(name.last[:allow_null]).to eq(false)
+          expect(address.last[:allow_null]).to eq(true)
         end
       end
     end
