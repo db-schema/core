@@ -52,6 +52,8 @@ module DbSchema
             set_column_allow_null(field.name)
           when Changes::DisallowNull
             set_column_not_null(field.name)
+          when Changes::AlterColumnDefault
+            set_column_default(field.name, field.new_default)
           end
         end
       end

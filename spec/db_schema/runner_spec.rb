@@ -163,6 +163,21 @@ RSpec.describe DbSchema::Runner do
           expect(address.last[:allow_null]).to eq(true)
         end
       end
+
+      context 'with AlterColumnDefault' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::AlterColumnDefault.new(name: :name, new_default: 'John Smith')
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          name = DbSchema.connection.schema(:people)[1]
+          expect(name.last[:default]).to eq("'John Smith'::character varying")
+        end
+      end
     end
   end
 
