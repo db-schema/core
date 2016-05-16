@@ -17,7 +17,7 @@ module DbSchema
             changes << DropTable.new(name: table_name)
           elsif actual != desired
             field_operations = field_changes(desired.fields, actual.fields)
-            index_operations = []
+            index_operations = index_changes(desired.indices, actual.indices)
 
             changes << AlterTable.new(name: table_name, fields: field_operations, indices: index_operations)
           end
@@ -30,7 +30,7 @@ module DbSchema
 
         field_names.each.with_object([]) do |field_name, table_changes|
           desired = desired_fields.find { |field| field.name == field_name }
-          actual  = actual_fields.find { |field| field.name == field_name }
+          actual  = actual_fields.find  { |field| field.name == field_name }
 
           if desired && !actual
             table_changes << CreateColumn.new(
@@ -67,6 +67,21 @@ module DbSchema
             if actual.default != desired.default
               table_changes << AlterColumnDefault.new(name: field_name, new_default: desired.default)
             end
+          end
+        end
+      end
+
+      def index_changes(desired_indices, actual_indices)
+        index_names = [desired_indices, actual_indices].flatten.map(&:name).uniq
+
+        index_names.each.with_object([]) do |index_name, table_changes|
+          desired = desired_indices.find { |index| index.name == index_name }
+          actual  = actual_indices.find  { |index| index.name == index_name }
+
+          if desired && !actual
+            table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
+          elsif actual && !desired
+            table_changes << DropIndex.new(name: index_name, fields: actual.fields)
           end
         end
       end
@@ -155,6 +170,7 @@ module DbSchema
     end
 
     class DropIndex
+      include Dry::Equalizer(:name, :fields)
       attr_reader :name, :fields
 
       def initialize(name:, fields:)

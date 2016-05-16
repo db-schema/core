@@ -37,6 +37,7 @@ module DbSchema
     end
 
     class Index
+      include Dry::Equalizer(:name, :fields, :unique?)
       attr_reader :name, :fields
 
       def initialize(name:, fields:, unique: false)

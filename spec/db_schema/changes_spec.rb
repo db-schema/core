@@ -60,7 +60,12 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field.new(name: :type, type: :varchar, null: false, default: 'guest')
         ]
 
-        [DbSchema::Definitions::Table.new(name: :users, fields: fields)]
+        indices = [
+          DbSchema::Definitions::Index.new(name: :users_name_index, fields: [:name]),
+          DbSchema::Definitions::Index.new(name: :users_email_index, fields: [:email], unique: true)
+        ]
+
+        [DbSchema::Definitions::Table.new(name: :users, fields: fields, indices: indices)]
       end
 
       let(:actual_schema) do
@@ -71,7 +76,12 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field.new(name: :type, type: :integer)
         ]
 
-        [DbSchema::Definitions::Table.new(name: :users, fields: fields)]
+        indices = [
+          DbSchema::Definitions::Index.new(name: :users_name_index, fields: [:name]),
+          DbSchema::Definitions::Index.new(name: :users_type_index, fields: [:type])
+        ]
+
+        [DbSchema::Definitions::Table.new(name: :users, fields: fields, indices: indices)]
       end
 
       it 'returns changes between two schemas' do
@@ -88,6 +98,11 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DisallowNull.new(name: :type),
           DbSchema::Changes::AlterColumnDefault.new(name: :type, new_default: 'guest'),
           DbSchema::Changes::DropColumn.new(name: :age)
+        ])
+
+        expect(alter_table.indices).to eq([
+          DbSchema::Changes::CreateIndex.new(name: :users_email_index, fields: [:email], unique: true),
+          DbSchema::Changes::DropIndex.new(name: :users_type_index, fields: [:type])
         ])
       end
     end
