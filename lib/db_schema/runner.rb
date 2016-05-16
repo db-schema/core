@@ -25,6 +25,10 @@ module DbSchema
         change.fields.each do |field|
           column(field.name, field.type, field.options)
         end
+
+        change.indices.each do |index|
+          index(index.fields, name: index.name, unique: index.unique?)
+        end
       end
     end
 

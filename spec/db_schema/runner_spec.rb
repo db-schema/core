@@ -29,13 +29,27 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
+  let(:users_indices) do
+    [
+      DbSchema::Definitions::Index.new(
+        name: :index_users_on_name,
+        fields: [:name]
+      ),
+      DbSchema::Definitions::Index.new(
+        name: :index_users_on_email,
+        fields: [:email],
+        unique: true
+      )
+    ]
+  end
+
   subject { DbSchema::Runner.new(changes) }
 
   describe '#run!' do
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [
-          DbSchema::Changes::CreateTable.new(name: :users, fields: users_fields),
+          DbSchema::Changes::CreateTable.new(name: :users, fields: users_fields, indices: users_indices),
           DbSchema::Changes::DropTable.new(name: :people)
         ]
       end
@@ -55,6 +69,12 @@ RSpec.describe DbSchema::Runner do
         expect(email.first).to eq(:email)
         expect(email.last[:db_type]).to eq('character varying(255)')
         expect(email.last[:default]).to eq("'mail@example.com'::character varying")
+
+        indexes = DbSchema.connection.indexes(:users)
+        expect(indexes[:index_users_on_name][:columns]).to eq([:name])
+        expect(indexes[:index_users_on_name][:unique]).to eq(false)
+        expect(indexes[:index_users_on_email][:columns]).to eq([:email])
+        expect(indexes[:index_users_on_email][:unique]).to eq(true)
       end
     end
 
