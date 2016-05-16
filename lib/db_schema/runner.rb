@@ -60,6 +60,15 @@ module DbSchema
             set_column_default(field.name, field.new_default)
           end
         end
+
+        change.indices.each do |index|
+          case index
+          when Changes::CreateIndex
+            add_index(index.fields, name: index.name, unique: index.unique?)
+          when Changes::DropIndex
+            drop_index(index.fields, name: index.name)
+          end
+        end
       end
     end
   end

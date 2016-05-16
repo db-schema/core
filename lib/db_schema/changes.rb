@@ -155,10 +155,11 @@ module DbSchema
     end
 
     class DropIndex
-      attr_reader :name
+      attr_reader :name, :fields
 
-      def initialize(name:)
-        @name = name
+      def initialize(name:, fields:)
+        @name   = name
+        @fields = fields
       end
     end
   end

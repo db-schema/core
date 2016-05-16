@@ -6,6 +6,8 @@ RSpec.describe DbSchema::Runner do
       column :id, :integer, primary_key: true
       column :name, :varchar
       column :address, :varchar, null: false
+
+      index :address
     end
   end
 
@@ -196,6 +198,30 @@ RSpec.describe DbSchema::Runner do
 
           name = DbSchema.connection.schema(:people)[1]
           expect(name.last[:default]).to eq("'John Smith'::character varying")
+        end
+      end
+
+      context 'with CreateIndex & DropIndex' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::CreateColumn.new(name: :email, type: :varchar)
+          ]
+        end
+
+        let(:index_changes) do
+          [
+            DbSchema::Changes::CreateIndex.new(name: :people_name_index, fields: [:name]),
+            DbSchema::Changes::DropIndex.new(name: :people_address_index, fields: [:address])
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          expect(DbSchema.connection.indexes(:people).count).to eq(1)
+          name_index = DbSchema.connection.indexes(:people)[:people_name_index]
+          expect(name_index[:columns]).to eq([:name])
+          expect(name_index[:unique]).to eq(false)
         end
       end
     end
