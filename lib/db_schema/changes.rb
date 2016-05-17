@@ -82,6 +82,9 @@ module DbSchema
             table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
           elsif actual && !desired
             table_changes << DropIndex.new(name: index_name, fields: actual.fields)
+          elsif actual != desired
+            table_changes << DropIndex.new(name: index_name, fields: actual.fields)
+            table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
           end
         end
       end

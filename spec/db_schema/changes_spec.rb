@@ -61,7 +61,7 @@ RSpec.describe DbSchema::Changes do
         ]
 
         indices = [
-          DbSchema::Definitions::Index.new(name: :users_name_index, fields: [:name]),
+          DbSchema::Definitions::Index.new(name: :users_name_index, fields: [:name], unique: true),
           DbSchema::Definitions::Index.new(name: :users_email_index, fields: [:email], unique: true)
         ]
 
@@ -101,6 +101,8 @@ RSpec.describe DbSchema::Changes do
         ])
 
         expect(alter_table.indices).to eq([
+          DbSchema::Changes::DropIndex.new(name: :users_name_index, fields: [:name]),
+          DbSchema::Changes::CreateIndex.new(name: :users_name_index, fields: [:name], unique: true),
           DbSchema::Changes::CreateIndex.new(name: :users_email_index, fields: [:email], unique: true),
           DbSchema::Changes::DropIndex.new(name: :users_type_index, fields: [:type])
         ])
