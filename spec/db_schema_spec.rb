@@ -1,33 +1,105 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema do
-  it 'has a version number' do
-    expect(DbSchema::VERSION).not_to be_nil
-  end
+  let(:database) { DbSchema.connection }
 
   describe '.describe' do
-    it 'applies the schema to the database' do
-      pending 'Refactoring Runner & DbSchema.describe'
+    before(:each) do
+      database.create_table :users do
+        column :id, :integer, primary_key: true
+        column :name, :varchar, null: false
+        column :email, :varchar
 
+        index :email
+      end
+
+      database.create_table :posts do
+        column :id, :integer, primary_key: true
+        column :title, :varchar
+        column :text, :varchar
+      end
+    end
+
+    it 'applies the schema to the database' do
       subject.describe do |db|
         db.table :users do |t|
           t.integer :id, primary_key: true
-          t.varchar :name
+          t.varchar :first_name, null: false
+          t.varchar :last_name, null: false
+          t.varchar :email, null: false
+
+          t.index [:first_name, :last_name], name: :users_name_index
+          t.index [:email], name: :users_email_index, unique: true
+        end
+
+        db.table :posts do |t|
+          t.integer :id, primary_key: true
+          t.varchar :title, null: false
+          t.varchar :text
+          t.integer :user_id, null: false
+
+          t.index [:user_id], name: :posts_user_id_index
+        end
+
+        db.table :cities do |t|
+          t.integer :id, primary_key: true
+          t.varchar :name, null: false
         end
       end
 
-      expect(subject.connection.tables).to eq([:users])
-      id, name = subject.connection.schema(:users)
+      expect(database.tables).to include(:users)
+      expect(database.tables).to include(:posts)
+      expect(database.tables).to include(:cities)
+
+      id, email, first_name, last_name = database.schema(:users)
+      expect(id.first).to eq(:id)
+      expect(email.first).to eq(:email)
+      expect(email.last[:db_type]).to eq('character varying(255)')
+      expect(email.last[:allow_null]).to eq(false)
+      expect(first_name.first).to eq(:first_name)
+      expect(first_name.last[:db_type]).to eq('character varying(255)')
+      expect(first_name.last[:allow_null]).to eq(false)
+      expect(last_name.first).to eq(:last_name)
+      expect(last_name.last[:db_type]).to eq('character varying(255)')
+      expect(last_name.last[:allow_null]).to eq(false)
+
+      users_indices = database.indexes(:users)
+      name_index, email_index = users_indices.values_at(:users_name_index, :users_email_index)
+      expect(name_index[:columns]).to eq([:first_name, :last_name])
+      expect(name_index[:unique]).to eq(false)
+      expect(email_index[:columns]).to eq([:email])
+      expect(email_index[:unique]).to eq(true)
+
+      id, title, text, user_id = database.schema(:posts)
+      expect(id.first).to eq(:id)
+      expect(title.first).to eq(:title)
+      expect(title.last[:db_type]).to eq('character varying(255)')
+      expect(title.last[:allow_null]).to eq(false)
+      expect(text.first).to eq(:text)
+      expect(text.last[:db_type]).to eq('character varying(255)')
+      expect(text.last[:allow_null]).to eq(true)
+      expect(user_id.first).to eq(:user_id)
+      expect(user_id.last[:db_type]).to eq('integer')
+      expect(user_id.last[:allow_null]).to eq(false)
+
+      user_id_index = database.indexes(:posts)[:posts_user_id_index]
+      expect(user_id_index[:columns]).to eq([:user_id])
+      expect(user_id_index[:unique]).to eq(false)
+
+      id, name = database.schema(:cities)
       expect(id.first).to eq(:id)
       expect(id.last[:db_type]).to eq('integer')
       expect(id.last[:primary_key]).to eq(true)
       expect(name.first).to eq(:name)
       expect(name.last[:db_type]).to eq('character varying(255)')
+      expect(name.last[:allow_null]).to eq(false)
+
+      expect(database.indexes(:cities)).to be_empty
     end
 
     after(:each) do
-      DbSchema.connection.tables.each do |table_name|
-        DbSchema.connection.drop_table(table_name)
+      database.tables.each do |table_name|
+        database.drop_table(table_name)
       end
     end
   end

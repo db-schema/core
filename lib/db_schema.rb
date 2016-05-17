@@ -11,7 +11,11 @@ require 'db_schema/version'
 module DbSchema
   class << self
     def describe(&block)
-      raise NotImplementedError # temporarily
+      desired_schema = DSL.new(block).schema
+      actual_schema  = Reader.read_schema
+
+      changes = Changes.between(desired_schema, actual_schema)
+      Runner.new(changes).run!
     end
 
     def connection
