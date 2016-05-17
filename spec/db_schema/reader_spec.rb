@@ -43,6 +43,7 @@ RSpec.describe DbSchema::Reader do
         expect(name).not_to have_sequence
         expect(email.name).to eq(:email)
         expect(email.type).to eq(:varchar)
+        expect(email).to be_null
         expect(email.default).to eq('mail@example.com')
         expect(email).not_to have_sequence
 
@@ -53,6 +54,7 @@ RSpec.describe DbSchema::Reader do
         expect(id).not_to have_sequence
         expect(title.name).to eq(:title)
         expect(title.type).to eq(:varchar)
+        expect(title).to be_null
         expect(user_id.name).to eq(:user_id)
         expect(user_id.type).to eq(:integer)
         expect(user_id).not_to be_null

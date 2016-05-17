@@ -29,7 +29,7 @@ module DbSchema
                 name:         field_name,
                 type:         translate_type(field_details[:db_type]),
                 primary_key:  field_details[:primary_key],
-                null:         field_details[:null],
+                null:         field_details[:allow_null],
                 default:      field_details[:ruby_default],
                 has_sequence: field_details[:primary_key] && has_sequence
               )
