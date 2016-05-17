@@ -70,7 +70,7 @@ RSpec.describe DbSchema::Changes do
 
       let(:actual_schema) do
         fields = [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer),
+          DbSchema::Definitions::Field.new(name: :id, type: :integer, null: false),
           DbSchema::Definitions::Field.new(name: :name, type: :varchar),
           DbSchema::Definitions::Field.new(name: :age, type: :integer),
           DbSchema::Definitions::Field.new(name: :type, type: :integer)

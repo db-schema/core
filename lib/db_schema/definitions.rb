@@ -20,7 +20,7 @@ module DbSchema
       end
 
       def null?
-        @null
+        !primary_key? && @null
       end
 
       def has_sequence?
