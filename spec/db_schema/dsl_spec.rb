@@ -5,7 +5,7 @@ RSpec.describe DbSchema::DSL do
     let(:schema_block) do
       -> (db) do
         db.table :users do |t|
-          t.integer :id, primary_key: true, has_sequence: true
+          t.integer :id, primary_key: true
           t.varchar :name, null: false
           t.varchar :email, default: 'mail@example.com'
 
@@ -37,17 +37,14 @@ RSpec.describe DbSchema::DSL do
       expect(id.name).to eq(:id)
       expect(id.type).to eq(:integer)
       expect(id).to be_primary_key
-      expect(id).to have_sequence
 
       expect(name.name).to eq(:name)
       expect(name.type).to eq(:varchar)
       expect(name).not_to be_null
-      expect(name).not_to have_sequence
 
       expect(email.name).to eq(:email)
       expect(email.type).to eq(:varchar)
       expect(email.default).to eq('mail@example.com')
-      expect(email).not_to have_sequence
 
       expect(users.indices.count).to eq(1)
       email_index = users.indices.first

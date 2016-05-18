@@ -38,8 +38,7 @@ module DbSchema
               type:         desired.type,
               primary_key:  desired.primary_key?,
               null:         desired.null?,
-              default:      desired.default,
-              has_sequence: desired.has_sequence?
+              default:      desired.default
             )
           elsif actual && !desired
             table_changes << DropColumn.new(name: field_name)

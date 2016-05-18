@@ -3,16 +3,15 @@ require 'dry/equalizer'
 module DbSchema
   module Definitions
     class Field
-      include Dry::Equalizer(:name, :type, :primary_key?, :null?, :default, :has_sequence?)
+      include Dry::Equalizer(:name, :type, :primary_key?, :null?, :default)
       attr_reader :name, :type, :default
 
-      def initialize(name:, type:, primary_key: false, null: true, default: nil, has_sequence: false)
+      def initialize(name:, type:, primary_key: false, null: true, default: nil)
         @name         = name.to_sym
         @type         = type.to_sym
         @primary_key  = primary_key
         @null         = null
         @default      = default
-        @has_sequence = has_sequence
       end
 
       def primary_key?
@@ -21,10 +20,6 @@ module DbSchema
 
       def null?
         !primary_key? && @null
-      end
-
-      def has_sequence?
-        @has_sequence
       end
 
       def options

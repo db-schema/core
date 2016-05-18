@@ -36,22 +36,18 @@ RSpec.describe DbSchema::Reader do
         expect(id.name).to eq(:id)
         expect(id.type).to eq(:integer)
         expect(id).to be_primary_key
-        expect(id).to have_sequence
         expect(name.name).to eq(:name)
         expect(name.type).to eq(:varchar)
         expect(name).not_to be_null
-        expect(name).not_to have_sequence
         expect(email.name).to eq(:email)
         expect(email.type).to eq(:varchar)
         expect(email).to be_null
         expect(email.default).to eq('mail@example.com')
-        expect(email).not_to have_sequence
 
         id, title, user_id = posts.fields
         expect(id.name).to eq(:id)
         expect(id.type).to eq(:integer)
         expect(id).to be_primary_key
-        expect(id).not_to have_sequence
         expect(title.name).to eq(:title)
         expect(title.type).to eq(:varchar)
         expect(title).to be_null
