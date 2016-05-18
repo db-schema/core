@@ -3,7 +3,7 @@ require 'spec_helper'
 RSpec.describe DbSchema::Runner do
   before(:each) do
     DbSchema.connection.create_table :people do
-      column :id, :integer, primary_key: true
+      primary_key :id
       column :name, :varchar
       column :address, :varchar, null: false
 
@@ -61,10 +61,12 @@ RSpec.describe DbSchema::Runner do
           subject.run!
         }.to change { DbSchema.connection.tables }.from([:people]).to([:users])
 
+        expect(DbSchema.connection.primary_key(:users)).to eq('id')
+        expect(DbSchema.connection.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
+
         id, name, email = DbSchema.connection.schema(:users)
         expect(id.first).to eq(:id)
         expect(id.last[:db_type]).to eq('integer')
-        expect(id.last[:primary_key]).to eq(true)
         expect(name.first).to eq(:name)
         expect(name.last[:db_type]).to eq('character varying(255)')
         expect(name.last[:allow_null]).to eq(false)
@@ -100,15 +102,20 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Changes::CreateColumn.new(name: :first_name, type: :varchar),
             DbSchema::Changes::CreateColumn.new(name: :last_name, type: :varchar),
             DbSchema::Changes::CreateColumn.new(name: :age, type: :integer, null: false),
-            DbSchema::Changes::DropColumn.new(name: :name)
+            DbSchema::Changes::DropColumn.new(name: :name),
+            DbSchema::Changes::DropColumn.new(name: :id),
+            DbSchema::Changes::CreateColumn.new(name: :uid, type: :integer, primary_key: true)
           ]
         end
 
         it 'applies all the changes' do
           subject.run!
 
-          id, address, first_name, last_name, age = DbSchema.connection.schema(:people)
-          expect(id.first).to eq(:id)
+          expect(DbSchema.connection.primary_key(:people)).to eq('uid')
+          expect(DbSchema.connection.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
+
+          address, first_name, last_name, age, uid = DbSchema.connection.schema(:people)
+          expect(uid.first).to eq(:uid)
           expect(address.first).to eq(:address)
           expect(first_name.first).to eq(:first_name)
           expect(first_name.last[:db_type]).to eq('character varying(255)')
@@ -152,20 +159,31 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with CreatePrimaryKey & DropPrimaryKey' do
+      context 'with CreatePrimaryKey' do
         let(:field_changes) do
           [
-            DbSchema::Changes::DropPrimaryKey.new(name: :id),
             DbSchema::Changes::CreatePrimaryKey.new(name: :name)
           ]
         end
 
-        it 'applies all the changes' do
-          subject.run!
+        it 'raises a NotImplementedError' do
+          expect {
+            subject.run!
+          }.to raise_error(NotImplementedError)
+        end
+      end
 
-          id, name = DbSchema.connection.schema(:people)
-          expect(id.last[:primary_key]).to eq(false)
-          expect(name.last[:primary_key]).to eq(true)
+      context 'with DropPrimaryKey' do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::DropPrimaryKey.new(name: :id)
+          ]
+        end
+
+        it 'raises a NotImplementedError' do
+          expect {
+            subject.run!
+          }.to raise_error(NotImplementedError)
         end
       end
 

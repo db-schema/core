@@ -24,7 +24,6 @@ module DbSchema
 
       def options
         {}.tap do |options|
-          options[:primary_key] = true if primary_key?
           options[:null] = false unless null?
           options[:default] = default unless default.nil?
         end

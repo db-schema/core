@@ -23,7 +23,11 @@ module DbSchema
     def create_table(change)
       DbSchema.connection.create_table(change.name) do
         change.fields.each do |field|
-          column(field.name, field.type, field.options)
+          if field.primary_key?
+            primary_key(field.name)
+          else
+            column(field.name, field.type, field.options)
+          end
         end
 
         change.indices.each do |index|
@@ -41,7 +45,11 @@ module DbSchema
         change.fields.each do |field|
           case field
           when Changes::CreateColumn
-            add_column(field.name, field.type, field.options)
+            if field.primary_key?
+              add_primary_key(field.name)
+            else
+              add_column(field.name, field.type, field.options)
+            end
           when Changes::DropColumn
             drop_column(field.name)
           when Changes::RenameColumn
@@ -49,9 +57,9 @@ module DbSchema
           when Changes::AlterColumnType
             set_column_type(field.name, field.new_type)
           when Changes::CreatePrimaryKey
-            add_primary_key([field.name])
+            raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
           when Changes::DropPrimaryKey
-            drop_constraint("#{change.name}_pkey")
+            raise NotImplementedError, 'Removing a primary key while leaving the column is currently unsupported'
           when Changes::AllowNull
             set_column_allow_null(field.name)
           when Changes::DisallowNull
