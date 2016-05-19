@@ -69,13 +69,13 @@ RSpec.describe DbSchema::DSL do
       expect(user_id_fkey.table).to eq(:users)
       expect(user_id_fkey.references_primary_key?).to eq(true)
       expect(user_id_fkey.on_delete).to eq(:set_null)
-      expect(user_id_fkey.on_update).to be_nil
+      expect(user_id_fkey.on_update).to eq(:no_action)
       expect(user_id_fkey).to be_deferrable
       expect(user_name_fkey.name).to eq(:user_name_fkey)
       expect(user_name_fkey.fields).to eq([:user_name])
       expect(user_name_fkey.table).to eq(:users)
       expect(user_name_fkey.keys).to eq([:name])
-      expect(user_name_fkey.on_delete).to be_nil
+      expect(user_name_fkey.on_delete).to eq(:no_action)
       expect(user_name_fkey.on_update).to eq(:cascade)
       expect(user_name_fkey).not_to be_deferrable
     end

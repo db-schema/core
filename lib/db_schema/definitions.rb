@@ -48,7 +48,7 @@ module DbSchema
     class ForeignKey
       attr_reader :name, :fields, :table, :keys, :on_update, :on_delete
 
-      def initialize(name:, fields:, table:, keys: [], on_update: nil, on_delete: nil, deferrable: false)
+      def initialize(name:, fields:, table:, keys: [], on_update: :no_action, on_delete: :no_action, deferrable: false)
         @name       = name
         @fields     = fields
         @table      = table
