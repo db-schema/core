@@ -16,8 +16,12 @@ RSpec.describe DbSchema::DSL do
           t.integer :id, primary_key: true
           t.varchar :title
           t.integer :user_id, null: false
+          t.varchar :user_name
 
           t.index :user_id, name: :posts_user_id_idx
+
+          t.foreign_key :user_id, references: :users
+          t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey
         end
       end
     end
@@ -30,7 +34,7 @@ RSpec.describe DbSchema::DSL do
       expect(users.name).to eq(:users)
       expect(users.fields.count).to eq(3)
       expect(posts.name).to eq(:posts)
-      expect(posts.fields.count).to eq(3)
+      expect(posts.fields.count).to eq(4)
 
       id, name, email = users.fields
 
@@ -57,6 +61,17 @@ RSpec.describe DbSchema::DSL do
       expect(user_id_index.name).to eq(:posts_user_id_idx)
       expect(user_id_index.fields).to eq([:user_id])
       expect(user_id_index).not_to be_unique
+
+      expect(posts.foreign_keys.count).to eq(2)
+      user_id_fkey, user_name_fkey = posts.foreign_keys
+      expect(user_id_fkey.name).to eq(:posts_user_id_fkey)
+      expect(user_id_fkey.fields).to eq([:user_id])
+      expect(user_id_fkey.table).to eq(:users)
+      expect(user_id_fkey.references_primary_key?).to eq(true)
+      expect(user_name_fkey.name).to eq(:user_name_fkey)
+      expect(user_name_fkey.fields).to eq([:user_name])
+      expect(user_name_fkey.table).to eq(:users)
+      expect(user_name_fkey.keys).to eq([:name])
     end
   end
 end

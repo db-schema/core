@@ -13,12 +13,13 @@ module DbSchema
     end
 
     def table(name, &block)
-      table_yielder = TableYielder.new(block)
+      table_yielder = TableYielder.new(name, block)
 
       tables << Definitions::Table.new(
-        name:    name,
-        fields:  table_yielder.fields,
-        indices: table_yielder.indices
+        name:         name,
+        fields:       table_yielder.fields,
+        indices:      table_yielder.indices,
+        foreign_keys: table_yielder.foreign_keys
       )
     end
 
@@ -28,7 +29,10 @@ module DbSchema
     end
 
     class TableYielder
-      def initialize(block)
+      attr_reader :table_name
+
+      def initialize(table_name, block)
+        @table_name = table_name
         block.call(self)
       end
 
@@ -56,12 +60,40 @@ module DbSchema
         )
       end
 
+      def foreign_key(fields, references:, name: nil)
+        fkey_fields = Array(fields)
+        fkey_name = name || :"#{table_name}_#{fkey_fields.first}_fkey"
+
+        if references.is_a?(Array)
+          # [:table, :field]
+          referenced_table, *referenced_keys = references
+
+          foreign_keys << Definitions::ForeignKey.new(
+            name:   fkey_name,
+            fields: fkey_fields,
+            table:  referenced_table,
+            keys:   referenced_keys
+          )
+        else
+          # :table
+          foreign_keys << Definitions::ForeignKey.new(
+            name:   fkey_name,
+            fields: fkey_fields,
+            table:  references
+          )
+        end
+      end
+
       def fields
         @fields ||= []
       end
 
       def indices
         @indices ||= []
+      end
+
+      def foreign_keys
+        @foreign_keys ||= []
       end
     end
   end

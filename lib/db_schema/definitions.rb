@@ -45,14 +45,30 @@ module DbSchema
       end
     end
 
-    class Table
-      include Dry::Equalizer(:name, :fields, :indices)
-      attr_reader :name, :fields, :indices
+    class ForeignKey
+      attr_reader :name, :fields, :table, :keys
 
-      def initialize(name:, fields: [], indices: [])
-        @name    = name.to_sym
-        @fields  = fields
-        @indices = indices
+      def initialize(name:, fields:, table:, keys: [])
+        @name   = name
+        @fields = fields
+        @table  = table
+        @keys   = keys
+      end
+
+      def references_primary_key?
+        keys.empty?
+      end
+    end
+
+    class Table
+      include Dry::Equalizer(:name, :fields, :indices, :foreign_keys)
+      attr_reader :name, :fields, :indices, :foreign_keys
+
+      def initialize(name:, fields: [], indices: [], foreign_keys: [])
+        @name         = name.to_sym
+        @fields       = fields
+        @indices      = indices
+        @foreign_keys = foreign_keys
       end
     end
   end
