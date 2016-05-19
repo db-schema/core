@@ -60,7 +60,7 @@ module DbSchema
         )
       end
 
-      def foreign_key(fields, references:, name: nil)
+      def foreign_key(fields, references:, name: nil, on_update: nil, on_delete: nil, deferrable: false)
         fkey_fields = Array(fields)
         fkey_name = name || :"#{table_name}_#{fkey_fields.first}_fkey"
 
@@ -69,17 +69,23 @@ module DbSchema
           referenced_table, *referenced_keys = references
 
           foreign_keys << Definitions::ForeignKey.new(
-            name:   fkey_name,
-            fields: fkey_fields,
-            table:  referenced_table,
-            keys:   referenced_keys
+            name:       fkey_name,
+            fields:     fkey_fields,
+            table:      referenced_table,
+            keys:       referenced_keys,
+            on_delete:  on_delete,
+            on_update:  on_update,
+            deferrable: deferrable
           )
         else
           # :table
           foreign_keys << Definitions::ForeignKey.new(
-            name:   fkey_name,
-            fields: fkey_fields,
-            table:  references
+            name:       fkey_name,
+            fields:     fkey_fields,
+            table:      references,
+            on_delete:  on_delete,
+            on_update:  on_update,
+            deferrable: deferrable
           )
         end
       end

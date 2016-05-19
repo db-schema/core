@@ -15,13 +15,13 @@ RSpec.describe DbSchema::DSL do
         db.table :posts do |t|
           t.integer :id, primary_key: true
           t.varchar :title
-          t.integer :user_id, null: false
+          t.integer :user_id
           t.varchar :user_name
 
           t.index :user_id, name: :posts_user_id_idx
 
-          t.foreign_key :user_id, references: :users
-          t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey
+          t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
+          t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
         end
       end
     end
@@ -68,10 +68,16 @@ RSpec.describe DbSchema::DSL do
       expect(user_id_fkey.fields).to eq([:user_id])
       expect(user_id_fkey.table).to eq(:users)
       expect(user_id_fkey.references_primary_key?).to eq(true)
+      expect(user_id_fkey.on_delete).to eq(:set_null)
+      expect(user_id_fkey.on_update).to be_nil
+      expect(user_id_fkey).to be_deferrable
       expect(user_name_fkey.name).to eq(:user_name_fkey)
       expect(user_name_fkey.fields).to eq([:user_name])
       expect(user_name_fkey.table).to eq(:users)
       expect(user_name_fkey.keys).to eq([:name])
+      expect(user_name_fkey.on_delete).to be_nil
+      expect(user_name_fkey.on_update).to eq(:cascade)
+      expect(user_name_fkey).not_to be_deferrable
     end
   end
 end

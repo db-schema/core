@@ -46,17 +46,24 @@ module DbSchema
     end
 
     class ForeignKey
-      attr_reader :name, :fields, :table, :keys
+      attr_reader :name, :fields, :table, :keys, :on_update, :on_delete
 
-      def initialize(name:, fields:, table:, keys: [])
-        @name   = name
-        @fields = fields
-        @table  = table
-        @keys   = keys
+      def initialize(name:, fields:, table:, keys: [], on_update: nil, on_delete: nil, deferrable: false)
+        @name       = name
+        @fields     = fields
+        @table      = table
+        @keys       = keys
+        @on_update  = on_update
+        @on_delete  = on_delete
+        @deferrable = deferrable
       end
 
       def references_primary_key?
         keys.empty?
+      end
+
+      def deferrable?
+        @deferrable
       end
     end
 
