@@ -40,7 +40,16 @@ module DbSchema
               )
             end
 
-            Definitions::Table.new(name: table_name, fields: fields, indices: indices)
+            foreign_keys = DbSchema.connection.foreign_key_list(table_name).map do |foreign_key_data|
+              build_foreign_key(foreign_key_data)
+            end
+
+            Definitions::Table.new(
+              name:         table_name,
+              fields:       fields,
+              indices:      indices,
+              foreign_keys: foreign_keys
+            )
           end
         end
 
@@ -50,6 +59,31 @@ module DbSchema
             :varchar
           else
             postgres_type
+          end
+        end
+
+      private
+        def build_foreign_key(data)
+          keys = if data[:key] == [primary_keys[data[:table]].to_sym]
+            [] # this foreign key references a primary key
+          else
+            data[:key]
+          end
+
+          Definitions::ForeignKey.new(
+            name:       data[:name],
+            fields:     data[:columns],
+            table:      data[:table],
+            keys:       keys,
+            on_delete:  data[:on_delete],
+            on_update:  data[:on_update],
+            deferrable: data[:deferrable]
+          )
+        end
+
+        def primary_keys
+          @primary_keys ||= DbSchema.connection.tables.reduce({}) do |primary_keys, table_name|
+            primary_keys.merge(table_name => DbSchema.connection.primary_key(table_name))
           end
         end
       end
