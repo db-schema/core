@@ -46,6 +46,7 @@ module DbSchema
     end
 
     class ForeignKey
+      include Dry::Equalizer(:name, :fields, :table, :keys, :on_update, :on_delete, :deferrable?)
       attr_reader :name, :fields, :table, :keys, :on_update, :on_delete
 
       def initialize(name:, fields:, table:, keys: [], on_update: :no_action, on_delete: :no_action, deferrable: false)

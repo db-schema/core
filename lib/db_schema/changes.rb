@@ -12,14 +12,25 @@ module DbSchema
           actual  = actual_schema.find { |table| table.name == table_name }
 
           if desired && !actual
-            changes << CreateTable.new(name: table_name, fields: desired.fields, indices: desired.indices)
+            changes << CreateTable.new(
+              name:         table_name,
+              fields:       desired.fields,
+              indices:      desired.indices,
+              foreign_keys: desired.foreign_keys
+            )
           elsif actual && !desired
             changes << DropTable.new(name: table_name)
           elsif actual != desired
-            field_operations = field_changes(desired.fields, actual.fields)
-            index_operations = index_changes(desired.indices, actual.indices)
+            field_operations       = field_changes(desired.fields, actual.fields)
+            index_operations       = index_changes(desired.indices, actual.indices)
+            foreign_key_operations = foreign_key_changes(desired.foreign_keys, actual.foreign_keys)
 
-            changes << AlterTable.new(name: table_name, fields: field_operations, indices: index_operations)
+            changes << AlterTable.new(
+              name:         table_name,
+              fields:       field_operations,
+              indices:      index_operations,
+              foreign_keys: foreign_key_operations
+            )
           end
         end
       end
@@ -87,6 +98,40 @@ module DbSchema
           end
         end
       end
+
+      def foreign_key_changes(desired_foreign_keys, actual_foreign_keys)
+        key_names = [desired_foreign_keys, actual_foreign_keys].flatten.map(&:name).uniq
+
+        key_names.each.with_object([]) do |key_name, table_changes|
+          desired = desired_foreign_keys.find { |key| key.name == key_name }
+          actual  = actual_foreign_keys.find  { |key| key.name == key_name }
+
+          if desired && !actual
+            table_changes << CreateForeignKey.new(
+              name:       key_name,
+              fields:     desired.fields,
+              table:      desired.table,
+              keys:       desired.keys,
+              on_delete:  desired.on_delete,
+              on_update:  desired.on_update,
+              deferrable: desired.deferrable?
+            )
+          elsif actual && !desired
+            table_changes << DropForeignKey.new(name: key_name)
+          elsif actual != desired
+            table_changes << DropForeignKey.new(name: key_name)
+            table_changes << CreateForeignKey.new(
+              name:       key_name,
+              fields:     desired.fields,
+              table:      desired.table,
+              keys:       desired.keys,
+              on_delete:  desired.on_delete,
+              on_update:  desired.on_update,
+              deferrable: desired.deferrable?
+            )
+          end
+        end
+      end
     end
 
     class CreateTable < Definitions::Table
@@ -102,12 +147,13 @@ module DbSchema
     end
 
     class AlterTable
-      attr_reader :name, :fields, :indices
+      attr_reader :name, :fields, :indices, :foreign_keys
 
-      def initialize(name:, fields:, indices:)
-        @name    = name
-        @fields  = fields
-        @indices = indices
+      def initialize(name:, fields:, indices:, foreign_keys:)
+        @name         = name
+        @fields       = fields
+        @indices      = indices
+        @foreign_keys = foreign_keys
       end
     end
 
@@ -179,6 +225,12 @@ module DbSchema
         @name   = name
         @fields = fields
       end
+    end
+
+    class CreateForeignKey < Definitions::ForeignKey
+    end
+
+    class DropForeignKey < ColumnOperation
     end
   end
 end

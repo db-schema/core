@@ -86,9 +86,10 @@ RSpec.describe DbSchema::Runner do
       let(:changes) do
         [
           DbSchema::Changes::AlterTable.new(
-            name:    :people,
-            fields:  field_changes,
-            indices: index_changes
+            name:         :people,
+            fields:       field_changes,
+            indices:      index_changes,
+            foreign_keys: []
           )
         ]
       end
