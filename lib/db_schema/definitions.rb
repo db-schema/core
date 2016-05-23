@@ -66,6 +66,17 @@ module DbSchema
       def deferrable?
         @deferrable
       end
+
+      def options
+        {
+          deferrable:                  deferrable?,
+          foreign_key_constraint_name: name,
+          on_delete:                   on_delete,
+          on_update:                   on_update
+        }.tap do |options|
+          options[:key] = keys unless references_primary_key?
+        end
+      end
     end
 
     class Table

@@ -77,6 +77,15 @@ module DbSchema
             drop_index(index.fields, name: index.name)
           end
         end
+
+        change.foreign_keys.each do |foreign_key|
+          case foreign_key
+          when Changes::CreateForeignKey
+            add_foreign_key(foreign_key.fields, foreign_key.table, foreign_key.options)
+          when Changes::DropForeignKey
+            drop_foreign_key([], name: foreign_key.name)
+          end
+        end
       end
     end
   end
