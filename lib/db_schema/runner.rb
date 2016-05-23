@@ -74,7 +74,7 @@ module DbSchema
           when Changes::CreateIndex
             add_index(index.fields, name: index.name, unique: index.unique?)
           when Changes::DropIndex
-            drop_index(index.fields, name: index.name)
+            drop_index([], name: index.name)
           end
         end
 

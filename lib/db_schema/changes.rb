@@ -91,9 +91,9 @@ module DbSchema
           if desired && !actual
             table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
           elsif actual && !desired
-            table_changes << DropIndex.new(name: index_name, fields: actual.fields)
+            table_changes << DropIndex.new(name: index_name)
           elsif actual != desired
-            table_changes << DropIndex.new(name: index_name, fields: actual.fields)
+            table_changes << DropIndex.new(name: index_name)
             table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
           end
         end
@@ -217,14 +217,7 @@ module DbSchema
     class CreateIndex < Definitions::Index
     end
 
-    class DropIndex
-      include Dry::Equalizer(:name, :fields)
-      attr_reader :name, :fields
-
-      def initialize(name:, fields:)
-        @name   = name
-        @fields = fields
-      end
+    class DropIndex < ColumnOperation
     end
 
     class CreateForeignKey < Definitions::ForeignKey

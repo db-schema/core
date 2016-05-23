@@ -233,7 +233,7 @@ RSpec.describe DbSchema::Runner do
         let(:index_changes) do
           [
             DbSchema::Changes::CreateIndex.new(name: :people_name_index, fields: [:name]),
-            DbSchema::Changes::DropIndex.new(name: :people_address_index, fields: [:address])
+            DbSchema::Changes::DropIndex.new(name: :people_address_index)
           ]
         end
 
