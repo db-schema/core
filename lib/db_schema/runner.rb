@@ -33,6 +33,10 @@ module DbSchema
         change.indices.each do |index|
           index(index.fields, name: index.name, unique: index.unique?)
         end
+
+        change.foreign_keys.each do |foreign_key|
+          foreign_key(foreign_key.fields, foreign_key.table, foreign_key.options)
+        end
       end
     end
 

@@ -8,8 +8,16 @@ RSpec.describe DbSchema::Runner do
       primary_key :id
       column :name, :varchar
       column :address, :varchar, null: false
+      column :country_name, :varchar
 
       index :address
+    end
+
+    database.create_table :countries do
+      primary_key :id
+      column :name, :varchar, null: false
+
+      index :name, unique: true
     end
   end
 
@@ -29,6 +37,11 @@ RSpec.describe DbSchema::Runner do
         name: :email,
         type: :varchar,
         default: 'mail@example.com'
+      ),
+      DbSchema::Definitions::Field.new(
+        name: :country_id,
+        type: :integer,
+        null: false
       )
     ]
   end
@@ -47,21 +60,38 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
+  let(:users_foreign_keys) do
+    [
+      DbSchema::Definitions::ForeignKey.new(
+        name:      :users_country_id_fkey,
+        fields:    [:country_id],
+        table:     :countries,
+        on_delete: :set_null
+      )
+    ]
+  end
+
   subject { DbSchema::Runner.new(changes) }
 
   describe '#run!' do
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [
-          DbSchema::Changes::CreateTable.new(name: :users, fields: users_fields, indices: users_indices),
+          DbSchema::Changes::CreateTable.new(
+            name:         :users,
+            fields:       users_fields,
+            indices:      users_indices,
+            foreign_keys: users_foreign_keys
+          ),
           DbSchema::Changes::DropTable.new(name: :people)
         ]
       end
 
       it 'applies all the changes' do
-        expect {
-          subject.run!
-        }.to change { DbSchema.connection.tables }.from([:people]).to([:users])
+        subject.run!
+
+        expect(DbSchema.connection.tables).not_to include(:people)
+        expect(DbSchema.connection.tables).to include(:users)
 
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
@@ -81,6 +111,16 @@ RSpec.describe DbSchema::Runner do
         expect(indexes[:index_users_on_name][:unique]).to eq(false)
         expect(indexes[:index_users_on_email][:columns]).to eq([:email])
         expect(indexes[:index_users_on_email][:unique]).to eq(true)
+
+        expect(database.foreign_key_list(:users).count).to eq(1)
+        users_country_id_fkey = database.foreign_key_list(:users).first
+        expect(users_country_id_fkey[:name]).to eq(:users_country_id_fkey)
+        expect(users_country_id_fkey[:columns]).to eq([:country_id])
+        expect(users_country_id_fkey[:table]).to eq(:countries)
+        expect(users_country_id_fkey[:key]).to eq([:id])
+        expect(users_country_id_fkey[:on_delete]).to eq(:set_null)
+        expect(users_country_id_fkey[:on_update]).to eq(:no_action)
+        expect(users_country_id_fkey[:deferrable]).to eq(false)
       end
     end
 
@@ -118,7 +158,7 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          address, first_name, last_name, age, uid = DbSchema.connection.schema(:people)
+          address, country_name, first_name, last_name, age, uid = DbSchema.connection.schema(:people)
           expect(address.first).to eq(:address)
           expect(first_name.first).to eq(:first_name)
           expect(first_name.last[:db_type]).to eq('character varying(255)')
@@ -256,17 +296,9 @@ RSpec.describe DbSchema::Runner do
             index :name, unique: true
           end
 
-          database.create_table :countries do
-            primary_key :id
-            column :name, :varchar, null: false
-
-            index :name, unique: true
-          end
-
           database.alter_table :people do
             add_column :city_name, :varchar
             add_column :city_id, :integer
-            add_column :country_name, :varchar
 
             add_foreign_key [:city_name], :cities, key: :name
           end
