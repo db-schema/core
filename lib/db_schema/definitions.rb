@@ -31,13 +31,14 @@ module DbSchema
     end
 
     class Index
-      include Dry::Equalizer(:name, :fields, :unique?)
-      attr_reader :name, :fields
+      include Dry::Equalizer(:name, :fields, :unique?, :condition)
+      attr_reader :name, :fields, :condition
 
-      def initialize(name:, fields:, unique: false)
-        @name   = name.to_sym
-        @fields = fields.map(&:to_sym)
-        @unique = unique
+      def initialize(name:, fields:, unique: false, condition: nil)
+        @name      = name.to_sym
+        @fields    = fields.map(&:to_sym)
+        @unique    = unique
+        @condition = condition
       end
 
       def unique?

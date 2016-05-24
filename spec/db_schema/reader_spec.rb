@@ -15,7 +15,7 @@ RSpec.describe DbSchema::Reader do
           column :name, :varchar, null: false, unique: true
           column :email, :varchar, default: 'mail@example.com'
 
-          index :email, unique: true
+          index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
 
         DbSchema.connection.create_table :posts do
@@ -61,8 +61,9 @@ RSpec.describe DbSchema::Reader do
 
         expect(users.indices.count).to eq(2)
         email_index = users.indices.first
-        expect(email_index.fields).to eq([:email])
+        expect(email_index.fields).to eq([:email, :name])
         expect(email_index).to be_unique
+        expect(email_index.condition).to eq('email IS NOT NULL')
 
         expect(posts.indices.count).to eq(1)
         user_id_index = posts.indices.first
