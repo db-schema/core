@@ -49,13 +49,14 @@ RSpec.describe DbSchema::Runner do
   let(:users_indices) do
     [
       DbSchema::Definitions::Index.new(
-        name: :index_users_on_name,
+        name:   :index_users_on_name,
         fields: [:name]
       ),
       DbSchema::Definitions::Index.new(
-        name: :index_users_on_email,
-        fields: [:email],
-        unique: true
+        name:      :index_users_on_email,
+        fields:    [:email],
+        unique:    true,
+        condition: 'email IS NOT NULL'
       )
     ]
   end
@@ -106,11 +107,14 @@ RSpec.describe DbSchema::Runner do
         expect(email.last[:db_type]).to eq('character varying(255)')
         expect(email.last[:default]).to eq("'mail@example.com'::character varying")
 
-        indexes = database.indexes(:users)
-        expect(indexes[:index_users_on_name][:columns]).to eq([:name])
-        expect(indexes[:index_users_on_name][:unique]).to eq(false)
-        expect(indexes[:index_users_on_email][:columns]).to eq([:email])
-        expect(indexes[:index_users_on_email][:unique]).to eq(true)
+        indices = DbSchema::Reader::Postgres.indices_data_for(:users)
+        name_index  = indices.find { |index| index[:name] == :index_users_on_name }
+        email_index = indices.find { |index| index[:name] == :index_users_on_email }
+        expect(name_index[:fields]).to eq([:name])
+        expect(name_index[:unique]).to eq(false)
+        expect(email_index[:fields]).to eq([:email])
+        expect(email_index[:unique]).to eq(true)
+        expect(email_index[:condition]).to eq('email IS NOT NULL')
 
         expect(database.foreign_key_list(:users).count).to eq(1)
         users_country_id_fkey = database.foreign_key_list(:users).first
@@ -272,7 +276,11 @@ RSpec.describe DbSchema::Runner do
 
         let(:index_changes) do
           [
-            DbSchema::Changes::CreateIndex.new(name: :people_name_index, fields: [:name]),
+            DbSchema::Changes::CreateIndex.new(
+              name:      :people_name_index,
+              fields:    [:name],
+              condition: 'name IS NOT NULL'
+            ),
             DbSchema::Changes::DropIndex.new(name: :people_address_index)
           ]
         end
@@ -280,10 +288,12 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          expect(database.indexes(:people).count).to eq(1)
-          name_index = database.indexes(:people)[:people_name_index]
-          expect(name_index[:columns]).to eq([:name])
+          indices = DbSchema::Reader::Postgres.indices_data_for(:people)
+          expect(indices.count).to eq(1)
+          name_index = indices.first
+          expect(name_index[:fields]).to eq([:name])
           expect(name_index[:unique]).to eq(false)
+          expect(name_index[:condition]).to eq('name IS NOT NULL')
         end
       end
 

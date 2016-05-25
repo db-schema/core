@@ -81,7 +81,6 @@ SELECT ordinal_position AS pos, column_name AS name
           end
         end
 
-      private
         def indices_data_for(table_name)
           column_names = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].reduce({}) do |names, column|
             names.merge(column[:pos] => column[:name])
@@ -100,6 +99,7 @@ SELECT ordinal_position AS pos, column_name AS name
           end
         end
 
+      private
         def build_foreign_key(data)
           keys = if data[:key] == [primary_keys[data[:table]].to_sym]
             [] # this foreign key references a primary key

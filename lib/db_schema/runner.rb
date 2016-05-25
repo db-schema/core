@@ -31,7 +31,7 @@ module DbSchema
         end
 
         change.indices.each do |index|
-          index(index.fields, name: index.name, unique: index.unique?)
+          index(index.fields, name: index.name, unique: index.unique?, where: index.condition)
         end
 
         change.foreign_keys.each do |foreign_key|
@@ -76,7 +76,7 @@ module DbSchema
         change.indices.each do |index|
           case index
           when Changes::CreateIndex
-            add_index(index.fields, name: index.name, unique: index.unique?)
+            add_index(index.fields, name: index.name, unique: index.unique?, where: index.condition)
           when Changes::DropIndex
             drop_index([], name: index.name)
           end
