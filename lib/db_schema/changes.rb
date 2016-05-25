@@ -89,12 +89,22 @@ module DbSchema
           actual  = actual_indices.find  { |index| index.name == index_name }
 
           if desired && !actual
-            table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
+            table_changes << CreateIndex.new(
+              name:      index_name,
+              fields:    desired.fields,
+              unique:    desired.unique?,
+              condition: desired.condition
+            )
           elsif actual && !desired
             table_changes << DropIndex.new(name: index_name)
           elsif actual != desired
             table_changes << DropIndex.new(name: index_name)
-            table_changes << CreateIndex.new(name: index_name, fields: desired.fields, unique: desired.unique?)
+            table_changes << CreateIndex.new(
+              name:      index_name,
+              fields:    desired.fields,
+              unique:    desired.unique?,
+              condition: desired.condition
+            )
           end
         end
       end
