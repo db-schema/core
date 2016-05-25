@@ -9,7 +9,7 @@ RSpec.describe DbSchema::DSL do
           t.varchar :name, null: false
           t.varchar :email, default: 'mail@example.com'
 
-          t.index :email, name: :users_email_idx, unique: true
+          t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
         end
 
         db.table :posts do |t|
@@ -55,6 +55,7 @@ RSpec.describe DbSchema::DSL do
       expect(email_index.name).to eq(:users_email_idx)
       expect(email_index.fields).to eq([:email])
       expect(email_index).to be_unique
+      expect(email_index.condition).to eq('email IS NOT NULL')
 
       expect(posts.indices.count).to eq(1)
       user_id_index = posts.indices.first

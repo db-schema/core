@@ -52,11 +52,12 @@ module DbSchema
         )
       end
 
-      def index(fields, name:, unique: false)
+      def index(fields, name:, unique: false, where: nil)
         indices << Definitions::Index.new(
-          name:   name,
-          fields: Array(fields),
-          unique: unique
+          name:      name,
+          fields:    Array(fields),
+          unique:    unique,
+          condition: where
         )
       end
 
