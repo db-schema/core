@@ -23,7 +23,8 @@ module DbSchema
 SELECT relname AS name,
        indkey AS column_positions,
        indisunique AS unique,
-       pg_get_expr(indpred, indrelid, true) AS condition
+       pg_get_expr(indpred, indrelid, true) AS condition,
+       pg_get_expr(indexprs, indrelid, true) AS expression
   FROM pg_class, pg_index
  WHERE pg_class.oid = pg_index.indexrelid
    AND pg_class.oid IN (
