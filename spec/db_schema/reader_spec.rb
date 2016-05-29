@@ -10,12 +10,10 @@ RSpec.describe DbSchema::Reader do
 
     context 'on a database with tables' do
       before(:each) do
-        pending 'Rewriting Definitions::Field'
-
         DbSchema.connection.create_table :users do
           column :id, :serial, primary_key: true
           column :name, :varchar, null: false, unique: true
-          column :email, :varchar, default: 'mail@example.com'
+          column :email, :varchar, default: 'mail@example.com', size: 250
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
@@ -39,26 +37,27 @@ RSpec.describe DbSchema::Reader do
         expect(posts.name).to eq(:posts)
 
         id, name, email = users.fields
+        expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
-        expect(id.type).to eq(:integer)
         expect(id).to be_primary_key
+        expect(name).to be_a(DbSchema::Definitions::Field::Varchar)
         expect(name.name).to eq(:name)
-        expect(name.type).to eq(:varchar)
         expect(name).not_to be_null
+        expect(email).to be_a(DbSchema::Definitions::Field::Varchar)
         expect(email.name).to eq(:email)
-        expect(email.type).to eq(:varchar)
         expect(email).to be_null
         expect(email.default).to eq('mail@example.com')
+        expect(email.options[:length]).to eq(250)
 
         id, title, user_id = posts.fields
+        expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
-        expect(id.type).to eq(:integer)
         expect(id).to be_primary_key
+        expect(title).to be_a(DbSchema::Definitions::Field::Varchar)
         expect(title.name).to eq(:title)
-        expect(title.type).to eq(:varchar)
         expect(title).to be_null
+        expect(user_id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(user_id.name).to eq(:user_id)
-        expect(user_id.type).to eq(:integer)
         expect(user_id).not_to be_null
 
         expect(users.indices.count).to eq(2)

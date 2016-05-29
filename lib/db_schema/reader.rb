@@ -19,6 +19,8 @@ module DbSchema
     end
 
     module Postgres
+      TYPECASTED_VALUE = /\A'(.*)'/
+
       INDICES_QUERY = <<-SQL.freeze
 SELECT relname AS name,
        indkey AS column_positions,
@@ -37,7 +39,14 @@ SELECT relname AS name,
       SQL
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
-SELECT ordinal_position AS pos, column_name AS name
+SELECT column_name AS name,
+       ordinal_position AS pos,
+       column_default AS default,
+       is_nullable AS null,
+       data_type AS type,
+       character_maximum_length AS length,
+       numeric_precision AS precision,
+       numeric_scale AS scale
   FROM information_schema.columns
  WHERE table_schema = 'public'
    AND table_name = ?
@@ -46,14 +55,10 @@ SELECT ordinal_position AS pos, column_name AS name
       class << self
         def read_schema
           DbSchema.connection.tables.map do |table_name|
-            fields = DbSchema.connection.schema(table_name).map do |field_name, field_details|
-              Definitions::Field.new(
-                name:         field_name,
-                type:         translate_type(field_details[:db_type]),
-                primary_key:  field_details[:primary_key],
-                null:         field_details[:allow_null],
-                default:      field_details[:ruby_default]
-              )
+            primary_key_name = DbSchema.connection.primary_key(table_name)
+
+            fields = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].map do |column_data|
+              build_field(column_data, primary_key: column_data[:name] == primary_key_name)
             end
 
             indices = indices_data_for(table_name).map do |index_data|
@@ -101,6 +106,34 @@ SELECT ordinal_position AS pos, column_name AS name
         end
 
       private
+        def build_field(data, primary_key: false)
+          type = data[:type].to_sym
+
+          nullable = (data[:null] != 'NO')
+
+          unless primary_key || data[:default].nil?
+            if match = TYPECASTED_VALUE.match(data[:default])
+              default = match[1]
+            end
+          end
+
+          options = case type
+          when :'character varying'
+            { length: data[:length] }
+          else
+            {}
+          end
+
+          Definitions::Field.build(
+            data[:name].to_sym,
+            data[:type].to_sym,
+            primary_key: primary_key,
+            null:        nullable,
+            default:     default,
+            **options
+          )
+        end
+
         def build_foreign_key(data)
           keys = if data[:key] == [primary_keys[data[:table]].to_sym]
             [] # this foreign key references a primary key
