@@ -36,20 +36,14 @@ module DbSchema
         block.call(self)
       end
 
-      %i(integer varchar).each do |type|
+      DbSchema::Definitions::Field.registry.keys.each do |type|
         define_method(type) do |name, **options|
           field(name, type, options)
         end
       end
 
-      def field(name, type, primary_key: false, null: true, default: nil)
-        fields << Definitions::Field.new(
-          name:         name,
-          type:         type,
-          primary_key:  primary_key,
-          null:         null,
-          default:      default
-        )
+      def field(name, type, **options)
+        fields << Definitions::Field.build(name, type, options)
       end
 
       def index(fields, name:, unique: false, where: nil)

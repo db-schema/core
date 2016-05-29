@@ -1,10 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::DSL do
-  before(:each) do
-    pending 'Rewriting Definitions::Field'
-  end
-
   describe '#schema' do
     let(:schema_block) do
       -> (db) do
@@ -42,16 +38,16 @@ RSpec.describe DbSchema::DSL do
 
       id, name, email = users.fields
 
+      expect(id).to be_a(DbSchema::Definitions::Field::Integer)
       expect(id.name).to eq(:id)
-      expect(id.type).to eq(:integer)
       expect(id).to be_primary_key
 
+      expect(name).to be_a(DbSchema::Definitions::Field::Varchar)
       expect(name.name).to eq(:name)
-      expect(name.type).to eq(:varchar)
       expect(name).not_to be_null
 
+      expect(email).to be_a(DbSchema::Definitions::Field::Varchar)
       expect(email.name).to eq(:email)
-      expect(email.type).to eq(:varchar)
       expect(email.default).to eq('mail@example.com')
 
       expect(users.indices.count).to eq(1)
