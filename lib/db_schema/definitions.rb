@@ -2,34 +2,6 @@ require 'dry/equalizer'
 
 module DbSchema
   module Definitions
-    class Field
-      include Dry::Equalizer(:name, :type, :primary_key?, :null?, :default)
-      attr_reader :name, :type, :default
-
-      def initialize(name:, type:, primary_key: false, null: true, default: nil)
-        @name         = name.to_sym
-        @type         = type.to_sym
-        @primary_key  = primary_key
-        @null         = null
-        @default      = default
-      end
-
-      def primary_key?
-        @primary_key
-      end
-
-      def null?
-        !primary_key? && @null
-      end
-
-      def options
-        {}.tap do |options|
-          options[:null] = false unless null?
-          options[:default] = default unless default.nil?
-        end
-      end
-    end
-
     class Index
       include Dry::Equalizer(:name, :fields, :unique?, :condition)
       attr_reader :name, :fields, :condition
@@ -93,3 +65,5 @@ module DbSchema
     end
   end
 end
+
+require_relative 'definitions/field'

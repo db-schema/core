@@ -177,7 +177,7 @@ module DbSchema
       end
     end
 
-    class CreateColumn < Definitions::Field
+    class CreateColumn < Definitions::Field::Base
     end
 
     class DropColumn < ColumnOperation

@@ -10,6 +10,8 @@ RSpec.describe DbSchema::Reader do
 
     context 'on a database with tables' do
       before(:each) do
+        pending 'Rewriting Definitions::Field'
+
         DbSchema.connection.create_table :users do
           column :id, :serial, primary_key: true
           column :name, :varchar, null: false, unique: true
