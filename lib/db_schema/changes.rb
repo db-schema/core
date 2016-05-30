@@ -178,6 +178,22 @@ module DbSchema
       def initialize(field)
         @field = field
       end
+
+      def name
+        field.name
+      end
+
+      def type
+        field.class.type
+      end
+
+      def primary_key?
+        field.primary_key?
+      end
+
+      def options
+        field.options
+      end
     end
 
     class DropColumn < ColumnOperation

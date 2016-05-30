@@ -4,8 +4,6 @@ RSpec.describe DbSchema::Runner do
   let(:database) { DbSchema.connection }
 
   before(:each) do
-    skip 'Rewriting Definitions::Field'
-
     database.create_table :people do
       primary_key :id
       column :name, :varchar
@@ -25,26 +23,10 @@ RSpec.describe DbSchema::Runner do
 
   let(:users_fields) do
     [
-      DbSchema::Definitions::Field.new(
-        name: :id,
-        type: :integer,
-        primary_key: true
-      ),
-      DbSchema::Definitions::Field.new(
-        name: :name,
-        type: :varchar,
-        null: false
-      ),
-      DbSchema::Definitions::Field.new(
-        name: :email,
-        type: :varchar,
-        default: 'mail@example.com'
-      ),
-      DbSchema::Definitions::Field.new(
-        name: :country_id,
-        type: :integer,
-        null: false
-      )
+      DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+      DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+      DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
+      DbSchema::Definitions::Field::Integer.new(:country_id, null: false)
     ]
   end
 
@@ -81,12 +63,12 @@ RSpec.describe DbSchema::Runner do
       let(:changes) do
         [
           DbSchema::Changes::CreateTable.new(
-            name:         :users,
+            :users,
             fields:       users_fields,
             indices:      users_indices,
             foreign_keys: users_foreign_keys
           ),
-          DbSchema::Changes::DropTable.new(name: :people)
+          DbSchema::Changes::DropTable.new(:people)
         ]
       end
 
@@ -134,7 +116,7 @@ RSpec.describe DbSchema::Runner do
       let(:changes) do
         [
           DbSchema::Changes::AlterTable.new(
-            name:         :people,
+            :people,
             fields:       field_changes,
             indices:      index_changes,
             foreign_keys: foreign_key_changes
@@ -146,15 +128,15 @@ RSpec.describe DbSchema::Runner do
       let(:index_changes) { [] }
       let(:foreign_key_changes) { [] }
 
-      context 'with CreateColumn & DropColumn' do
+      context 'containing CreateColumn & DropColumn' do
         let(:field_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(name: :first_name, type: :varchar),
-            DbSchema::Changes::CreateColumn.new(name: :last_name, type: :varchar),
-            DbSchema::Changes::CreateColumn.new(name: :age, type: :integer, null: false),
-            DbSchema::Changes::DropColumn.new(name: :name),
-            DbSchema::Changes::DropColumn.new(name: :id),
-            DbSchema::Changes::CreateColumn.new(name: :uid, type: :integer, primary_key: true)
+            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
+            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:last_name)),
+            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
+            DbSchema::Changes::DropColumn.new(:name),
+            DbSchema::Changes::DropColumn.new(:id),
+            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true))
           ]
         end
 
@@ -177,7 +159,7 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with RenameColumn' do
+      context 'containing RenameColumn' do
         let(:field_changes) do
           [
             DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
@@ -194,10 +176,10 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with AlterColumnType' do
+      context 'containing AlterColumnType' do
         let(:field_changes) do
           [
-            DbSchema::Changes::AlterColumnType.new(name: :name, new_type: :text)
+            DbSchema::Changes::AlterColumnType.new(:name, new_type: :text)
           ]
         end
 
@@ -209,7 +191,7 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with CreatePrimaryKey' do
+      context 'containing CreatePrimaryKey' do
         let(:field_changes) do
           [
             DbSchema::Changes::CreatePrimaryKey.new(name: :name)
@@ -223,7 +205,7 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with DropPrimaryKey' do
+      context 'containing DropPrimaryKey' do
         let(:field_changes) do
           [
             DbSchema::Changes::DropPrimaryKey.new(name: :id)
@@ -237,11 +219,11 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with AllowNull & DisallowNull' do
+      context 'containing AllowNull & DisallowNull' do
         let(:field_changes) do
           [
-            DbSchema::Changes::AllowNull.new(name: :address),
-            DbSchema::Changes::DisallowNull.new(name: :name)
+            DbSchema::Changes::AllowNull.new(:address),
+            DbSchema::Changes::DisallowNull.new(:name)
           ]
         end
 
@@ -254,10 +236,10 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with AlterColumnDefault' do
+      context 'containing AlterColumnDefault' do
         let(:field_changes) do
           [
-            DbSchema::Changes::AlterColumnDefault.new(name: :name, new_default: 'John Smith')
+            DbSchema::Changes::AlterColumnDefault.new(:name, new_default: 'John Smith')
           ]
         end
 
@@ -269,10 +251,10 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with CreateIndex & DropIndex' do
+      context 'containing CreateIndex & DropIndex' do
         let(:field_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(name: :email, type: :varchar)
+            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email))
           ]
         end
 
@@ -283,7 +265,7 @@ RSpec.describe DbSchema::Runner do
               fields:    [:name],
               condition: 'name IS NOT NULL'
             ),
-            DbSchema::Changes::DropIndex.new(name: :people_address_index)
+            DbSchema::Changes::DropIndex.new(:people_address_index)
           ]
         end
 
@@ -299,7 +281,7 @@ RSpec.describe DbSchema::Runner do
         end
       end
 
-      context 'with CreateForeignKey & DropForeignKey' do
+      context 'containing CreateForeignKey & DropForeignKey' do
         before(:each) do
           database.create_table :cities do
             primary_key :id
@@ -318,7 +300,7 @@ RSpec.describe DbSchema::Runner do
 
         let(:foreign_key_changes) do
           [
-            DbSchema::Changes::DropForeignKey.new(name: :people_city_name_fkey),
+            DbSchema::Changes::DropForeignKey.new(:people_city_name_fkey),
             DbSchema::Changes::CreateForeignKey.new(
               name:      :people_city_id_fkey,
               fields:    [:city_id],
