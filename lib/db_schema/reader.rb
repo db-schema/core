@@ -70,7 +70,7 @@ SELECT column_name AS name,
             end
 
             Definitions::Table.new(
-              name:         table_name,
+              table_name,
               fields:       fields,
               indices:      indices,
               foreign_keys: foreign_keys

@@ -1,17 +1,13 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Changes do
-  before(:each) do
-    pending 'Rewriting Definitions::Field'
-  end
-
   describe '.between' do
     context 'with tables being added and removed' do
       let(:users_fields) do
         [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :name, type: :varchar),
-          DbSchema::Definitions::Field.new(name: :city_id, type: :integer)
+          DbSchema::Definitions::Field::Integer.new(:id),
+          DbSchema::Definitions::Field::Varchar.new(:name),
+          DbSchema::Definitions::Field::Integer.new(:city_id)
         ]
       end
 
@@ -21,30 +17,30 @@ RSpec.describe DbSchema::Changes do
 
       let(:posts_fields) do
         [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :title, type: :varchar)
+          DbSchema::Definitions::Field::Integer.new(:id),
+          DbSchema::Definitions::Field::Varchar.new(:title)
         ]
       end
 
       let(:cities_fields) do
         [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :name, type: :varchar, null: false),
-          DbSchema::Definitions::Field.new(name: :country_id, type: :integer, null: false)
+          DbSchema::Definitions::Field::Integer.new(:id),
+          DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+          DbSchema::Definitions::Field::Integer.new(:country_id, null: false)
         ]
       end
 
       let(:desired_schema) do
         [
-          DbSchema::Definitions::Table.new(name: :users, fields: users_fields, foreign_keys: users_foreign_keys),
-          DbSchema::Definitions::Table.new(name: :cities, fields: cities_fields)
+          DbSchema::Definitions::Table.new(:users, fields: users_fields, foreign_keys: users_foreign_keys),
+          DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
         ]
       end
 
       let(:actual_schema) do
         [
-          DbSchema::Definitions::Table.new(name: :posts, fields: posts_fields),
-          DbSchema::Definitions::Table.new(name: :cities, fields: cities_fields)
+          DbSchema::Definitions::Table.new(:posts, fields: posts_fields),
+          DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
         ]
       end
 
@@ -52,9 +48,9 @@ RSpec.describe DbSchema::Changes do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         expect(changes).to include(
-          DbSchema::Changes::CreateTable.new(name: :users, fields: users_fields, foreign_keys: users_foreign_keys)
+          DbSchema::Changes::CreateTable.new(:users, fields: users_fields, foreign_keys: users_foreign_keys)
         )
-        expect(changes).to include(DbSchema::Changes::DropTable.new(name: :posts))
+        expect(changes).to include(DbSchema::Changes::DropTable.new(:posts))
       end
 
       it 'ignores matching tables' do
@@ -67,13 +63,13 @@ RSpec.describe DbSchema::Changes do
     context 'with table changed' do
       let(:desired_schema) do
         fields = [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer, primary_key: true),
-          DbSchema::Definitions::Field.new(name: :name, type: :varchar),
-          DbSchema::Definitions::Field.new(name: :email, type: :varchar, null: false),
-          DbSchema::Definitions::Field.new(name: :type, type: :varchar, null: false, default: 'guest'),
-          DbSchema::Definitions::Field.new(name: :city_id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :country_id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :group_id, type: :integer)
+          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Varchar.new(:name),
+          DbSchema::Definitions::Field::Varchar.new(:email, null: false),
+          DbSchema::Definitions::Field::Varchar.new(:type, null: false, default: 'guest'),
+          DbSchema::Definitions::Field::Integer.new(:city_id),
+          DbSchema::Definitions::Field::Integer.new(:country_id),
+          DbSchema::Definitions::Field::Integer.new(:group_id)
         ]
 
         indices = [
@@ -102,7 +98,7 @@ RSpec.describe DbSchema::Changes do
 
         [
           DbSchema::Definitions::Table.new(
-            name:         :users,
+            :users,
             fields:       fields,
             indices:      indices,
             foreign_keys: foreign_keys
@@ -112,13 +108,13 @@ RSpec.describe DbSchema::Changes do
 
       let(:actual_schema) do
         fields = [
-          DbSchema::Definitions::Field.new(name: :id, type: :integer, null: false),
-          DbSchema::Definitions::Field.new(name: :name, type: :varchar),
-          DbSchema::Definitions::Field.new(name: :age, type: :integer),
-          DbSchema::Definitions::Field.new(name: :type, type: :integer),
-          DbSchema::Definitions::Field.new(name: :city_id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :country_id, type: :integer),
-          DbSchema::Definitions::Field.new(name: :group_id, type: :integer)
+          DbSchema::Definitions::Field::Integer.new(:id, null: false),
+          DbSchema::Definitions::Field::Varchar.new(:name),
+          DbSchema::Definitions::Field::Integer.new(:age),
+          DbSchema::Definitions::Field::Integer.new(:type),
+          DbSchema::Definitions::Field::Integer.new(:city_id),
+          DbSchema::Definitions::Field::Integer.new(:country_id),
+          DbSchema::Definitions::Field::Integer.new(:group_id)
         ]
 
         indices = [
@@ -142,7 +138,7 @@ RSpec.describe DbSchema::Changes do
 
         [
           DbSchema::Definitions::Table.new(
-            name:         :users,
+            :users,
             fields:       fields,
             indices:      indices,
             foreign_keys: foreign_keys
@@ -158,12 +154,12 @@ RSpec.describe DbSchema::Changes do
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
         expect(alter_table.fields).to eq([
-          DbSchema::Changes::CreatePrimaryKey.new(name: :id),
-          DbSchema::Changes::CreateColumn.new(name: :email, type: :varchar, null: false),
-          DbSchema::Changes::AlterColumnType.new(name: :type, new_type: :varchar),
-          DbSchema::Changes::DisallowNull.new(name: :type),
-          DbSchema::Changes::AlterColumnDefault.new(name: :type, new_default: 'guest'),
-          DbSchema::Changes::DropColumn.new(name: :age)
+          DbSchema::Changes::CreatePrimaryKey.new(:id),
+          DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
+          DbSchema::Changes::AlterColumnType.new(:type, new_type: :varchar),
+          DbSchema::Changes::DisallowNull.new(:type),
+          DbSchema::Changes::AlterColumnDefault.new(:type, new_default: 'guest'),
+          DbSchema::Changes::DropColumn.new(:age)
         ])
 
         expect(alter_table.indices).to eq([

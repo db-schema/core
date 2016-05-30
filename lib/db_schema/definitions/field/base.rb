@@ -52,6 +52,10 @@ module DbSchema
           def valid_attributes
             @valid_attributes ||= []
           end
+
+          def type
+            Field.registry.key(self)
+          end
         end
       end
     end

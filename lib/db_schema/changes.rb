@@ -13,20 +13,20 @@ module DbSchema
 
           if desired && !actual
             changes << CreateTable.new(
-              name:         table_name,
+              table_name,
               fields:       desired.fields,
               indices:      desired.indices,
               foreign_keys: desired.foreign_keys
             )
           elsif actual && !desired
-            changes << DropTable.new(name: table_name)
+            changes << DropTable.new(table_name)
           elsif actual != desired
             field_operations       = field_changes(desired.fields, actual.fields)
             index_operations       = index_changes(desired.indices, actual.indices)
             foreign_key_operations = foreign_key_changes(desired.foreign_keys, actual.foreign_keys)
 
             changes << AlterTable.new(
-              name:         table_name,
+              table_name,
               fields:       field_operations,
               indices:      index_operations,
               foreign_keys: foreign_key_operations
@@ -44,38 +44,32 @@ module DbSchema
           actual  = actual_fields.find  { |field| field.name == field_name }
 
           if desired && !actual
-            table_changes << CreateColumn.new(
-              name:         field_name,
-              type:         desired.type,
-              primary_key:  desired.primary_key?,
-              null:         desired.null?,
-              default:      desired.default
-            )
+            table_changes << CreateColumn.new(desired)
           elsif actual && !desired
-            table_changes << DropColumn.new(name: field_name)
+            table_changes << DropColumn.new(field_name)
           elsif actual != desired
-            if actual.type != desired.type
-              table_changes << AlterColumnType.new(name: field_name, new_type: desired.type)
+            if actual.class.type != desired.class.type
+              table_changes << AlterColumnType.new(field_name, new_type: desired.class.type)
             end
 
             if desired.primary_key? && !actual.primary_key?
-              table_changes << CreatePrimaryKey.new(name: field_name)
+              table_changes << CreatePrimaryKey.new(field_name)
             end
 
             if actual.primary_key? && !desired.primary_key?
-              table_changes << DropPrimaryKey.new(name: field_name)
+              table_changes << DropPrimaryKey.new(field_name)
             end
 
             if desired.null? && !actual.null?
-              table_changes << AllowNull.new(name: field_name)
+              table_changes << AllowNull.new(field_name)
             end
 
             if actual.null? && !desired.null?
-              table_changes << DisallowNull.new(name: field_name)
+              table_changes << DisallowNull.new(field_name)
             end
 
             if actual.default != desired.default
-              table_changes << AlterColumnDefault.new(name: field_name, new_default: desired.default)
+              table_changes << AlterColumnDefault.new(field_name, new_default: desired.default)
             end
           end
         end
@@ -151,7 +145,7 @@ module DbSchema
       include Dry::Equalizer(:name)
       attr_reader :name
 
-      def initialize(name:)
+      def initialize(name)
         @name = name
       end
     end
@@ -159,7 +153,7 @@ module DbSchema
     class AlterTable
       attr_reader :name, :fields, :indices, :foreign_keys
 
-      def initialize(name:, fields:, indices:, foreign_keys:)
+      def initialize(name, fields:, indices:, foreign_keys:)
         @name         = name
         @fields       = fields
         @indices      = indices
@@ -172,12 +166,18 @@ module DbSchema
       include Dry::Equalizer(:name)
       attr_reader :name
 
-      def initialize(name:)
+      def initialize(name)
         @name = name
       end
     end
 
-    class CreateColumn < Definitions::Field::Base
+    class CreateColumn
+      include Dry::Equalizer(:field)
+      attr_reader :field
+
+      def initialize(field)
+        @field = field
+      end
     end
 
     class DropColumn < ColumnOperation
@@ -196,7 +196,7 @@ module DbSchema
       include Dry::Equalizer(:name, :new_type)
       attr_reader :name, :new_type
 
-      def initialize(name:, new_type:)
+      def initialize(name, new_type:)
         @name     = name
         @new_type = new_type
       end
@@ -218,7 +218,7 @@ module DbSchema
       include Dry::Equalizer(:name, :new_default)
       attr_reader :name, :new_default
 
-      def initialize(name:, new_default:)
+      def initialize(name, new_default:)
         @name        = name
         @new_default = new_default
       end

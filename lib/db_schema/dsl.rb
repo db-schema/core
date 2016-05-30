@@ -16,7 +16,7 @@ module DbSchema
       table_yielder = TableYielder.new(name, block)
 
       tables << Definitions::Table.new(
-        name:         name,
+        name,
         fields:       table_yielder.fields,
         indices:      table_yielder.indices,
         foreign_keys: table_yielder.foreign_keys

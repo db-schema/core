@@ -56,7 +56,7 @@ module DbSchema
       include Dry::Equalizer(:name, :fields, :indices, :foreign_keys)
       attr_reader :name, :fields, :indices, :foreign_keys
 
-      def initialize(name:, fields: [], indices: [], foreign_keys: [])
+      def initialize(name, fields: [], indices: [], foreign_keys: [])
         @name         = name.to_sym
         @fields       = fields
         @indices      = indices
