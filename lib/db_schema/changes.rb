@@ -48,8 +48,8 @@ module DbSchema
           elsif actual && !desired
             table_changes << DropColumn.new(field_name)
           elsif actual != desired
-            if actual.class.type != desired.class.type
-              table_changes << AlterColumnType.new(field_name, new_type: desired.class.type)
+            if (actual.class.type != desired.class.type) || (actual.attributes != desired.attributes)
+              table_changes << AlterColumnType.new(field_name, new_type: desired.class.type, **desired.attributes)
             end
 
             if desired.primary_key? && !actual.primary_key?
@@ -193,12 +193,13 @@ module DbSchema
     end
 
     class AlterColumnType
-      include Dry::Equalizer(:name, :new_type)
-      attr_reader :name, :new_type
+      include Dry::Equalizer(:name, :new_type, :new_attributes)
+      attr_reader :name, :new_type, :new_attributes
 
-      def initialize(name, new_type:)
-        @name     = name
-        @new_type = new_type
+      def initialize(name, new_type:, **new_attributes)
+        @name           = name
+        @new_type       = new_type
+        @new_attributes = new_attributes
       end
     end
 

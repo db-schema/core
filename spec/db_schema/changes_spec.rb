@@ -6,7 +6,7 @@ RSpec.describe DbSchema::Changes do
       let(:users_fields) do
         [
           DbSchema::Definitions::Field::Integer.new(:id),
-          DbSchema::Definitions::Field::Varchar.new(:name),
+          DbSchema::Definitions::Field::Varchar.new(:name, length: 20),
           DbSchema::Definitions::Field::Integer.new(:city_id)
         ]
       end
@@ -64,7 +64,7 @@ RSpec.describe DbSchema::Changes do
       let(:desired_schema) do
         fields = [
           DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-          DbSchema::Definitions::Field::Varchar.new(:name),
+          DbSchema::Definitions::Field::Varchar.new(:name, length: 60),
           DbSchema::Definitions::Field::Varchar.new(:email, null: false),
           DbSchema::Definitions::Field::Varchar.new(:type, null: false, default: 'guest'),
           DbSchema::Definitions::Field::Integer.new(:city_id),
@@ -155,6 +155,7 @@ RSpec.describe DbSchema::Changes do
 
         expect(alter_table.fields).to eq([
           DbSchema::Changes::CreatePrimaryKey.new(:id),
+          DbSchema::Changes::AlterColumnType.new(:name, new_type: :varchar, length: 60),
           DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
           DbSchema::Changes::AlterColumnType.new(:type, new_type: :varchar),
           DbSchema::Changes::DisallowNull.new(:type),
