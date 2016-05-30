@@ -78,15 +78,6 @@ SELECT column_name AS name,
           end
         end
 
-        def translate_type(postgres_type)
-          case postgres_type
-          when /^character varying/
-            :varchar
-          else
-            postgres_type
-          end
-        end
-
         def indices_data_for(table_name)
           column_names = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].reduce({}) do |names, column|
             names.merge(column[:pos] => column[:name])
