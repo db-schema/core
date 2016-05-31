@@ -26,7 +26,8 @@ module DbSchema
             if field.primary_key?
               primary_key(field.name)
             else
-              column(field.name, field.class.type, field.options)
+              options = Runner.map_options(field.class.type, field.options)
+              column(field.name, field.class.type.capitalize, options)
             end
           end
 

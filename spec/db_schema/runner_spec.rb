@@ -24,7 +24,7 @@ RSpec.describe DbSchema::Runner do
   let(:users_fields) do
     [
       DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-      DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+      DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
       DbSchema::Definitions::Field::Integer.new(:country_id, null: false)
     ]
@@ -85,10 +85,10 @@ RSpec.describe DbSchema::Runner do
         expect(id.first).to eq(:id)
         expect(id.last[:db_type]).to eq('integer')
         expect(name.first).to eq(:name)
-        expect(name.last[:db_type]).to eq('character varying(255)')
+        expect(name.last[:db_type]).to eq('character varying(50)')
         expect(name.last[:allow_null]).to eq(false)
         expect(email.first).to eq(:email)
-        expect(email.last[:db_type]).to eq('character varying(255)')
+        expect(email.last[:db_type]).to eq('character varying')
         expect(email.last[:default]).to eq("'mail@example.com'::character varying")
 
         indices = DbSchema::Reader::Postgres.indices_data_for(:users)
