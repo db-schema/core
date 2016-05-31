@@ -5,20 +5,18 @@ RSpec.describe DbSchema do
 
   describe '.describe' do
     before(:each) do
-      pending 'Rewriting Definitions::Field'
-
       database.create_table :users do
-        column :id, :integer, primary_key: true
-        column :name, :varchar, null: false
-        column :email, :varchar
+        column :id,    :Integer, primary_key: true
+        column :name,  :Varchar, null: false
+        column :email, :Varchar, length: 100
 
         index :email
       end
 
       database.create_table :posts do
-        column :id, :integer, primary_key: true
-        column :title, :varchar
-        column :text, :varchar
+        column :id,    :Integer, primary_key: true
+        column :title, :Varchar
+        column :text,  :Varchar
       end
     end
 
@@ -26,9 +24,9 @@ RSpec.describe DbSchema do
       subject.describe do |db|
         db.table :users do |t|
           t.integer :id, primary_key: true
-          t.varchar :first_name, null: false
-          t.varchar :last_name, null: false
-          t.varchar :email, null: false
+          t.varchar :first_name, null: false, length: 30
+          t.varchar :last_name,  null: false, length: 30
+          t.varchar :email,      null: false
 
           t.index [:first_name, :last_name], name: :users_name_index
           t.index [:email], name: :users_email_index, unique: true
@@ -37,7 +35,7 @@ RSpec.describe DbSchema do
         db.table :posts do |t|
           t.integer :id, primary_key: true
           t.varchar :title, null: false
-          t.varchar :text
+          t.text :text
           t.integer :user_id, null: false
 
           t.index [:user_id], name: :posts_user_id_index
@@ -56,13 +54,13 @@ RSpec.describe DbSchema do
       id, email, first_name, last_name = database.schema(:users)
       expect(id.first).to eq(:id)
       expect(email.first).to eq(:email)
-      expect(email.last[:db_type]).to eq('character varying(255)')
+      expect(email.last[:db_type]).to eq('character varying')
       expect(email.last[:allow_null]).to eq(false)
       expect(first_name.first).to eq(:first_name)
-      expect(first_name.last[:db_type]).to eq('character varying(255)')
+      expect(first_name.last[:db_type]).to eq('character varying(30)')
       expect(first_name.last[:allow_null]).to eq(false)
       expect(last_name.first).to eq(:last_name)
-      expect(last_name.last[:db_type]).to eq('character varying(255)')
+      expect(last_name.last[:db_type]).to eq('character varying(30)')
       expect(last_name.last[:allow_null]).to eq(false)
 
       users_indices = database.indexes(:users)
@@ -75,10 +73,10 @@ RSpec.describe DbSchema do
       id, title, text, user_id = database.schema(:posts)
       expect(id.first).to eq(:id)
       expect(title.first).to eq(:title)
-      expect(title.last[:db_type]).to eq('character varying(255)')
+      expect(title.last[:db_type]).to eq('character varying')
       expect(title.last[:allow_null]).to eq(false)
       expect(text.first).to eq(:text)
-      expect(text.last[:db_type]).to eq('character varying(255)')
+      expect(text.last[:db_type]).to eq('text')
       expect(text.last[:allow_null]).to eq(true)
       expect(user_id.first).to eq(:user_id)
       expect(user_id.last[:db_type]).to eq('integer')
@@ -93,7 +91,7 @@ RSpec.describe DbSchema do
       expect(id.last[:db_type]).to eq('integer')
       expect(id.last[:primary_key]).to eq(true)
       expect(name.first).to eq(:name)
-      expect(name.last[:db_type]).to eq('character varying(255)')
+      expect(name.last[:db_type]).to eq('character varying')
       expect(name.last[:allow_null]).to eq(false)
 
       expect(database.indexes(:cities)).to be_empty
