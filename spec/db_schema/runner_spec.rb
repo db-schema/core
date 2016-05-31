@@ -6,9 +6,9 @@ RSpec.describe DbSchema::Runner do
   before(:each) do
     database.create_table :people do
       primary_key :id
-      column :name, :varchar
-      column :address, :varchar, null: false
-      column :country_name, :varchar
+      column :name,         :Varchar
+      column :address,      :Varchar, null: false, size: 150
+      column :country_name, :Varchar
 
       index :address
     end
@@ -132,7 +132,9 @@ RSpec.describe DbSchema::Runner do
         let(:field_changes) do
           [
             DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:last_name)),
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Varchar.new(:last_name, length: 30, null: false)
+            ),
             DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
             DbSchema::Changes::DropColumn.new(:name),
             DbSchema::Changes::DropColumn.new(:id),
@@ -149,9 +151,10 @@ RSpec.describe DbSchema::Runner do
           address, country_name, first_name, last_name, age, uid = DbSchema.connection.schema(:people)
           expect(address.first).to eq(:address)
           expect(first_name.first).to eq(:first_name)
-          expect(first_name.last[:db_type]).to eq('character varying(255)')
+          expect(first_name.last[:db_type]).to eq('character varying')
           expect(last_name.first).to eq(:last_name)
-          expect(last_name.last[:db_type]).to eq('character varying(255)')
+          expect(last_name.last[:db_type]).to eq('character varying(30)')
+          expect(last_name.last[:allow_null]).to eq(false)
           expect(age.first).to eq(:age)
           expect(age.last[:db_type]).to eq('integer')
           expect(age.last[:allow_null]).to eq(false)
@@ -172,7 +175,7 @@ RSpec.describe DbSchema::Runner do
           id, full_name = database.schema(:people)
           expect(id.first).to eq(:id)
           expect(full_name.first).to eq(:full_name)
-          expect(full_name.last[:db_type]).to eq('character varying(255)')
+          expect(full_name.last[:db_type]).to eq('character varying')
         end
       end
 
@@ -188,6 +191,28 @@ RSpec.describe DbSchema::Runner do
 
           id, name = database.schema(:people)
           expect(name.last[:db_type]).to eq('text')
+        end
+
+        context 'that changes field attributes' do
+          let(:field_changes) do
+            [
+              DbSchema::Changes::AlterColumnType.new(:address, new_type: :varchar),
+              DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40)
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            schema = DbSchema::Reader.read_schema
+            people = schema.find { |table| table.name == :people }
+            address, country_name = people.fields.last(2)
+
+            expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
+            expect(address.options[:length]).to be_nil
+            expect(country_name).to be_a(DbSchema::Definitions::Field::Varchar)
+            expect(country_name.options[:length]).to eq(40)
+          end
         end
       end
 
