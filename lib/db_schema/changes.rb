@@ -90,9 +90,9 @@ module DbSchema
               condition: desired.condition
             )
           elsif actual && !desired
-            table_changes << DropIndex.new(name: index_name)
+            table_changes << DropIndex.new(index_name)
           elsif actual != desired
-            table_changes << DropIndex.new(name: index_name)
+            table_changes << DropIndex.new(index_name)
             table_changes << CreateIndex.new(
               name:      index_name,
               fields:    desired.fields,

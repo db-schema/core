@@ -164,10 +164,10 @@ RSpec.describe DbSchema::Changes do
         ])
 
         expect(alter_table.indices).to eq([
-          DbSchema::Changes::DropIndex.new(name: :users_name_index),
+          DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(name: :users_name_index, fields: [:name], unique: true, condition: 'email IS NOT NULL'),
           DbSchema::Changes::CreateIndex.new(name: :users_email_index, fields: [:email], unique: true),
-          DbSchema::Changes::DropIndex.new(name: :users_type_index)
+          DbSchema::Changes::DropIndex.new(:users_type_index)
         ])
 
         expect(alter_table.foreign_keys).to eq([
