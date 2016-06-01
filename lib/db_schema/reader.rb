@@ -111,6 +111,8 @@ SELECT column_name AS name,
           options = case type
           when :'character varying'
             { length: data[:length] }
+          when :numeric
+            { precision: data[:precision], scale: data[:scale] }
           else
             {}
           end

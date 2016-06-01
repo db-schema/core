@@ -14,6 +14,8 @@ RSpec.describe DbSchema::Reader do
           column :id, :serial, primary_key: true
           column :name, :varchar, null: false, unique: true
           column :email, :varchar, default: 'mail@example.com', size: 250
+          column :lat, :numeric, size: [6, 3]
+          column :lng, :decimal, size: [7, 4]
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
@@ -36,7 +38,7 @@ RSpec.describe DbSchema::Reader do
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
 
-        id, name, email = users.fields
+        id, name, email, lat, lng = users.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
         expect(id).to be_primary_key
@@ -48,6 +50,14 @@ RSpec.describe DbSchema::Reader do
         expect(email).to be_null
         expect(email.default).to eq('mail@example.com')
         expect(email.options[:length]).to eq(250)
+        expect(lat).to be_a(DbSchema::Definitions::Field::Numeric)
+        expect(lat.name).to eq(:lat)
+        expect(lat.options[:precision]).to eq(6)
+        expect(lat.options[:scale]).to eq(3)
+        expect(lng).to be_a(DbSchema::Definitions::Field::Numeric)
+        expect(lng.name).to eq(:lng)
+        expect(lng.options[:precision]).to eq(7)
+        expect(lng.options[:scale]).to eq(4)
 
         id, title, user_id = posts.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
