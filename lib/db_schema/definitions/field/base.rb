@@ -32,6 +32,8 @@ module DbSchema
           self.class.valid_attributes.reduce({}) do |hash, attr_name|
             if attr_value = @attributes[attr_name]
               hash.merge(attr_name => attr_value)
+            elsif default_value = self.class.default_attribute_values[attr_name]
+              hash.merge(attr_name => default_value)
             else
               hash
             end
@@ -45,12 +47,21 @@ module DbSchema
             end
           end
 
-          def attributes(*attr_names)
+          def attributes(*attr_names, **attributes_with_defaults)
             valid_attributes.push(*attr_names)
+
+            attributes_with_defaults.each do |attr_name, default_value|
+              valid_attributes.push(attr_name)
+              default_attribute_values[attr_name] = default_value
+            end
           end
 
           def valid_attributes
             @valid_attributes ||= []
+          end
+
+          def default_attribute_values
+            @default_attribute_values ||= {}
           end
 
           def type

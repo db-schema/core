@@ -109,7 +109,7 @@ SELECT column_name AS name,
           end
 
           options = case type
-          when :'character varying'
+          when :character, :'character varying'
             Utils.filter_by_keys(data, :length)
           when :numeric
             Utils.filter_by_keys(data, :precision, :scale)
