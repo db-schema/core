@@ -101,8 +101,8 @@ module DbSchema
         when :varchar
           Utils.rename_keys(options, length: :size)
         when :numeric
-          Utils.rename_keys(options) do |field_options, sequel_options|
-            sequel_options[:size] = field_options.values_at(:precision, :scale)
+          Utils.rename_keys(options) do |new_options|
+            new_options[:size] = Utils.delete_at(new_options, :precision, :scale)
           end
         else
           options
