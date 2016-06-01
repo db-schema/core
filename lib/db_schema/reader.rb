@@ -110,9 +110,9 @@ SELECT column_name AS name,
 
           options = case type
           when :'character varying'
-            { length: data[:length] }
+            Utils.filter_by_keys(data, :length)
           when :numeric
-            { precision: data[:precision], scale: data[:scale] }
+            Utils.filter_by_keys(data, :precision, :scale)
           else
             {}
           end
