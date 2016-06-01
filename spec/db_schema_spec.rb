@@ -44,6 +44,8 @@ RSpec.describe DbSchema do
         db.table :cities do |t|
           t.integer :id, primary_key: true
           t.varchar :name, null: false
+          t.numeric :lat, precision: 6, scale: 3
+          t.decimal :lng, precision: 6, scale: 3
         end
       end
 
@@ -86,13 +88,17 @@ RSpec.describe DbSchema do
       expect(user_id_index[:columns]).to eq([:user_id])
       expect(user_id_index[:unique]).to eq(false)
 
-      id, name = database.schema(:cities)
+      id, name, lat, lng = database.schema(:cities)
       expect(id.first).to eq(:id)
       expect(id.last[:db_type]).to eq('integer')
       expect(id.last[:primary_key]).to eq(true)
       expect(name.first).to eq(:name)
       expect(name.last[:db_type]).to eq('character varying')
       expect(name.last[:allow_null]).to eq(false)
+      expect(lat.first).to eq(:lat)
+      expect(lat.last[:db_type]).to eq('numeric(6,3)')
+      expect(lng.first).to eq(:lng)
+      expect(lng.last[:db_type]).to eq('numeric(6,3)')
 
       expect(database.indexes(:cities)).to be_empty
     end

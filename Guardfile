@@ -13,4 +13,5 @@ guard :rspec, cmd: 'bundle exec rspec', all_on_start: true do
   dsl.watch_spec_files_for(ruby.lib_files)
   watch(%r{lib/db_schema/definitions\.rb})    { rspec.spec_dir }
   watch(%r{lib/db_schema/definitions/.*\.rb}) { rspec.spec_dir }
+  watch('lib/db_schema/utils.rb')             { rspec.spec_dir }
 end
