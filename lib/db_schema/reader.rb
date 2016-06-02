@@ -47,7 +47,8 @@ SELECT column_name AS name,
        character_maximum_length AS char_length,
        numeric_precision AS num_precision,
        numeric_scale AS num_scale,
-       datetime_precision AS dt_precision
+       datetime_precision AS dt_precision,
+       interval_type
   FROM information_schema.columns
  WHERE table_schema = 'public'
    AND table_name = ?
@@ -129,6 +130,15 @@ SELECT column_name AS name,
               Utils.filter_by_keys(data, :dt_precision),
               dt_precision: :precision
             )
+          when :interval
+            Utils.rename_keys(
+              Utils.filter_by_keys(data, :dt_precision, :interval_type),
+              dt_precision: :precision
+            ) do |attributes|
+              if type = attributes.delete(:interval_type)
+                attributes[:fields] = type.gsub(/\(\d\)/, '').downcase.to_sym
+              end
+            end
           else
             {}
           end

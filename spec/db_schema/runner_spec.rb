@@ -28,7 +28,8 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
       DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
-      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false)
+      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false),
+      DbSchema::Definitions::Field::Interval.new(:period, fields: :second, precision: 5)
     ]
   end
 
@@ -84,7 +85,7 @@ RSpec.describe DbSchema::Runner do
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
         users = DbSchema::Reader.read_schema.find { |table| table.name == :users }
-        id, name, email, country_id, created_at = users.fields
+        id, name, email, country_id, created_at, period = users.fields
         expect(id.name).to eq(:id)
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id).to be_primary_key
@@ -99,6 +100,10 @@ RSpec.describe DbSchema::Runner do
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at).not_to be_null
         expect(created_at.options[:precision]).to eq(6)
+        expect(period.name).to eq(:period)
+        expect(period).to be_a(DbSchema::Definitions::Field::Interval)
+        expect(period.options[:fields]).to eq(:second)
+        expect(period.options[:precision]).to eq(5)
 
         indices = DbSchema::Reader::Postgres.indices_data_for(:users)
         name_index  = indices.find { |index| index[:name] == :index_users_on_name }

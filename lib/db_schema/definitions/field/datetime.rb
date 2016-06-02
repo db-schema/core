@@ -24,6 +24,11 @@ module DbSchema
         register :timetz, :'time with time zone'
         attributes precision: 6
       end
+
+      class Interval < Base
+        register :interval
+        attributes :fields, :precision
+      end
     end
   end
 end

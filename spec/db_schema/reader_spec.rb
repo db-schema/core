@@ -18,6 +18,8 @@ RSpec.describe DbSchema::Reader do
           column :lng, :decimal, size: [7, 4]
           column :created_at, :timestamp, size: 3
           column :updated_at, :timestamp
+          column :period, 'interval HOUR'
+          column :other_period, :interval, size: 4
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
@@ -42,7 +44,7 @@ RSpec.describe DbSchema::Reader do
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
 
-        id, name, email, lat, lng, created_at, updated_at = users.fields
+        id, name, email, lat, lng, created_at, updated_at, period, other_period = users.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
         expect(id).to be_primary_key
@@ -68,6 +70,13 @@ RSpec.describe DbSchema::Reader do
         expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(updated_at.name).to eq(:updated_at)
         expect(updated_at.options[:precision]).to eq(6)
+        expect(period).to be_a(DbSchema::Definitions::Field::Interval)
+        expect(period.name).to eq(:period)
+        expect(period.options[:fields]).to eq(:hour)
+        expect(other_period).to be_a(DbSchema::Definitions::Field::Interval)
+        expect(other_period.name).to eq(:other_period)
+        expect(other_period.options[:fields]).to be_nil
+        expect(other_period.options[:precision]).to eq(4)
 
         id, title, user_id, user_name, created_on, created_at = posts.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
