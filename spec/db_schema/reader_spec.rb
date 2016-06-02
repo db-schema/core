@@ -16,6 +16,8 @@ RSpec.describe DbSchema::Reader do
           column :email, :varchar, default: 'mail@example.com', size: 250
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4]
+          column :created_at, :timestamp, size: 3
+          column :updated_at, :timestamp
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
@@ -25,6 +27,8 @@ RSpec.describe DbSchema::Reader do
           column :title, :varchar
           column :user_id, :integer, null: false
           column :user_name, :varchar
+          column :created_on, :date
+          column :created_at, :timetz
 
           index :user_id
 
@@ -38,7 +42,7 @@ RSpec.describe DbSchema::Reader do
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
 
-        id, name, email, lat, lng = users.fields
+        id, name, email, lat, lng, created_at, updated_at = users.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
         expect(id).to be_primary_key
@@ -58,8 +62,14 @@ RSpec.describe DbSchema::Reader do
         expect(lng.name).to eq(:lng)
         expect(lng.options[:precision]).to eq(7)
         expect(lng.options[:scale]).to eq(4)
+        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+        expect(created_at.name).to eq(:created_at)
+        expect(created_at.options[:precision]).to eq(3)
+        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+        expect(updated_at.name).to eq(:updated_at)
+        expect(updated_at.options[:precision]).to eq(6)
 
-        id, title, user_id = posts.fields
+        id, title, user_id, user_name, created_on, created_at = posts.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
         expect(id).to be_primary_key
@@ -69,6 +79,11 @@ RSpec.describe DbSchema::Reader do
         expect(user_id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(user_id.name).to eq(:user_id)
         expect(user_id).not_to be_null
+        expect(created_on).to be_a(DbSchema::Definitions::Field::Date)
+        expect(created_on.name).to eq(:created_on)
+        expect(created_at).to be_a(DbSchema::Definitions::Field::Timetz)
+        expect(created_at.name).to eq(:created_at)
+        expect(created_at.options[:precision]).to eq(6)
 
         expect(users.indices.count).to eq(2)
         email_index = users.indices.first

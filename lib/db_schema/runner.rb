@@ -104,6 +104,8 @@ module DbSchema
           Utils.rename_keys(options) do |new_options|
             new_options[:size] = Utils.delete_at(new_options, :precision, :scale)
           end
+        when :timestamp, :timestamptz, :time, :timetz
+          Utils.rename_keys(options, precision: :size)
         else
           options
         end

@@ -9,6 +9,7 @@ RSpec.describe DbSchema::Runner do
       column :name,         :Varchar
       column :address,      :Varchar, null: false, size: 150
       column :country_name, :Varchar
+      column :created_at,   :Timestamptz
 
       index :address
     end
@@ -26,7 +27,8 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
       DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
-      DbSchema::Definitions::Field::Integer.new(:country_id, null: false)
+      DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
+      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false)
     ]
   end
 
@@ -81,15 +83,22 @@ RSpec.describe DbSchema::Runner do
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
-        id, name, email = database.schema(:users)
-        expect(id.first).to eq(:id)
-        expect(id.last[:db_type]).to eq('integer')
-        expect(name.first).to eq(:name)
-        expect(name.last[:db_type]).to eq('character varying(50)')
-        expect(name.last[:allow_null]).to eq(false)
-        expect(email.first).to eq(:email)
-        expect(email.last[:db_type]).to eq('character varying')
-        expect(email.last[:default]).to eq("'mail@example.com'::character varying")
+        users = DbSchema::Reader.read_schema.find { |table| table.name == :users }
+        id, name, email, country_id, created_at = users.fields
+        expect(id.name).to eq(:id)
+        expect(id).to be_a(DbSchema::Definitions::Field::Integer)
+        expect(id).to be_primary_key
+        expect(name.name).to eq(:name)
+        expect(name).to be_a(DbSchema::Definitions::Field::Varchar)
+        expect(name.options[:length]).to eq(50)
+        expect(name).not_to be_null
+        expect(email.name).to eq(:email)
+        expect(email).to be_a(DbSchema::Definitions::Field::Varchar)
+        expect(email.default).to eq('mail@example.com')
+        expect(created_at.name).to eq(:created_at)
+        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+        expect(created_at).not_to be_null
+        expect(created_at.options[:precision]).to eq(6)
 
         indices = DbSchema::Reader::Postgres.indices_data_for(:users)
         name_index  = indices.find { |index| index[:name] == :index_users_on_name }
@@ -138,7 +147,12 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
             DbSchema::Changes::DropColumn.new(:name),
             DbSchema::Changes::DropColumn.new(:id),
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true))
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
+            ),
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, precision: 3)
+            )
           ]
         end
 
@@ -148,17 +162,25 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          address, country_name, first_name, last_name, age, uid = DbSchema.connection.schema(:people)
-          expect(address.first).to eq(:address)
-          expect(first_name.first).to eq(:first_name)
-          expect(first_name.last[:db_type]).to eq('character varying')
-          expect(last_name.first).to eq(:last_name)
-          expect(last_name.last[:db_type]).to eq('character varying(30)')
-          expect(last_name.last[:allow_null]).to eq(false)
-          expect(age.first).to eq(:age)
-          expect(age.last[:db_type]).to eq('integer')
-          expect(age.last[:allow_null]).to eq(false)
-          expect(uid.first).to eq(:uid)
+          people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+          address, country_name, created_at, first_name, last_name, age, uid, updated_at = people.fields
+          expect(address.name).to eq(:address)
+          expect(created_at.name).to eq(:created_at)
+          expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
+          expect(created_at.options[:precision]).to eq(6)
+          expect(first_name.name).to eq(:first_name)
+          expect(first_name).to be_a(DbSchema::Definitions::Field::Varchar)
+          expect(last_name.name).to eq(:last_name)
+          expect(last_name).to be_a(DbSchema::Definitions::Field::Varchar)
+          expect(last_name.options[:length]).to eq(30)
+          expect(last_name).not_to be_null
+          expect(age.name).to eq(:age)
+          expect(age).to be_a(DbSchema::Definitions::Field::Integer)
+          expect(age).not_to be_null
+          expect(uid.name).to eq(:uid)
+          expect(updated_at.name).to eq(:updated_at)
+          expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+          expect(updated_at.options[:precision]).to eq(3)
         end
       end
 
@@ -197,7 +219,8 @@ RSpec.describe DbSchema::Runner do
           let(:field_changes) do
             [
               DbSchema::Changes::AlterColumnType.new(:address, new_type: :varchar),
-              DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40)
+              DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
+              DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamp, precision: 2)
             ]
           end
 
@@ -206,12 +229,14 @@ RSpec.describe DbSchema::Runner do
 
             schema = DbSchema::Reader.read_schema
             people = schema.find { |table| table.name == :people }
-            address, country_name = people.fields.last(2)
+            address, country_name, created_at = people.fields.last(3)
 
             expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
             expect(address.options[:length]).to be_nil
             expect(country_name).to be_a(DbSchema::Definitions::Field::Varchar)
             expect(country_name.options[:length]).to eq(40)
+            expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+            expect(created_at.options[:precision]).to eq(2)
           end
         end
       end

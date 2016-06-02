@@ -44,9 +44,10 @@ SELECT column_name AS name,
        column_default AS default,
        is_nullable AS null,
        data_type AS type,
-       character_maximum_length AS length,
-       numeric_precision AS precision,
-       numeric_scale AS scale
+       character_maximum_length AS char_length,
+       numeric_precision AS num_precision,
+       numeric_scale AS num_scale,
+       datetime_precision AS dt_precision
   FROM information_schema.columns
  WHERE table_schema = 'public'
    AND table_name = ?
@@ -110,9 +111,24 @@ SELECT column_name AS name,
 
           options = case type
           when :character, :'character varying'
-            Utils.filter_by_keys(data, :length)
+            Utils.rename_keys(
+              Utils.filter_by_keys(data, :char_length),
+              char_length: :length
+            )
           when :numeric
-            Utils.filter_by_keys(data, :precision, :scale)
+            Utils.rename_keys(
+              Utils.filter_by_keys(data, :num_precision, :num_scale),
+              num_precision: :precision,
+              num_scale: :scale
+            )
+          when :'timestamp without time zone',
+               :'timestamp with time zone',
+               :'time without time zone',
+               :'time with time zone'
+            Utils.rename_keys(
+              Utils.filter_by_keys(data, :dt_precision),
+              dt_precision: :precision
+            )
           else
             {}
           end
@@ -128,7 +144,7 @@ SELECT column_name AS name,
         end
 
         def build_foreign_key(data)
-          keys = if data[:key] == [primary_keys[data[:table]].to_sym]
+          keys = if data[:key] == [primary_key_for(data[:table])]
             [] # this foreign key references a primary key
           else
             data[:key]
@@ -143,6 +159,12 @@ SELECT column_name AS name,
             on_update:  data[:on_update],
             deferrable: data[:deferrable]
           )
+        end
+
+        def primary_key_for(table_name)
+          if pkey = primary_keys[table_name]
+            pkey.to_sym
+          end
         end
 
         def primary_keys
