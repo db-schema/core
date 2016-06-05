@@ -29,7 +29,10 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
       DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
       DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false),
-      DbSchema::Definitions::Field::Interval.new(:period, fields: :second, precision: 5)
+      DbSchema::Definitions::Field::Interval.new(:period, fields: :second, precision: 5),
+      DbSchema::Definitions::Field::Bit.new(:some_bit),
+      DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
+      DbSchema::Definitions::Field::Varbit.new(:some_varbit, length: 250)
     ]
   end
 
@@ -85,7 +88,7 @@ RSpec.describe DbSchema::Runner do
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
         users = DbSchema::Reader.read_schema.find { |table| table.name == :users }
-        id, name, email, country_id, created_at, period = users.fields
+        id, name, email, country_id, created_at, period, some_bit, some_bits, some_varbit = users.fields
         expect(id.name).to eq(:id)
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id).to be_primary_key
@@ -104,6 +107,15 @@ RSpec.describe DbSchema::Runner do
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.options[:fields]).to eq(:second)
         expect(period.options[:precision]).to eq(5)
+        expect(some_bit.name).to eq(:some_bit)
+        expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
+        expect(some_bit.options[:length]).to eq(1)
+        expect(some_bits.name).to eq(:some_bits)
+        expect(some_bits).to be_a(DbSchema::Definitions::Field::Bit)
+        expect(some_bits.options[:length]).to eq(7)
+        expect(some_varbit.name).to eq(:some_varbit)
+        expect(some_varbit).to be_a(DbSchema::Definitions::Field::Varbit)
+        expect(some_varbit.options[:length]).to eq(250)
 
         indices = DbSchema::Reader::Postgres.indices_data_for(:users)
         name_index  = indices.find { |index| index[:name] == :index_users_on_name }

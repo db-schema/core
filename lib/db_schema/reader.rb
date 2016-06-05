@@ -111,7 +111,7 @@ SELECT column_name AS name,
           end
 
           options = case type
-          when :character, :'character varying'
+          when :character, :'character varying', :bit, :'bit varying'
             Utils.rename_keys(
               Utils.filter_by_keys(data, :char_length),
               char_length: :length

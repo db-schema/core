@@ -98,7 +98,7 @@ module DbSchema
 
       def map_options(type, options)
         mapping = case type
-        when :char, :varchar
+        when :char, :varchar, :bit, :varbit
           Utils.rename_keys(options, length: :size)
         when :numeric
           Utils.rename_keys(options) do |new_options|

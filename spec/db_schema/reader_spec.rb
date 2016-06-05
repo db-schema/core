@@ -20,6 +20,10 @@ RSpec.describe DbSchema::Reader do
           column :updated_at, :timestamp
           column :period, 'interval HOUR'
           column :other_period, :interval, size: 4
+          column :some_bit, :bit
+          column :several_bits, :bit, size: 5
+          column :variable_bits, :varbit
+          column :limited_variable_bits, :varbit, size: 150
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
@@ -44,7 +48,9 @@ RSpec.describe DbSchema::Reader do
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
 
-        id, name, email, lat, lng, created_at, updated_at, period, other_period = users.fields
+        id, name, email, lat, lng, created_at, updated_at, period, other_period,
+        some_bit, several_bits, variable_bits, limited_variable_bits = users.fields
+
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
         expect(id).to be_primary_key
@@ -77,6 +83,18 @@ RSpec.describe DbSchema::Reader do
         expect(other_period.name).to eq(:other_period)
         expect(other_period.options[:fields]).to be_nil
         expect(other_period.options[:precision]).to eq(4)
+        expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
+        expect(some_bit.name).to eq(:some_bit)
+        expect(some_bit.options[:length]).to eq(1)
+        expect(several_bits).to be_a(DbSchema::Definitions::Field::Bit)
+        expect(several_bits.name).to eq(:several_bits)
+        expect(several_bits.options[:length]).to eq(5)
+        expect(variable_bits).to be_a(DbSchema::Definitions::Field::Varbit)
+        expect(variable_bits.name).to eq(:variable_bits)
+        expect(variable_bits.options[:length]).to be_nil
+        expect(limited_variable_bits).to be_a(DbSchema::Definitions::Field::Varbit)
+        expect(limited_variable_bits.name).to eq(:limited_variable_bits)
+        expect(limited_variable_bits.options[:length]).to eq(150)
 
         id, title, user_id, user_name, created_on, created_at = posts.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
