@@ -403,19 +403,55 @@ RSpec.describe DbSchema::Runner do
         end
       end
     end
+  end
 
-    after(:each) do
-      database.tables.each do |table_name|
-        database.foreign_key_list(table_name).each do |foreign_key|
-          database.alter_table(table_name) do
-            drop_foreign_key([], name: foreign_key[:name])
-          end
+  describe '.map_options' do
+    context 'with a :numeric type' do
+      let(:type) { :numeric }
+
+      context 'with both :precision and :scale' do
+        let(:options) do
+          { null: false, precision: 10, scale: 2 }
+        end
+
+        it 'returns :size with both precision and scale' do
+          expect(DbSchema::Runner.map_options(type, options)).to eq(null: false, size: [10, 2])
         end
       end
 
-      database.tables.each do |table_name|
-        database.drop_table(table_name)
+      context 'with just the :precision' do
+        let(:options) do
+          { null: false, precision: 7 }
+        end
+
+        it 'returns :size with precision' do
+          expect(DbSchema::Runner.map_options(type, options)).to eq(null: false, size: 7)
+        end
       end
+
+      context 'without :precision' do
+        let(:options) do
+          { null: false, scale: 5 }
+        end
+
+        it 'does not return :size' do
+          expect(DbSchema::Runner.map_options(type, options)).to eq(null: false)
+        end
+      end
+    end
+  end
+
+  after(:each) do
+    database.tables.each do |table_name|
+      database.foreign_key_list(table_name).each do |foreign_key|
+        database.alter_table(table_name) do
+          drop_foreign_key([], name: foreign_key[:name])
+        end
+      end
+    end
+
+    database.tables.each do |table_name|
+      database.drop_table(table_name)
     end
   end
 end

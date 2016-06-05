@@ -102,7 +102,15 @@ module DbSchema
           Utils.rename_keys(options, length: :size)
         when :numeric
           Utils.rename_keys(options) do |new_options|
-            new_options[:size] = Utils.delete_at(new_options, :precision, :scale)
+            precision, scale = Utils.delete_at(new_options, :precision, :scale)
+
+            if precision
+              if scale
+                new_options[:size] = [precision, scale]
+              else
+                new_options[:size] = precision
+              end
+            end
           end
         when :timestamp, :timestamptz, :time, :timetz
           Utils.rename_keys(options, precision: :size)
