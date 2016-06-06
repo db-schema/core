@@ -39,19 +39,26 @@ SELECT relname AS name,
       SQL
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
-SELECT column_name AS name,
-       ordinal_position AS pos,
-       column_default AS default,
-       is_nullable AS null,
-       data_type AS type,
-       character_maximum_length AS char_length,
-       numeric_precision AS num_precision,
-       numeric_scale AS num_scale,
-       datetime_precision AS dt_precision,
-       interval_type
-  FROM information_schema.columns
- WHERE table_schema = 'public'
-   AND table_name = ?
+   SELECT c.column_name AS name,
+          c.ordinal_position AS pos,
+          c.column_default AS default,
+          c.is_nullable AS null,
+          c.data_type AS type,
+          c.character_maximum_length AS char_length,
+          c.numeric_precision AS num_precision,
+          c.numeric_scale AS num_scale,
+          c.datetime_precision AS dt_precision,
+          c.interval_type,
+          e.data_type AS element_type
+     FROM information_schema.columns AS c
+LEFT JOIN information_schema.element_types AS e
+       ON e.object_catalog = c.table_catalog
+      AND e.object_schema = c.table_schema
+      AND e.object_name = c.table_name
+      AND e.object_type = 'TABLE'
+      AND e.collection_type_identifier = c.dtd_identifier
+    WHERE c.table_schema = 'public'
+      AND c.table_name = ?
       SQL
 
       class << self
@@ -100,7 +107,7 @@ SELECT column_name AS name,
 
       private
         def build_field(data, primary_key: false)
-          type = data[:type].to_sym
+          type = data[:type].to_sym.downcase
 
           nullable = (data[:null] != 'NO')
 
@@ -135,9 +142,13 @@ SELECT column_name AS name,
               Utils.filter_by_keys(data, :dt_precision, :interval_type),
               dt_precision: :precision
             ) do |attributes|
-              if type = attributes.delete(:interval_type)
-                attributes[:fields] = type.gsub(/\(\d\)/, '').downcase.to_sym
+              if interval_type = attributes.delete(:interval_type)
+                attributes[:fields] = interval_type.gsub(/\(\d\)/, '').downcase.to_sym
               end
+            end
+          when :array
+            Utils.rename_keys(Utils.filter_by_keys(data, :element_type)) do |attributes|
+              attributes[:element_type] = attributes[:element_type].to_sym
             end
           else
             {}
@@ -145,7 +156,7 @@ SELECT column_name AS name,
 
           Definitions::Field.build(
             data[:name].to_sym,
-            data[:type].to_sym,
+            type,
             primary_key: primary_key,
             null:        nullable,
             default:     default,

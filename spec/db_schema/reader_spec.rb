@@ -24,6 +24,7 @@ RSpec.describe DbSchema::Reader do
           column :several_bits, :bit, size: 5
           column :variable_bits, :varbit
           column :limited_variable_bits, :varbit, size: 150
+          column :numbers, 'integer[]'
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
         end
@@ -49,7 +50,7 @@ RSpec.describe DbSchema::Reader do
         expect(posts.name).to eq(:posts)
 
         id, name, email, lat, lng, created_at, updated_at, period, other_period,
-        some_bit, several_bits, variable_bits, limited_variable_bits = users.fields
+        some_bit, several_bits, variable_bits, limited_variable_bits, numbers = users.fields
 
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
@@ -95,6 +96,9 @@ RSpec.describe DbSchema::Reader do
         expect(limited_variable_bits).to be_a(DbSchema::Definitions::Field::Varbit)
         expect(limited_variable_bits.name).to eq(:limited_variable_bits)
         expect(limited_variable_bits.options[:length]).to eq(150)
+        expect(numbers).to be_a(DbSchema::Definitions::Field::Array)
+        expect(numbers.name).to eq(:numbers)
+        expect(numbers.options[:element_type]).to eq(:integer)
 
         id, title, user_id, user_name, created_on, created_at = posts.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
