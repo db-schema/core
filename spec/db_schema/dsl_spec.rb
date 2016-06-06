@@ -9,6 +9,7 @@ RSpec.describe DbSchema::DSL do
           t.varchar :name, null: false
           t.varchar :email, default: 'mail@example.com'
           t.char    :sex
+          t.array   :strings, element_type: :varchar
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
         end
@@ -33,11 +34,11 @@ RSpec.describe DbSchema::DSL do
       users, posts = subject.schema
 
       expect(users.name).to eq(:users)
-      expect(users.fields.count).to eq(4)
+      expect(users.fields.count).to eq(5)
       expect(posts.name).to eq(:posts)
       expect(posts.fields.count).to eq(4)
 
-      id, name, email, sex = users.fields
+      id, name, email, sex, strings = users.fields
 
       expect(id).to be_a(DbSchema::Definitions::Field::Integer)
       expect(id.name).to eq(:id)
@@ -54,6 +55,10 @@ RSpec.describe DbSchema::DSL do
       expect(sex).to be_a(DbSchema::Definitions::Field::Char)
       expect(sex.name).to eq(:sex)
       expect(sex.options[:length]).to eq(1)
+
+      expect(strings).to be_a(DbSchema::Definitions::Field::Array)
+      expect(strings.name).to eq(:strings)
+      expect(strings.options[:element_type]).to eq(:varchar)
 
       expect(users.indices.count).to eq(1)
       email_index = users.indices.first
