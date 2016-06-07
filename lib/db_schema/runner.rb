@@ -118,6 +118,10 @@ module DbSchema
           Utils.rename_keys(options, precision: :size) do |new_options|
             new_options[:type] = "INTERVAL #{new_options.delete(:fields).upcase}"
           end
+        when :array
+          Utils.rename_keys(options) do |new_options|
+            new_options[:type] = "#{new_options.delete(:element_type)}[]"
+          end
         else
           options
         end
