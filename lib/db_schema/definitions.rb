@@ -4,12 +4,13 @@ module DbSchema
   module Definitions
     class Index
       include Dry::Equalizer(:name, :fields, :unique?, :condition)
-      attr_reader :name, :fields, :condition
+      attr_reader :name, :fields, :type, :condition
 
-      def initialize(name:, fields:, unique: false, condition: nil)
+      def initialize(name:, fields:, unique: false, type: :btree, condition: nil)
         @name      = name.to_sym
         @fields    = fields.map(&:to_sym)
         @unique    = unique
+        @type      = type
         @condition = condition
       end
 

@@ -27,6 +27,7 @@ RSpec.describe DbSchema::Reader do
           column :numbers, 'integer[]'
 
           index [:email, :name], unique: true, where: 'email IS NOT NULL'
+          index [:name], type: :spgist
         end
 
         DbSchema.connection.create_table :posts do
@@ -116,11 +117,14 @@ RSpec.describe DbSchema::Reader do
         expect(created_at.name).to eq(:created_at)
         expect(created_at.options[:precision]).to eq(6)
 
-        expect(users.indices.count).to eq(2)
-        email_index = users.indices.first
+        expect(users.indices.count).to eq(3)
+        email_index, name_index, * = users.indices
         expect(email_index.fields).to eq([:email, :name])
         expect(email_index).to be_unique
+        expect(email_index.type).to eq(:btree)
         expect(email_index.condition).to eq('email IS NOT NULL')
+        expect(name_index.fields).to eq([:name])
+        expect(name_index.type).to eq(:spgist)
 
         expect(posts.indices.count).to eq(1)
         user_id_index = posts.indices.first

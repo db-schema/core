@@ -26,8 +26,13 @@ SELECT relname AS name,
        indkey AS column_positions,
        indisunique AS unique,
        pg_get_expr(indpred, indrelid, true) AS condition,
-       pg_get_expr(indexprs, indrelid, true) AS expression
+       pg_get_expr(indexprs, indrelid, true) AS expression,
+       amname AS index_type
   FROM pg_class, pg_index
+LEFT JOIN pg_opclass
+       ON pg_opclass.oid = ANY(pg_index.indclass::int[])
+LEFT JOIN pg_am
+       ON pg_am.oid = pg_opclass.opcmethod
  WHERE pg_class.oid = pg_index.indexrelid
    AND pg_class.oid IN (
     SELECT indexrelid
@@ -100,6 +105,7 @@ LEFT JOIN information_schema.element_types AS e
               name:      index[:name].to_sym,
               fields:    names,
               unique:    index[:unique],
+              type:      index[:index_type].to_sym,
               condition: index[:condition]
             }
           end
