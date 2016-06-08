@@ -46,13 +46,14 @@ module DbSchema
         fields << Definitions::Field.build(name, type, options)
       end
 
-      def index(fields, name: nil, unique: false, where: nil)
+      def index(fields, name: nil, unique: false, using: :btree, where: nil)
         index_name = name || "#{table_name}_#{Array(fields).join('_')}_index"
 
         indices << Definitions::Index.new(
           name:      index_name,
           fields:    Array(fields),
           unique:    unique,
+          type:      using,
           condition: where
         )
       end

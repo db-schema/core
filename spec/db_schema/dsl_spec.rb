@@ -12,6 +12,7 @@ RSpec.describe DbSchema::DSL do
           t.array   :strings, element_type: :varchar
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
+          t.index :strings, using: :gin
         end
 
         db.table :posts do |t|
@@ -60,12 +61,15 @@ RSpec.describe DbSchema::DSL do
       expect(strings.name).to eq(:strings)
       expect(strings.options[:element_type]).to eq(:varchar)
 
-      expect(users.indices.count).to eq(1)
-      email_index = users.indices.first
+      expect(users.indices.count).to eq(2)
+      email_index, strings_index = users.indices
       expect(email_index.name).to eq(:users_email_idx)
       expect(email_index.fields).to eq([:email])
       expect(email_index).to be_unique
+      expect(email_index).to be_btree
       expect(email_index.condition).to eq('email IS NOT NULL')
+      expect(strings_index.name).to eq(:users_strings_index)
+      expect(strings_index.type).to eq(:gin)
 
       expect(posts.indices.count).to eq(1)
       user_id_index = posts.indices.first
