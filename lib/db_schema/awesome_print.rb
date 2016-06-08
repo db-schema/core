@@ -51,11 +51,14 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_index(object)
-        data = [format_dbschema_fields(object.fields)]
+        fields = format_dbschema_fields(object.fields)
+        using = ' using ' + colorize(object.type.to_s, :symbol) unless object.btree?
+
+        data = [nil]
         data << colorize('unique', :nilclass) if object.unique?
         data << colorize('condition: ', :symbol) + object.condition.ai unless object.condition.nil?
 
-        "#<#{object.class} #{object.name.ai} on #{data.join(', ')}>"
+        "#<#{object.class} #{object.name.ai} on #{fields}#{using}#{data.join(', ')}>"
       end
 
       def awesome_dbschema_foreign_key(object)

@@ -17,6 +17,10 @@ module DbSchema
       def unique?
         @unique
       end
+
+      def btree?
+        type == :btree
+      end
     end
 
     class ForeignKey
