@@ -20,7 +20,7 @@ RSpec.describe DbSchema::DSL do
           t.integer :user_id
           t.varchar :user_name
 
-          t.index :user_id, name: :posts_user_id_idx
+          t.index :user_id
 
           t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
           t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
@@ -69,7 +69,7 @@ RSpec.describe DbSchema::DSL do
 
       expect(posts.indices.count).to eq(1)
       user_id_index = posts.indices.first
-      expect(user_id_index.name).to eq(:posts_user_id_idx)
+      expect(user_id_index.name).to eq(:posts_user_id_index)
       expect(user_id_index.fields).to eq([:user_id])
       expect(user_id_index).not_to be_unique
 
