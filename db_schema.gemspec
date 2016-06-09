@@ -8,9 +8,9 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Vsevolod Romashov']
   spec.email         = ['7@7vn.ru']
 
-  spec.summary       = %q{TODO: Write a short summary, because Rubygems requires one.}
-  spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.summary       = 'Declarative database schema definition.'
+  spec.description   = 'A database schema toolkit that reads a "single-source-of-truth" schema definition from a ruby file and auto-migrates the database to conform to it.'
+  spec.homepage      = 'https://github.com/7even/db_schema'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r(^spec/)) }
