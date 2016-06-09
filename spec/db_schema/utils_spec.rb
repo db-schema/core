@@ -50,4 +50,24 @@ RSpec.describe DbSchema::Utils do
       expect(subject.delete_at(hash, :b, :d)).to eq([2, 4])
     end
   end
+
+  describe '.symbolize_keys' do
+    let(:hash) do
+      { 'a' => 1, b: 2, 'c' => 3 }
+    end
+
+    it 'returns a new hash with symbol keys' do
+      expect(subject.symbolize_keys(hash)).to eq(a: 1, b: 2, c: 3)
+    end
+
+    context 'with a nested hash' do
+      before(:each) do
+        hash['d'] = { e: 4, 'f' => 5 }
+      end
+
+      it 'returns a new nested hash with symbol keys at all levels' do
+        expect(subject.symbolize_keys(hash)).to eq(a: 1, b: 2, c: 3, d: { e: 4, f: 5 })
+      end
+    end
+  end
 end

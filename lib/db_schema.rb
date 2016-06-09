@@ -1,4 +1,5 @@
 require 'sequel'
+require 'yaml'
 
 require 'db_schema/configuration'
 require 'db_schema/utils'
@@ -34,6 +35,17 @@ module DbSchema
     def configure(connection_parameters)
       @configuration = Configuration.new(connection_parameters)
       @connection    = nil
+    end
+
+    def configure_from_yaml(yaml_path, environment)
+      data = Utils.symbolize_keys(YAML.load_file(yaml_path))
+      filtered_data = Utils.filter_by_keys(
+        data[environment.to_sym],
+        *%i(adapter host port database username password)
+      )
+      renamed_data = Utils.rename_keys(filtered_data, username: :user)
+
+      configure(renamed_data)
     end
 
     def configuration

@@ -25,6 +25,14 @@ module DbSchema
           hash.delete(key)
         end
       end
+
+      def symbolize_keys(hash)
+        return hash unless hash.is_a?(Hash)
+
+        hash.reduce({}) do |new_hash, (key, value)|
+          new_hash.merge(key.to_sym => symbolize_keys(value))
+        end
+      end
     end
   end
 end

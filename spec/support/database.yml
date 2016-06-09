@@ -1,0 +1,17 @@
+development:
+  adapter:  postgres
+  username: 7even
+  database: db_schema_dev
+  password:
+  host:     localhost
+  encoding: unicode
+  pool:     50
+
+test:
+  adapter:  postgres
+  username: 7even
+  database: db_schema_test
+  password:
+  host:     localhost
+  encoding: unicode
+  template: template0

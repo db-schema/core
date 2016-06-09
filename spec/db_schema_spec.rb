@@ -130,6 +130,25 @@ RSpec.describe DbSchema do
     end
   end
 
+  describe '.configure_from_yaml' do
+    let(:path) { Pathname.new('../support/database.yml').expand_path(__FILE__) }
+
+    it 'configures the connection from a YAML file' do
+      subject.configure_from_yaml(path, :development)
+
+      expect(subject.configuration.adapter).to eq('postgres')
+      expect(subject.configuration.host).to eq('localhost')
+      expect(subject.configuration.port).to eq(5432)
+      expect(subject.configuration.database).to eq('db_schema_dev')
+      expect(subject.configuration.user).to eq('7even')
+      expect(subject.configuration.password).to eq(nil)
+    end
+
+    after(:each) do
+      subject.reset!
+    end
+  end
+
   describe '.configuration' do
     context 'without a prior call to .configure' do
       it 'raises a RuntimeError' do
