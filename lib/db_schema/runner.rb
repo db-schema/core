@@ -7,14 +7,16 @@ module DbSchema
     end
 
     def run!
-      changes.each do |change|
-        case change
-        when Changes::CreateTable
-          self.class.create_table(change)
-        when Changes::DropTable
-          self.class.drop_table(change)
-        when Changes::AlterTable
-          self.class.alter_table(change)
+      DbSchema.connection.transaction do
+        changes.each do |change|
+          case change
+          when Changes::CreateTable
+            self.class.create_table(change)
+          when Changes::DropTable
+            self.class.drop_table(change)
+          when Changes::AlterTable
+            self.class.alter_table(change)
+          end
         end
       end
     end

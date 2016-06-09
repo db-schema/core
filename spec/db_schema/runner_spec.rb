@@ -428,6 +428,33 @@ RSpec.describe DbSchema::Runner do
         end
       end
     end
+
+    it 'runs all operations in a transaction' do
+      changes = [
+        DbSchema::Changes::AlterTable.new(
+          :people,
+          fields: [
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Varchar.new(:city_name)
+            )
+          ],
+          indices: [
+            DbSchema::Changes::CreateIndex.new(
+              name:   :people_city_name_index,
+              fields: [:city_name],
+              type:   :gist
+            )
+          ],
+          foreign_keys: []
+        )
+      ]
+
+      expect {
+        expect {
+          described_class.new(changes).run!
+        }.to raise_error(Sequel::DatabaseError)
+      }.not_to change { DbSchema.connection.schema(:people).count }
+    end
   end
 
   describe '.map_options' do
