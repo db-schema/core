@@ -42,6 +42,10 @@ module DbSchema
         end
       end
 
+      def primary_key(name)
+        fields << Definitions::Field::Integer.new(name, primary_key: true)
+      end
+
       def field(name, type, **options)
         fields << Definitions::Field.build(name, type, options)
       end

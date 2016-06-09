@@ -5,7 +5,7 @@ RSpec.describe DbSchema::DSL do
     let(:schema_block) do
       -> (db) do
         db.table :users do |t|
-          t.integer :id, primary_key: true
+          t.primary_key :id
           t.varchar :name, null: false
           t.varchar :email, default: 'mail@example.com'
           t.char    :sex
@@ -16,7 +16,7 @@ RSpec.describe DbSchema::DSL do
         end
 
         db.table :posts do |t|
-          t.integer :id, primary_key: true
+          t.primary_key :id
           t.varchar :title
           t.integer :user_id
           t.varchar :user_name
