@@ -5,9 +5,9 @@ module DbSchema
         register :array
         attr_reader :element_type
 
-        def initialize(name, element_type:, **options)
+        def initialize(name, of:, **options)
           super(name, **options)
-          @element_type = Field.type_class_for(element_type)
+          @element_type = Field.type_class_for(of)
         end
 
         def attributes

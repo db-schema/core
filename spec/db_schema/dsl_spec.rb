@@ -9,7 +9,7 @@ RSpec.describe DbSchema::DSL do
           t.varchar :name, null: false
           t.varchar :email, default: 'mail@example.com'
           t.char    :sex
-          t.array   :strings, element_type: :varchar
+          t.array   :strings, of: :varchar
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
           t.index :strings, using: :gin

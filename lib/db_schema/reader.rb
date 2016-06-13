@@ -154,7 +154,7 @@ LEFT JOIN information_schema.element_types AS e
             end
           when :array
             Utils.rename_keys(Utils.filter_by_keys(data, :element_type)) do |attributes|
-              attributes[:element_type] = attributes[:element_type].to_sym
+              attributes[:of] = attributes[:element_type].to_sym
             end
           else
             {}
