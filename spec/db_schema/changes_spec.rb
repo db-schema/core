@@ -172,9 +172,9 @@ RSpec.describe DbSchema::Changes do
 
         expect(alter_table.foreign_keys).to eq([
           DbSchema::Changes::CreateForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities),
-          DbSchema::Changes::DropForeignKey.new(name: :users_group_id_fkey),
+          DbSchema::Changes::DropForeignKey.new(:users_group_id_fkey),
           DbSchema::Changes::CreateForeignKey.new(name: :users_group_id_fkey, fields: [:group_id], table: :groups, on_delete: :cascade),
-          DbSchema::Changes::DropForeignKey.new(name: :users_country_id_fkey)
+          DbSchema::Changes::DropForeignKey.new(:users_country_id_fkey)
         ])
       end
     end
