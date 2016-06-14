@@ -121,9 +121,9 @@ module DbSchema
               deferrable: desired.deferrable?
             )
           elsif actual && !desired
-            table_changes << DropForeignKey.new(name: key_name)
+            table_changes << DropForeignKey.new(key_name)
           elsif actual != desired
-            table_changes << DropForeignKey.new(name: key_name)
+            table_changes << DropForeignKey.new(key_name)
             table_changes << CreateForeignKey.new(
               name:       key_name,
               fields:     desired.fields,
