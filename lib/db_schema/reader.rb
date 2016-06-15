@@ -22,26 +22,27 @@ module DbSchema
       DEFAULT_VALUE = /\A('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)/
 
       INDICES_QUERY = <<-SQL.freeze
-SELECT relname AS name,
-       indkey AS column_positions,
-       indisunique AS unique,
-       pg_get_expr(indpred, indrelid, true) AS condition,
-       pg_get_expr(indexprs, indrelid, true) AS expression,
-       amname AS index_type
-  FROM pg_class, pg_index
+   SELECT relname AS name,
+          indkey AS column_positions,
+          indisunique AS unique,
+          indoption AS index_options,
+          pg_get_expr(indpred, indrelid, true) AS condition,
+          pg_get_expr(indexprs, indrelid, true) AS expression,
+          amname AS index_type
+     FROM pg_class, pg_index
 LEFT JOIN pg_opclass
        ON pg_opclass.oid = ANY(pg_index.indclass::int[])
 LEFT JOIN pg_am
        ON pg_am.oid = pg_opclass.opcmethod
- WHERE pg_class.oid = pg_index.indexrelid
-   AND pg_class.oid IN (
-    SELECT indexrelid
-      FROM pg_index, pg_class
-     WHERE pg_class.relname = ?
-       AND pg_class.oid = pg_index.indrelid
-       AND indisprimary != 't'
+    WHERE pg_class.oid = pg_index.indexrelid
+      AND pg_class.oid IN (
+     SELECT indexrelid
+       FROM pg_index, pg_class
+      WHERE pg_class.relname = ?
+        AND pg_class.oid = pg_index.indrelid
+        AND indisprimary != 't'
 )
-  GROUP BY name, column_positions, indisunique, condition, expression, index_type
+  GROUP BY name, column_positions, indisunique, index_options, condition, expression, index_type
       SQL
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
@@ -100,11 +101,26 @@ LEFT JOIN information_schema.element_types AS e
 
           DbSchema.connection[INDICES_QUERY, table_name.to_s].map do |index|
             positions = index[:column_positions].split(' ').map(&:to_i)
-            names = column_names.values_at(*positions).map(&:to_sym)
+            options   = index[:index_options].split(' ').map(&:to_i)
+
+            fields = column_names.values_at(*positions).zip(options).map do |column_name, column_order_options|
+              options = case column_order_options
+              when 0
+                {}
+              when 3
+                { order: :desc }
+              when 2
+                { nulls: :first }
+              when 1
+                { order: :desc, nulls: :last }
+              end
+
+              DbSchema::Definitions::Index::Field.new(column_name.to_sym, **options)
+            end
 
             {
               name:      index[:name].to_sym,
-              fields:    names,
+              fields:    fields,
               unique:    index[:unique],
               type:      index[:index_type].to_sym,
               condition: index[:condition]
