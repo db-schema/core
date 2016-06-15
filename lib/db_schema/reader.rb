@@ -41,6 +41,7 @@ LEFT JOIN pg_am
        AND pg_class.oid = pg_index.indrelid
        AND indisprimary != 't'
 )
+  GROUP BY name, column_positions, indisunique, condition, expression, index_type
       SQL
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze

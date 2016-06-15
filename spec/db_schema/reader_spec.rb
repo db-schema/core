@@ -26,7 +26,7 @@ RSpec.describe DbSchema::Reader do
           column :limited_variable_bits, :varbit, size: 150
           column :numbers, 'integer[]'
 
-          index [:email, :name], unique: true, where: 'email IS NOT NULL'
+          index [:email, :name, :lat, :lng], unique: true, where: 'email IS NOT NULL'
           index [:name], type: :spgist
         end
 
@@ -119,7 +119,7 @@ RSpec.describe DbSchema::Reader do
 
         expect(users.indices.count).to eq(3)
         email_index, name_index, * = users.indices
-        expect(email_index.fields).to eq([:email, :name])
+        expect(email_index.fields).to eq([:email, :name, :lat, :lng])
         expect(email_index).to be_unique
         expect(email_index.type).to eq(:btree)
         expect(email_index.condition).to eq('email IS NOT NULL')
