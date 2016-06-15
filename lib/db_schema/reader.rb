@@ -19,7 +19,7 @@ module DbSchema
     end
 
     module Postgres
-      TYPECASTED_VALUE = /\A'(.*)'/
+      DEFAULT_VALUE = /\A('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)/
 
       INDICES_QUERY = <<-SQL.freeze
 SELECT relname AS name,
@@ -119,8 +119,14 @@ LEFT JOIN information_schema.element_types AS e
           nullable = (data[:null] != 'NO')
 
           unless primary_key || data[:default].nil?
-            if match = TYPECASTED_VALUE.match(data[:default])
-              default = match[1]
+            if match = DEFAULT_VALUE.match(data[:default])
+              default = if match[:string]
+                match[:string]
+              elsif match[:integer]
+                match[:integer].to_i
+              elsif match[:float]
+                match[:float].to_f
+              end
             end
           end
 

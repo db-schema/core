@@ -14,8 +14,9 @@ RSpec.describe DbSchema::Reader do
           column :id, :serial, primary_key: true
           column :name, :varchar, null: false, unique: true
           column :email, :varchar, default: 'mail@example.com', size: 250
+          column :age, :integer, default: 20
           column :lat, :numeric, size: [6, 3]
-          column :lng, :decimal, size: [7, 4]
+          column :lng, :decimal, size: [7, 4], default: 3.45
           column :created_at, :timestamp, size: 3
           column :updated_at, :timestamp
           column :period, 'interval HOUR'
@@ -50,7 +51,7 @@ RSpec.describe DbSchema::Reader do
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
 
-        id, name, email, lat, lng, created_at, updated_at, period, other_period,
+        id, name, email, age, lat, lng, created_at, updated_at, period, other_period,
         some_bit, several_bits, variable_bits, limited_variable_bits, numbers = users.fields
 
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
@@ -59,17 +60,22 @@ RSpec.describe DbSchema::Reader do
         expect(name).to be_a(DbSchema::Definitions::Field::Varchar)
         expect(name.name).to eq(:name)
         expect(name).not_to be_null
+        expect(name.default).to be_nil
         expect(email).to be_a(DbSchema::Definitions::Field::Varchar)
         expect(email.name).to eq(:email)
         expect(email).to be_null
         expect(email.default).to eq('mail@example.com')
         expect(email.options[:length]).to eq(250)
+        expect(age).to be_a(DbSchema::Definitions::Field::Integer)
+        expect(age.name).to eq(:age)
+        expect(age.default).to eq(20)
         expect(lat).to be_a(DbSchema::Definitions::Field::Numeric)
         expect(lat.name).to eq(:lat)
         expect(lat.options[:precision]).to eq(6)
         expect(lat.options[:scale]).to eq(3)
         expect(lng).to be_a(DbSchema::Definitions::Field::Numeric)
         expect(lng.name).to eq(:lng)
+        expect(lng.default).to eq(3.45)
         expect(lng.options[:precision]).to eq(7)
         expect(lng.options[:scale]).to eq(4)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
