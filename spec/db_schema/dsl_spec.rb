@@ -20,8 +20,13 @@ RSpec.describe DbSchema::DSL do
           t.varchar :title
           t.integer :user_id
           t.varchar :user_name
+          t.integer :col1
+          t.integer :col2
+          t.integer :col3
+          t.integer :col4
 
           t.index :user_id
+          t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
 
           t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
           t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
@@ -37,7 +42,7 @@ RSpec.describe DbSchema::DSL do
       expect(users.name).to eq(:users)
       expect(users.fields.count).to eq(5)
       expect(posts.name).to eq(:posts)
-      expect(posts.fields.count).to eq(4)
+      expect(posts.fields.count).to eq(8)
 
       id, name, email, sex, strings = users.fields
 
@@ -64,18 +69,31 @@ RSpec.describe DbSchema::DSL do
       expect(users.indices.count).to eq(2)
       email_index, strings_index = users.indices
       expect(email_index.name).to eq(:users_email_idx)
-      expect(email_index.fields).to eq([:email])
+      expect(email_index.fields).to eq([
+        DbSchema::Definitions::Index::Field.new(:email)
+      ])
       expect(email_index).to be_unique
       expect(email_index).to be_btree
       expect(email_index.condition).to eq('email IS NOT NULL')
       expect(strings_index.name).to eq(:users_strings_index)
       expect(strings_index.type).to eq(:gin)
 
-      expect(posts.indices.count).to eq(1)
-      user_id_index = posts.indices.first
+      expect(posts.indices.count).to eq(2)
+
+      user_id_index, sorted_index = posts.indices
       expect(user_id_index.name).to eq(:posts_user_id_index)
-      expect(user_id_index.fields).to eq([:user_id])
+      expect(user_id_index.fields).to eq([
+        DbSchema::Definitions::Index::Field.new(:user_id)
+      ])
       expect(user_id_index).not_to be_unique
+
+      expect(sorted_index.name).to eq(:posts_col1_col2_col3_col4_index)
+      expect(sorted_index.fields).to eq([
+        DbSchema::Definitions::Index::Field.new(:col1),
+        DbSchema::Definitions::Index::Field.new(:col2, order: :desc),
+        DbSchema::Definitions::Index::Field.new(:col3, nulls: :first),
+        DbSchema::Definitions::Index::Field.new(:col4, order: :desc, nulls: :last)
+      ])
 
       expect(posts.foreign_keys.count).to eq(2)
       user_id_fkey, user_name_fkey = posts.foreign_keys

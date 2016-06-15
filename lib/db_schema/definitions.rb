@@ -8,7 +8,7 @@ module DbSchema
 
       def initialize(name:, fields:, unique: false, type: :btree, condition: nil)
         @name      = name.to_sym
-        @fields    = fields.map(&:to_sym)
+        @fields    = fields
         @unique    = unique
         @type      = type
         @condition = condition
@@ -20,6 +20,25 @@ module DbSchema
 
       def btree?
         type == :btree
+      end
+
+      class Field
+        include Dry::Equalizer(:name, :order, :nulls)
+        attr_reader :name, :order, :nulls
+
+        def initialize(name, order: :asc, nulls: asc? ? :first : :last)
+          @name  = name
+          @order = order
+          @nulls = nulls
+        end
+
+        def asc?
+          @order == :asc
+        end
+
+        def desc?
+          @order == :desc
+        end
       end
     end
 
