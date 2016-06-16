@@ -33,6 +33,12 @@ module DbSchema
           new_hash.merge(key.to_sym => symbolize_keys(value))
         end
       end
+
+      def sort_by_class(array, sorted_classes)
+        sorted_classes.flat_map do |klass|
+          array.select { |object| object.is_a?(klass) }
+        end
+      end
     end
   end
 end

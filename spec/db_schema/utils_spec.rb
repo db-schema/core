@@ -70,4 +70,18 @@ RSpec.describe DbSchema::Utils do
       end
     end
   end
+
+  describe '.sort_by_class' do
+    let(:class_a) { Class.new }
+    let(:class_b) { Class.new }
+    let(:class_c) { Class.new }
+
+    let(:objects) { [class_b.new, class_c.new, class_a.new, class_c.new, class_b.new] }
+
+    it 'sorts the objects in correct order' do
+      sorted_objects = subject.sort_by_class(objects, [class_a, class_b, class_c])
+
+      expect(sorted_objects.map(&:class)).to eq([class_a, class_b, class_b, class_c, class_c])
+    end
+  end
 end
