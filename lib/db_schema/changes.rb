@@ -9,7 +9,7 @@ module DbSchema
 
         table_names.each.with_object([]) do |table_name, changes|
           desired = desired_schema.find { |table| table.name == table_name }
-          actual  = actual_schema.find { |table| table.name == table_name }
+          actual  = actual_schema.find  { |table| table.name == table_name }
 
           if desired && !actual
             changes << CreateTable.new(

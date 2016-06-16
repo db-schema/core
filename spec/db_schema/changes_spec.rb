@@ -75,11 +75,15 @@ RSpec.describe DbSchema::Changes do
         indices = [
           DbSchema::Definitions::Index.new(
             name:      :users_name_index,
-            fields:    [:name],
+            fields:    [DbSchema::Definitions::Index::Field.new(:name)],
             unique:    true,
             condition: 'email IS NOT NULL'
           ),
-          DbSchema::Definitions::Index.new(name: :users_email_index, fields: [:email], unique: true)
+          DbSchema::Definitions::Index.new(
+            name: :users_email_index,
+            fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
+            unique: true
+          )
         ]
 
         foreign_keys = [
@@ -118,8 +122,14 @@ RSpec.describe DbSchema::Changes do
         ]
 
         indices = [
-          DbSchema::Definitions::Index.new(name: :users_name_index, fields: [:name]),
-          DbSchema::Definitions::Index.new(name: :users_type_index, fields: [:type])
+          DbSchema::Definitions::Index.new(
+            name: :users_name_index,
+            fields: [DbSchema::Definitions::Index::Field.new(:name)]
+          ),
+          DbSchema::Definitions::Index.new(
+            name: :users_type_index,
+            fields: [DbSchema::Definitions::Index::Field.new(:type)]
+          )
         ]
 
         foreign_keys = [
@@ -165,8 +175,17 @@ RSpec.describe DbSchema::Changes do
 
         expect(alter_table.indices).to eq([
           DbSchema::Changes::DropIndex.new(:users_name_index),
-          DbSchema::Changes::CreateIndex.new(name: :users_name_index, fields: [:name], unique: true, condition: 'email IS NOT NULL'),
-          DbSchema::Changes::CreateIndex.new(name: :users_email_index, fields: [:email], unique: true),
+          DbSchema::Changes::CreateIndex.new(
+            name: :users_name_index,
+            fields: [DbSchema::Definitions::Index::Field.new(:name)],
+            unique: true,
+            condition: 'email IS NOT NULL'
+          ),
+          DbSchema::Changes::CreateIndex.new(
+            name: :users_email_index,
+            fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
+            unique: true
+          ),
           DbSchema::Changes::DropIndex.new(:users_type_index)
         ])
 
