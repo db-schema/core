@@ -50,8 +50,8 @@ module DbSchema
         fields << Definitions::Field.build(name, type, options)
       end
 
-      def index(fields = [], name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
-        index_fields = Array(fields).map do |field_name|
+      def index(*fields, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
+        index_fields = fields.map do |field_name|
           Definitions::Index::Field.new(field_name.to_sym)
         end + ordered_fields.map do |field_name, field_order_options|
           options = case field_order_options

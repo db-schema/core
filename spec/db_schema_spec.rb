@@ -28,8 +28,8 @@ RSpec.describe DbSchema do
           t.varchar :last_name,  null: false, length: 30
           t.varchar :email,      null: false
 
-          t.index [:first_name, :last_name], name: :users_name_index
-          t.index [:email], name: :users_email_index, unique: true
+          t.index :first_name, last_name: :desc, name: :users_name_index
+          t.index :email, name: :users_email_index, unique: true
         end
 
         db.table :posts do |t|
@@ -38,7 +38,7 @@ RSpec.describe DbSchema do
           t.text :text
           t.integer :user_id, null: false
 
-          t.index [:user_id], name: :posts_user_id_index
+          t.index :user_id, name: :posts_author_index
         end
 
         db.table :cities do |t|
@@ -65,11 +65,16 @@ RSpec.describe DbSchema do
       expect(last_name.last[:db_type]).to eq('character varying(30)')
       expect(last_name.last[:allow_null]).to eq(false)
 
-      users_indices = database.indexes(:users)
-      name_index, email_index = users_indices.values_at(:users_name_index, :users_email_index)
-      expect(name_index[:columns]).to eq([:first_name, :last_name])
+      users_indices = DbSchema::Reader::Postgres.indices_data_for(:users)
+      name_index  = users_indices.find { |index| index[:name] == :users_name_index }
+      email_index = users_indices.find { |index| index[:name] == :users_email_index }
+
+      expect(name_index[:fields]).to eq([
+        DbSchema::Definitions::Index::Field.new(:first_name),
+        DbSchema::Definitions::Index::Field.new(:last_name, order: :desc)
+      ])
       expect(name_index[:unique]).to eq(false)
-      expect(email_index[:columns]).to eq([:email])
+      expect(email_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:email)])
       expect(email_index[:unique]).to eq(true)
 
       id, title, text, user_id = database.schema(:posts)
@@ -84,7 +89,7 @@ RSpec.describe DbSchema do
       expect(user_id.last[:db_type]).to eq('integer')
       expect(user_id.last[:allow_null]).to eq(false)
 
-      user_id_index = database.indexes(:posts)[:posts_user_id_index]
+      user_id_index = database.indexes(:posts)[:posts_author_index]
       expect(user_id_index[:columns]).to eq([:user_id])
       expect(user_id_index[:unique]).to eq(false)
 
