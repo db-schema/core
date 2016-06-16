@@ -5,8 +5,6 @@ RSpec.describe DbSchema do
 
   describe '.describe' do
     before(:each) do
-      pending 'Definitions::Index under heavy refactoring'
-
       database.create_table :users do
         column :id,    :Integer, primary_key: true
         column :name,  :Varchar, null: false

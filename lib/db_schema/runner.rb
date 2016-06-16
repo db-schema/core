@@ -34,8 +34,14 @@ module DbSchema
           end
 
           change.indices.each do |index|
+            fields = if index.btree?
+              index.fields.map(&:to_sequel)
+            else
+              index.fields.map(&:name)
+            end
+
             index(
-              index.fields,
+              fields,
               name:   index.name,
               unique: index.unique?,
               type:   index.type,
@@ -87,8 +93,14 @@ module DbSchema
           change.indices.each do |index|
             case index
             when Changes::CreateIndex
+              fields = if index.btree?
+                index.fields.map(&:to_sequel)
+              else
+                index.fields.map(&:name)
+              end
+
               add_index(
-                index.fields,
+                fields,
                 name:   index.name,
                 unique: index.unique?,
                 type:   index.type,

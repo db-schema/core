@@ -41,17 +41,17 @@ RSpec.describe DbSchema::Runner do
     [
       DbSchema::Definitions::Index.new(
         name:   :index_users_on_name,
-        fields: [:name]
+        fields: [DbSchema::Definitions::Index::Field.new(:name)]
       ),
       DbSchema::Definitions::Index.new(
         name:      :index_users_on_email,
-        fields:    [:email],
+        fields:    [DbSchema::Definitions::Index::Field.new(:email, order: :desc, nulls: :last)],
         unique:    true,
         condition: 'email IS NOT NULL'
       ),
       DbSchema::Definitions::Index.new(
         name:   :users_names_index,
-        fields: [:names],
+        fields: [DbSchema::Definitions::Index::Field.new(:names)],
         type:   :gin
       )
     ]
@@ -72,10 +72,6 @@ RSpec.describe DbSchema::Runner do
 
   describe '#run!' do
     context 'with CreateTable & DropTable' do
-      before(:each) do
-        pending 'Definitions::Index under heavy refactoring'
-      end
-
       let(:changes) do
         [
           DbSchema::Changes::CreateTable.new(
@@ -135,14 +131,14 @@ RSpec.describe DbSchema::Runner do
         email_index = indices.find { |index| index[:name] == :index_users_on_email }
         names_index = indices.find { |index| index[:name] == :users_names_index }
 
-        expect(name_index[:fields]).to eq([:name])
+        expect(name_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:name)])
         expect(name_index[:unique]).to eq(false)
         expect(name_index[:type]).to eq(:btree)
-        expect(email_index[:fields]).to eq([:email])
+        expect(email_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:email, order: :desc, nulls: :last)])
         expect(email_index[:unique]).to eq(true)
         expect(email_index[:type]).to eq(:btree)
         expect(email_index[:condition]).to eq('email IS NOT NULL')
-        expect(names_index[:fields]).to eq([:names])
+        expect(names_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:names)])
         expect(names_index[:type]).to eq(:gin)
 
         expect(database.foreign_key_list(:users).count).to eq(1)
@@ -338,10 +334,6 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing CreateIndex & DropIndex' do
-        before(:each) do
-          pending 'Definitions::Index under heavy refactoring'
-        end
-
         let(:field_changes) do
           [
             DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email))
@@ -352,13 +344,13 @@ RSpec.describe DbSchema::Runner do
           [
             DbSchema::Changes::CreateIndex.new(
               name:      :people_name_index,
-              fields:    [:name],
+              fields:    [DbSchema::Definitions::Index::Field.new(:name, order: :desc)],
               condition: 'name IS NOT NULL'
             ),
             DbSchema::Changes::DropIndex.new(:people_address_index),
             DbSchema::Changes::CreateIndex.new(
               name:   :people_created_at_index,
-              fields: [:created_at],
+              fields: [DbSchema::Definitions::Index::Field.new(:created_at, nulls: :first)],
               type:   :brin
             )
           ]
@@ -372,11 +364,12 @@ RSpec.describe DbSchema::Runner do
           name_index = indices.find { |index| index[:name] == :people_name_index }
           time_index = indices.find { |index| index[:name] == :people_created_at_index }
 
-          expect(name_index[:fields]).to eq([:name])
+          expect(name_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:name, order: :desc)])
           expect(name_index[:unique]).to eq(false)
           expect(name_index[:type]).to eq(:btree)
           expect(name_index[:condition]).to eq('name IS NOT NULL')
-          expect(time_index[:fields]).to eq([:created_at])
+          # non-BTree indexes don't support index ordering
+          expect(time_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:created_at)])
           expect(time_index[:type]).to eq(:brin)
         end
       end
@@ -449,7 +442,7 @@ RSpec.describe DbSchema::Runner do
           indices: [
             DbSchema::Changes::CreateIndex.new(
               name:   :people_city_name_index,
-              fields: [:city_name],
+              fields: [DbSchema::Definitions::Index::Field.new(:city_name)],
               type:   :gist
             )
           ],

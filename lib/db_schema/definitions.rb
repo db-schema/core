@@ -26,7 +26,7 @@ module DbSchema
         include Dry::Equalizer(:name, :order, :nulls)
         attr_reader :name, :order, :nulls
 
-        def initialize(name, order: :asc, nulls: order == :asc ? :first : :last)
+        def initialize(name, order: :asc, nulls: order == :asc ? :last : :first)
           @name  = name
           @order = order
           @nulls = nulls
@@ -38,6 +38,14 @@ module DbSchema
 
         def desc?
           @order == :desc
+        end
+
+        def to_sequel
+          if asc?
+            Sequel.asc(name, nulls: nulls)
+          else
+            Sequel.desc(name, nulls: nulls)
+          end
         end
       end
     end
