@@ -71,6 +71,10 @@ RSpec.describe DbSchema::Runner do
   subject { DbSchema::Runner.new(changes) }
 
   describe '#run!' do
+    before(:each) do
+      pending 'Refactoring foreign keys in Changes'
+    end
+
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [

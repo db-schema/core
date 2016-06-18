@@ -14,23 +14,32 @@ module DbSchema
           if desired && !actual
             changes << CreateTable.new(
               table_name,
-              fields:       desired.fields,
-              indices:      desired.indices,
-              foreign_keys: desired.foreign_keys
+              fields:  desired.fields,
+              indices: desired.indices
             )
+
+            fkey_operations = desired.foreign_keys.map do |fkey|
+              CreateForeignKey.new(table_name, fkey)
+            end
+            changes.concat(fkey_operations)
           elsif actual && !desired
             changes << DropTable.new(table_name)
+
+            actual.foreign_keys.each do |fkey|
+              changes << DropForeignKey.new(table_name, fkey.name)
+            end
           elsif actual != desired
-            field_operations       = field_changes(desired.fields, actual.fields)
-            index_operations       = index_changes(desired.indices, actual.indices)
-            foreign_key_operations = foreign_key_changes(desired.foreign_keys, actual.foreign_keys)
+            field_operations = field_changes(desired.fields, actual.fields)
+            index_operations = index_changes(desired.indices, actual.indices)
+            fkey_operations  = foreign_key_changes(table_name, desired.foreign_keys, actual.foreign_keys)
 
             changes << AlterTable.new(
               table_name,
-              fields:       field_operations,
-              indices:      index_operations,
-              foreign_keys: foreign_key_operations
+              fields:  field_operations,
+              indices: index_operations
             )
+
+            changes.concat(fkey_operations)
           end
         end
       end
@@ -103,42 +112,44 @@ module DbSchema
         end
       end
 
-      def foreign_key_changes(desired_foreign_keys, actual_foreign_keys)
+      def foreign_key_changes(table_name, desired_foreign_keys, actual_foreign_keys)
         key_names = [desired_foreign_keys, actual_foreign_keys].flatten.map(&:name).uniq
 
         key_names.each.with_object([]) do |key_name, table_changes|
           desired = desired_foreign_keys.find { |key| key.name == key_name }
           actual  = actual_foreign_keys.find  { |key| key.name == key_name }
 
+          foreign_key = Definitions::ForeignKey.new(
+            name:       key_name,
+            fields:     desired.fields,
+            table:      desired.table,
+            keys:       desired.keys,
+            on_delete:  desired.on_delete,
+            on_update:  desired.on_update,
+            deferrable: desired.deferrable?
+          ) if desired
+
           if desired && !actual
-            table_changes << CreateForeignKey.new(
-              name:       key_name,
-              fields:     desired.fields,
-              table:      desired.table,
-              keys:       desired.keys,
-              on_delete:  desired.on_delete,
-              on_update:  desired.on_update,
-              deferrable: desired.deferrable?
-            )
+            table_changes << CreateForeignKey.new(table_name, foreign_key)
           elsif actual && !desired
-            table_changes << DropForeignKey.new(key_name)
+            table_changes << DropForeignKey.new(table_name, key_name)
           elsif actual != desired
-            table_changes << DropForeignKey.new(key_name)
-            table_changes << CreateForeignKey.new(
-              name:       key_name,
-              fields:     desired.fields,
-              table:      desired.table,
-              keys:       desired.keys,
-              on_delete:  desired.on_delete,
-              on_update:  desired.on_update,
-              deferrable: desired.deferrable?
-            )
+            table_changes << DropForeignKey.new(table_name, key_name)
+            table_changes << CreateForeignKey.new(table_name, foreign_key)
           end
         end
       end
     end
 
-    class CreateTable < Definitions::Table
+    class CreateTable
+      include Dry::Equalizer(:name, :fields, :indices)
+      attr_reader :name, :fields, :indices
+
+      def initialize(name, fields: [], indices: [])
+        @name    = name
+        @fields  = fields
+        @indices = indices
+      end
     end
 
     class DropTable
@@ -151,13 +162,13 @@ module DbSchema
     end
 
     class AlterTable
-      attr_reader :name, :fields, :indices, :foreign_keys
+      include Dry::Equalizer(:name, :fields, :indices)
+      attr_reader :name, :fields, :indices
 
-      def initialize(name, fields:, indices:, foreign_keys:)
-        @name         = name
-        @fields       = fields
-        @indices      = indices
-        @foreign_keys = foreign_keys
+      def initialize(name, fields:, indices:)
+        @name    = name
+        @fields  = fields
+        @indices = indices
       end
     end
 
@@ -247,10 +258,24 @@ module DbSchema
     class DropIndex < ColumnOperation
     end
 
-    class CreateForeignKey < Definitions::ForeignKey
+    class CreateForeignKey
+      include Dry::Equalizer(:table_name, :foreign_key)
+      attr_reader :table_name, :foreign_key
+
+      def initialize(table_name, foreign_key)
+        @table_name  = table_name
+        @foreign_key = foreign_key
+      end
     end
 
-    class DropForeignKey < ColumnOperation
+    class DropForeignKey
+      include Dry::Equalizer(:table_name, :fkey_name)
+      attr_reader :table_name, :fkey_name
+
+      def initialize(table_name, fkey_name)
+        @table_name = table_name
+        @fkey_name  = fkey_name
+      end
     end
   end
 end

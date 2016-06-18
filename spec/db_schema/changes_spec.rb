@@ -12,13 +12,21 @@ RSpec.describe DbSchema::Changes do
       end
 
       let(:users_foreign_keys) do
-        [DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)]
+        [
+          DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
+        ]
       end
 
       let(:posts_fields) do
         [
           DbSchema::Definitions::Field::Integer.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:title)
+        ]
+      end
+
+      let(:posts_foreign_keys) do
+        [
+          DbSchema::Definitions::ForeignKey.new(name: :posts_city_id_fkey, fields: [:city_id], table: :cities)
         ]
       end
 
@@ -39,7 +47,7 @@ RSpec.describe DbSchema::Changes do
 
       let(:actual_schema) do
         [
-          DbSchema::Definitions::Table.new(:posts, fields: posts_fields),
+          DbSchema::Definitions::Table.new(:posts, fields: posts_fields, foreign_keys: posts_foreign_keys),
           DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
         ]
       end
@@ -48,15 +56,21 @@ RSpec.describe DbSchema::Changes do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         expect(changes).to include(
-          DbSchema::Changes::CreateTable.new(:users, fields: users_fields, foreign_keys: users_foreign_keys)
+          DbSchema::Changes::CreateTable.new(:users, fields: users_fields)
         )
         expect(changes).to include(DbSchema::Changes::DropTable.new(:posts))
+        expect(changes).to include(
+          DbSchema::Changes::CreateForeignKey.new(:users, users_foreign_keys.first)
+        )
+        expect(changes).to include(
+          DbSchema::Changes::DropForeignKey.new(:posts, posts_foreign_keys.first.name)
+        )
       end
 
       it 'ignores matching tables' do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
-        expect(changes.count).to eq(2)
+        expect(changes.count).to eq(4)
       end
     end
 
@@ -80,7 +94,7 @@ RSpec.describe DbSchema::Changes do
             condition: 'email IS NOT NULL'
           ),
           DbSchema::Definitions::Index.new(
-            name: :users_email_index,
+            name:   :users_email_index,
             fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
             unique: true
           )
@@ -159,7 +173,6 @@ RSpec.describe DbSchema::Changes do
       it 'returns changes between two schemas' do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
-        expect(changes.count).to eq(1)
         alter_table = changes.first
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
@@ -189,11 +202,26 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DropIndex.new(:users_type_index)
         ])
 
-        expect(alter_table.foreign_keys).to eq([
-          DbSchema::Changes::CreateForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities),
-          DbSchema::Changes::DropForeignKey.new(:users_group_id_fkey),
-          DbSchema::Changes::CreateForeignKey.new(name: :users_group_id_fkey, fields: [:group_id], table: :groups, on_delete: :cascade),
-          DbSchema::Changes::DropForeignKey.new(:users_country_id_fkey)
+        expect(changes.drop(1)).to eq([
+          DbSchema::Changes::CreateForeignKey.new(
+            :users,
+            DbSchema::Definitions::ForeignKey.new(
+              name:   :users_city_id_fkey,
+              fields: [:city_id],
+              table:  :cities
+            )
+          ),
+          DbSchema::Changes::DropForeignKey.new(:users, :users_group_id_fkey),
+          DbSchema::Changes::CreateForeignKey.new(
+            :users,
+            DbSchema::Definitions::ForeignKey.new(
+              name:      :users_group_id_fkey,
+              fields:    [:group_id],
+              table:     :groups,
+              on_delete: :cascade
+            )
+          ),
+          DbSchema::Changes::DropForeignKey.new(:users, :users_country_id_fkey)
         ])
       end
     end
