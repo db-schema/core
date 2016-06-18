@@ -3,7 +3,7 @@ module DbSchema
     attr_reader :changes
 
     def initialize(changes)
-      @changes = changes
+      @changes = preprocess_changes(changes)
     end
 
     def run!
@@ -16,9 +16,27 @@ module DbSchema
             self.class.drop_table(change)
           when Changes::AlterTable
             self.class.alter_table(change)
+          when Changes::CreateForeignKey
+            self.class.create_foreign_key(change)
+          when Changes::DropForeignKey
+            self.class.drop_foreign_key(change)
           end
         end
       end
+    end
+
+  private
+    def preprocess_changes(changes)
+      Utils.sort_by_class(
+        changes,
+        [
+          Changes::DropForeignKey,
+          Changes::CreateTable,
+          Changes::AlterTable,
+          Changes::DropTable,
+          Changes::CreateForeignKey
+        ]
+      )
     end
 
     class << self
@@ -47,10 +65,6 @@ module DbSchema
               type:   index.type,
               where:  index.condition
             )
-          end
-
-          change.foreign_keys.each do |foreign_key|
-            foreign_key(foreign_key.fields, foreign_key.table, foreign_key.options)
           end
         end
       end
@@ -110,15 +124,18 @@ module DbSchema
               drop_index([], name: index.name)
             end
           end
+        end
+      end
 
-          change.foreign_keys.each do |foreign_key|
-            case foreign_key
-            when Changes::CreateForeignKey
-              add_foreign_key(foreign_key.fields, foreign_key.table, foreign_key.options)
-            when Changes::DropForeignKey
-              drop_foreign_key([], name: foreign_key.name)
-            end
-          end
+      def create_foreign_key(change)
+        DbSchema.connection.alter_table(change.table_name) do
+          add_foreign_key(change.foreign_key.fields, change.foreign_key.table, change.foreign_key.options)
+        end
+      end
+
+      def drop_foreign_key(change)
+        DbSchema.connection.alter_table(change.table_name) do
+          drop_foreign_key([], name: change.fkey_name)
         end
       end
 

@@ -71,18 +71,13 @@ RSpec.describe DbSchema::Runner do
   subject { DbSchema::Runner.new(changes) }
 
   describe '#run!' do
-    before(:each) do
-      pending 'Refactoring foreign keys in Changes'
-    end
-
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [
           DbSchema::Changes::CreateTable.new(
             :users,
-            fields:       users_fields,
-            indices:      users_indices,
-            foreign_keys: users_foreign_keys
+            fields:  users_fields,
+            indices: users_indices
           ),
           DbSchema::Changes::DropTable.new(:people)
         ]
@@ -144,16 +139,6 @@ RSpec.describe DbSchema::Runner do
         expect(email_index[:condition]).to eq('email IS NOT NULL')
         expect(names_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:names)])
         expect(names_index[:type]).to eq(:gin)
-
-        expect(database.foreign_key_list(:users).count).to eq(1)
-        users_country_id_fkey = database.foreign_key_list(:users).first
-        expect(users_country_id_fkey[:name]).to eq(:users_country_id_fkey)
-        expect(users_country_id_fkey[:columns]).to eq([:country_id])
-        expect(users_country_id_fkey[:table]).to eq(:countries)
-        expect(users_country_id_fkey[:key]).to eq([:id])
-        expect(users_country_id_fkey[:on_delete]).to eq(:set_null)
-        expect(users_country_id_fkey[:on_update]).to eq(:no_action)
-        expect(users_country_id_fkey[:deferrable]).to eq(false)
       end
     end
 
@@ -162,9 +147,8 @@ RSpec.describe DbSchema::Runner do
         [
           DbSchema::Changes::AlterTable.new(
             :people,
-            fields:       field_changes,
-            indices:      index_changes,
-            foreign_keys: foreign_key_changes
+            fields:  field_changes,
+            indices: index_changes
           )
         ]
       end
@@ -377,60 +361,150 @@ RSpec.describe DbSchema::Runner do
           expect(time_index[:type]).to eq(:brin)
         end
       end
+    end
 
-      context 'containing CreateForeignKey & DropForeignKey' do
-        before(:each) do
-          database.create_table :cities do
-            primary_key :id
-            column :name, :varchar, null: false
+    context 'with CreateForeignKey & DropForeignKey' do
+      before(:each) do
+        database.create_table :cities do
+          primary_key :id
+          column :name, :varchar, null: false
 
-            index :name, unique: true
-          end
-
-          database.alter_table :people do
-            add_column :city_name, :varchar
-            add_column :city_id, :integer
-
-            add_foreign_key [:city_name], :cities, key: :name
-          end
+          index :name, unique: true
         end
 
-        let(:foreign_key_changes) do
-          [
-            DbSchema::Changes::DropForeignKey.new(:people_city_name_fkey),
-            DbSchema::Changes::CreateForeignKey.new(
+        database.alter_table :people do
+          add_column :city_name, :varchar
+          add_column :city_id, :integer
+
+          add_foreign_key [:city_name], :cities, key: :name
+        end
+      end
+
+      let(:changes) do
+        [
+          DbSchema::Changes::DropForeignKey.new(:people, :people_city_name_fkey),
+          DbSchema::Changes::CreateForeignKey.new(
+            :people,
+            DbSchema::Definitions::ForeignKey.new(
               name:      :people_city_id_fkey,
               fields:    [:city_id],
               table:     :cities,
               on_delete: :set_null
-            ),
-            DbSchema::Changes::CreateForeignKey.new(
+            )
+          ),
+          DbSchema::Changes::CreateForeignKey.new(
+            :people,
+            DbSchema::Definitions::ForeignKey.new(
               name:      :people_country_name_fkey,
               fields:    [:country_name],
               table:     :countries,
               keys:      [:name],
               on_update: :cascade
             )
-          ]
+          )
+        ]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        expect(database.foreign_key_list(:people).count).to eq(2)
+        city_id_fkey, country_name_fkey = database.foreign_key_list(:people)
+        expect(city_id_fkey[:name]).to eq(:people_city_id_fkey)
+        expect(city_id_fkey[:columns]).to eq([:city_id])
+        expect(city_id_fkey[:table]).to eq(:cities)
+        expect(city_id_fkey[:on_delete]).to eq(:set_null)
+        expect(city_id_fkey[:on_update]).to eq(:no_action)
+        expect(country_name_fkey[:name]).to eq(:people_country_name_fkey)
+        expect(country_name_fkey[:columns]).to eq([:country_name])
+        expect(country_name_fkey[:table]).to eq(:countries)
+        expect(country_name_fkey[:key]).to eq([:name])
+        expect(country_name_fkey[:on_delete]).to eq(:no_action)
+        expect(country_name_fkey[:on_update]).to eq(:cascade)
+      end
+    end
+
+    context 'with conflicting operations on foreign keys and tables' do
+      before(:each) do
+        DbSchema.connection.create_table :old_table do
+          primary_key :id
         end
 
-        it 'applies all the changes' do
-          subject.run!
-
-          expect(database.foreign_key_list(:people).count).to eq(2)
-          city_id_fkey, country_name_fkey = database.foreign_key_list(:people)
-          expect(city_id_fkey[:name]).to eq(:people_city_id_fkey)
-          expect(city_id_fkey[:columns]).to eq([:city_id])
-          expect(city_id_fkey[:table]).to eq(:cities)
-          expect(city_id_fkey[:on_delete]).to eq(:set_null)
-          expect(city_id_fkey[:on_update]).to eq(:no_action)
-          expect(country_name_fkey[:name]).to eq(:people_country_name_fkey)
-          expect(country_name_fkey[:columns]).to eq([:country_name])
-          expect(country_name_fkey[:table]).to eq(:countries)
-          expect(country_name_fkey[:key]).to eq([:name])
-          expect(country_name_fkey[:on_delete]).to eq(:no_action)
-          expect(country_name_fkey[:on_update]).to eq(:cascade)
+        DbSchema.connection.create_table :other_old_table do
+          primary_key :id
+          foreign_key :old_id, :old_table
         end
+
+        DbSchema.connection.create_table :referenced_table do
+          primary_key :id
+          integer :referenced_field, unique: true
+        end
+
+        DbSchema.connection.create_table :referring_table do
+          integer :new_id
+          foreign_key :old_id, :old_table
+          foreign_key :referenced_field, :referenced_table, key: :referenced_field
+        end
+      end
+
+      let(:changes) do
+        [
+          DbSchema::Changes::DropTable.new(:old_table),
+          DbSchema::Changes::DropTable.new(:other_old_table),
+          DbSchema::Changes::DropForeignKey.new(:other_old_table, :other_old_table_old_id_fkey),
+          DbSchema::Changes::AlterTable.new(
+            :referenced_table,
+            fields: [
+              DbSchema::Changes::DropColumn.new(:referenced_field)
+            ],
+            indices: []
+          ),
+          DbSchema::Changes::AlterTable.new(
+            :referring_table,
+            fields:  [],
+            indices: []
+          ),
+          DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_old_id_fkey),
+          DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_referenced_field_fkey),
+          DbSchema::Changes::CreateForeignKey.new(
+            :referring_table,
+            DbSchema::Definitions::ForeignKey.new(
+              name:   :referring_table_new_id_fkey,
+              fields: [:new_id],
+              table:  :new_table
+            )
+          ),
+          DbSchema::Changes::CreateTable.new(
+            :new_table,
+            fields: [
+              DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+              DbSchema::Definitions::Field::Integer.new(:other_new_id)
+            ],
+            indices: []
+          ),
+          DbSchema::Changes::CreateForeignKey.new(
+            :new_table,
+            DbSchema::Definitions::ForeignKey.new(
+              name:   :new_table_other_new_id_fkey,
+              fields: [:other_new_id],
+              table:  :other_new_table
+            )
+          ),
+          DbSchema::Changes::CreateTable.new(
+            :other_new_table,
+            fields: [
+              DbSchema::Definitions::Field::Integer.new(:id, primary_key: true)
+            ],
+            indices: []
+          )
+        ]
+      end
+
+      it 'creates and drops tables and foreign keys in appropriate order' do
+        subject.run!
+
+        tables = DbSchema::Reader.read_schema
+        expect(tables.count).to eq(6)
       end
     end
 
@@ -449,8 +523,7 @@ RSpec.describe DbSchema::Runner do
               fields: [DbSchema::Definitions::Index::Field.new(:city_name)],
               type:   :gist
             )
-          ],
-          foreign_keys: []
+          ]
         )
       ]
 

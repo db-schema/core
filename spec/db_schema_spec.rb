@@ -5,8 +5,6 @@ RSpec.describe DbSchema do
 
   describe '.describe' do
     before(:each) do
-      pending 'Refactoring foreign keys in Changes'
-
       database.create_table :users do
         column :id,    :Integer, primary_key: true
         column :name,  :Varchar, null: false
@@ -41,6 +39,7 @@ RSpec.describe DbSchema do
           t.integer :user_id, null: false
 
           t.index :user_id, name: :posts_author_index
+          t.foreign_key :user_id, references: :users
         end
 
         db.table :cities do |t|
@@ -95,6 +94,12 @@ RSpec.describe DbSchema do
       expect(user_id_index[:columns]).to eq([:user_id])
       expect(user_id_index[:unique]).to eq(false)
 
+      user_id_fkey = database.foreign_key_list(:posts).first
+      expect(user_id_fkey[:name]).to eq(:posts_user_id_fkey)
+      expect(user_id_fkey[:columns]).to eq([:user_id])
+      expect(user_id_fkey[:table]).to eq(:users)
+      expect(user_id_fkey[:key]).to eq([:id])
+
       id, name, lat, lng = database.schema(:cities)
       expect(id.first).to eq(:id)
       expect(id.last[:db_type]).to eq('integer')
@@ -111,6 +116,14 @@ RSpec.describe DbSchema do
     end
 
     after(:each) do
+      database.tables.each do |table_name|
+        database.foreign_key_list(table_name).each do |foreign_key|
+          database.alter_table(table_name) do
+            drop_foreign_key([], name: foreign_key[:name])
+          end
+        end
+      end
+
       database.tables.each do |table_name|
         database.drop_table(table_name)
       end
