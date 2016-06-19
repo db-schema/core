@@ -19,7 +19,7 @@ module DbSchema
     end
 
     module Postgres
-      DEFAULT_VALUE = /\A('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)/
+      DEFAULT_VALUE = /\A('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false)/
 
       INDICES_QUERY = <<-SQL.freeze
    SELECT relname AS name,
@@ -142,6 +142,8 @@ LEFT JOIN information_schema.element_types AS e
                 match[:integer].to_i
               elsif match[:float]
                 match[:float].to_f
+              elsif match[:boolean]
+                match[:boolean] == 'true'
               end
             end
           end

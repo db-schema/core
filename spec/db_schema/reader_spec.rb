@@ -14,6 +14,7 @@ RSpec.describe DbSchema::Reader do
           column :id, :serial, primary_key: true
           column :name, :varchar, null: false, unique: true
           column :email, :varchar, default: 'mail@example.com', size: 250
+          column :admin, :boolean, null: false, default: false
           column :age, :integer, default: 20
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4], default: 3.45
@@ -56,7 +57,7 @@ RSpec.describe DbSchema::Reader do
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
 
-        id, name, email, age, lat, lng, created_at, updated_at, period, other_period,
+        id, name, email, admin, age, lat, lng, created_at, updated_at, period, other_period,
         some_bit, several_bits, variable_bits, limited_variable_bits, numbers = users.fields
 
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
@@ -71,6 +72,10 @@ RSpec.describe DbSchema::Reader do
         expect(email).to be_null
         expect(email.default).to eq('mail@example.com')
         expect(email.options[:length]).to eq(250)
+        expect(admin).to be_a(DbSchema::Definitions::Field::Boolean)
+        expect(admin.name).to eq(:admin)
+        expect(admin).not_to be_null
+        expect(admin.default).to eq(false)
         expect(age).to be_a(DbSchema::Definitions::Field::Integer)
         expect(age.name).to eq(:age)
         expect(age.default).to eq(20)
