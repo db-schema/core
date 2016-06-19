@@ -96,6 +96,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Index.new(
             name:   :users_email_index,
             fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
+            type:   :hash,
             unique: true
           )
         ]
@@ -189,14 +190,15 @@ RSpec.describe DbSchema::Changes do
         expect(alter_table.indices).to eq([
           DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(
-            name: :users_name_index,
-            fields: [DbSchema::Definitions::Index::Field.new(:name)],
-            unique: true,
+            name:      :users_name_index,
+            fields:    [DbSchema::Definitions::Index::Field.new(:name)],
+            unique:    true,
             condition: 'email IS NOT NULL'
           ),
           DbSchema::Changes::CreateIndex.new(
-            name: :users_email_index,
+            name:   :users_email_index,
             fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
+            type:   :hash,
             unique: true
           ),
           DbSchema::Changes::DropIndex.new(:users_type_index)

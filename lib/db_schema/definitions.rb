@@ -3,7 +3,7 @@ require 'dry/equalizer'
 module DbSchema
   module Definitions
     class Index
-      include Dry::Equalizer(:name, :fields, :unique?, :condition)
+      include Dry::Equalizer(:name, :fields, :unique?, :type, :condition)
       attr_reader :name, :fields, :type, :condition
 
       def initialize(name:, fields:, unique: false, type: :btree, condition: nil)

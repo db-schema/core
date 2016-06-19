@@ -96,6 +96,7 @@ module DbSchema
               name:      index_name,
               fields:    desired.fields,
               unique:    desired.unique?,
+              type:      desired.type,
               condition: desired.condition
             )
           elsif actual && !desired
@@ -106,6 +107,7 @@ module DbSchema
               name:      index_name,
               fields:    desired.fields,
               unique:    desired.unique?,
+              type:      desired.type,
               condition: desired.condition
             )
           end
