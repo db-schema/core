@@ -84,14 +84,25 @@ module DbSchema
       end
     end
 
-    class Table
-      include Dry::Equalizer(:name, :fields, :indices, :foreign_keys)
-      attr_reader :name, :fields, :indices, :foreign_keys
+    class CheckConstraint
+      include Dry::Equalizer(:name, :condition)
+      attr_reader :name, :condition
 
-      def initialize(name, fields: [], indices: [], foreign_keys: [])
+      def initialize(name:, condition:)
+        @name      = name
+        @condition = condition
+      end
+    end
+
+    class Table
+      include Dry::Equalizer(:name, :fields, :indices, :checks, :foreign_keys)
+      attr_reader :name, :fields, :indices, :checks, :foreign_keys
+
+      def initialize(name, fields: [], indices: [], checks: [], foreign_keys: [])
         @name         = name.to_sym
         @fields       = fields
         @indices      = indices
+        @checks       = checks
         @foreign_keys = foreign_keys
       end
     end

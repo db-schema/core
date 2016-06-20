@@ -19,6 +19,7 @@ module DbSchema
         name,
         fields:       table_yielder.fields,
         indices:      table_yielder.indices,
+        checks:       table_yielder.checks,
         foreign_keys: table_yielder.foreign_keys
       )
     end
@@ -81,6 +82,10 @@ module DbSchema
         )
       end
 
+      def check(name, condition)
+        checks << Definitions::CheckConstraint.new(name: name, condition: condition)
+      end
+
       def foreign_key(fields, references:, name: nil, on_update: :no_action, on_delete: :no_action, deferrable: false)
         fkey_fields = Array(fields)
         fkey_name = name || :"#{table_name}_#{fkey_fields.first}_fkey"
@@ -117,6 +122,10 @@ module DbSchema
 
       def indices
         @indices ||= []
+      end
+
+      def checks
+        @checks ||= []
       end
 
       def foreign_keys

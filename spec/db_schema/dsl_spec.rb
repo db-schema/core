@@ -13,6 +13,8 @@ RSpec.describe DbSchema::DSL do
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
           t.index :strings, using: :gin
+
+          t.check :valid_sex, "sex IN ('M', 'F')"
         end
 
         db.table :posts do |t|
@@ -94,6 +96,11 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::Field.new(:col3, nulls: :first),
         DbSchema::Definitions::Index::Field.new(:col4, order: :desc, nulls: :last)
       ])
+
+      expect(users.checks.count).to eq(1)
+      sex_check = users.checks.first
+      expect(sex_check.name).to eq(:valid_sex)
+      expect(sex_check.condition).to eq("sex IN ('M', 'F')")
 
       expect(posts.foreign_keys.count).to eq(2)
       user_id_fkey, user_name_fkey = posts.foreign_keys
