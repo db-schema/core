@@ -21,6 +21,38 @@ module DbSchema
     module Postgres
       DEFAULT_VALUE = /\A('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false)/
 
+      COLUMN_NAMES_QUERY = <<-SQL.freeze
+   SELECT c.column_name AS name,
+          c.ordinal_position AS pos,
+          c.column_default AS default,
+          c.is_nullable AS null,
+          c.data_type AS type,
+          c.character_maximum_length AS char_length,
+          c.numeric_precision AS num_precision,
+          c.numeric_scale AS num_scale,
+          c.datetime_precision AS dt_precision,
+          c.interval_type,
+          e.data_type AS element_type
+     FROM information_schema.columns AS c
+LEFT JOIN information_schema.element_types AS e
+       ON e.object_catalog = c.table_catalog
+      AND e.object_schema = c.table_schema
+      AND e.object_name = c.table_name
+      AND e.object_type = 'TABLE'
+      AND e.collection_type_identifier = c.dtd_identifier
+    WHERE c.table_schema = 'public'
+      AND c.table_name = ?
+      SQL
+
+      CONSTRAINTS_QUERY = <<-SQL.freeze
+SELECT conname AS name,
+       pg_get_expr(conbin, conrelid, true) AS condition
+  FROM pg_constraint, pg_class
+ WHERE conrelid = pg_class.oid
+   AND relname = ?
+   AND contype = 'c'
+      SQL
+
       INDICES_QUERY = <<-SQL.freeze
    SELECT relname AS name,
           indkey AS column_positions,
@@ -45,29 +77,6 @@ LEFT JOIN pg_am
   GROUP BY name, column_positions, indisunique, index_options, condition, expression, index_type
       SQL
 
-      COLUMN_NAMES_QUERY = <<-SQL.freeze
-   SELECT c.column_name AS name,
-          c.ordinal_position AS pos,
-          c.column_default AS default,
-          c.is_nullable AS null,
-          c.data_type AS type,
-          c.character_maximum_length AS char_length,
-          c.numeric_precision AS num_precision,
-          c.numeric_scale AS num_scale,
-          c.datetime_precision AS dt_precision,
-          c.interval_type,
-          e.data_type AS element_type
-     FROM information_schema.columns AS c
-LEFT JOIN information_schema.element_types AS e
-       ON e.object_catalog = c.table_catalog
-      AND e.object_schema = c.table_schema
-      AND e.object_name = c.table_name
-      AND e.object_type = 'TABLE'
-      AND e.collection_type_identifier = c.dtd_identifier
-    WHERE c.table_schema = 'public'
-      AND c.table_name = ?
-      SQL
-
       class << self
         def read_schema
           DbSchema.connection.tables.map do |table_name|
@@ -85,10 +94,18 @@ LEFT JOIN information_schema.element_types AS e
               build_foreign_key(foreign_key_data)
             end
 
+            checks = DbSchema.connection[CONSTRAINTS_QUERY, table_name.to_s].map do |check_data|
+              Definitions::CheckConstraint.new(
+                name:      check_data[:name].to_sym,
+                condition: check_data[:condition]
+              )
+            end
+
             Definitions::Table.new(
               table_name,
               fields:       fields,
               indices:      indices,
+              checks:       checks,
               foreign_keys: foreign_keys
             )
           end

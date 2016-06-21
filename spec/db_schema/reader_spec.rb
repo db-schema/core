@@ -35,6 +35,8 @@ RSpec.describe DbSchema::Reader do
             Sequel.desc(:lng, nulls: :last)
           ], unique: true, where: 'email IS NOT NULL'
           index [:name], type: :spgist
+
+          constraint :is_adult, 'age > 18'
         end
 
         DbSchema.connection.create_table :posts do
@@ -150,6 +152,11 @@ RSpec.describe DbSchema::Reader do
           DbSchema::Definitions::Index::Field.new(:name)
         ])
         expect(name_index.type).to eq(:spgist)
+
+        expect(users.checks.count).to eq(1)
+        age_check = users.checks.first
+        expect(age_check.name).to eq(:is_adult)
+        expect(age_check.condition).to eq('age > 18')
 
         expect(posts.indices.count).to eq(1)
         user_id_index = posts.indices.first
