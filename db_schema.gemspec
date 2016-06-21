@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email         = ['7@7vn.ru']
 
   spec.summary       = 'Declarative database schema definition.'
-  spec.description   = 'A database schema toolkit that reads a "single-source-of-truth" schema definition from a ruby file and auto-migrates the database to conform to it.'
+  spec.description   = 'A database schema management tool that reads a "single-source-of-truth" schema definition from a ruby file and auto-migrates the database to conform to it.'
   spec.homepage      = 'https://github.com/7even/db_schema'
   spec.license       = 'MIT'
 
