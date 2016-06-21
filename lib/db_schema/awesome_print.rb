@@ -19,6 +19,8 @@ if defined?(AwesomePrint)
           :dbschema_field
         when ::DbSchema::Definitions::Index
           :dbschema_index
+        when ::DbSchema::Definitions::CheckConstraint
+          :dbschema_check_constraint
         when ::DbSchema::Definitions::ForeignKey
           :dbschema_foreign_key
         else
@@ -26,10 +28,11 @@ if defined?(AwesomePrint)
         end
       end
 
-      private
+    private
       def awesome_dbschema_table(object)
         data = ["fields: #{object.fields.ai(indent: 8)}"]
         data << "indices: #{object.indices.ai(indent: 8)}" if object.indices.any?
+        data << "checks: #{object.checks.ai(indent: 8)}" if object.checks.any?
         data << "foreign_keys: #{object.foreign_keys.ai(indent: 8)}" if object.foreign_keys.any?
 
         "#<DbSchema::Definitions::Table #{object.name.ai} #{data.join(', ')}>"
@@ -59,6 +62,10 @@ if defined?(AwesomePrint)
         data << colorize('condition: ', :symbol) + object.condition.ai unless object.condition.nil?
 
         "#<#{object.class} #{object.name.ai} on #{fields}#{using}#{data.join(', ')}>"
+      end
+
+      def awesome_dbschema_check_constraint(object)
+        "#<#{object.class} #{object.name.ai} #{object.condition.ai}>"
       end
 
       def awesome_dbschema_foreign_key(object)
