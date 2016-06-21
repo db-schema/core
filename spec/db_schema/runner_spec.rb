@@ -57,6 +57,8 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
+  let(:users_checks) { [] }
+
   let(:users_foreign_keys) do
     [
       DbSchema::Definitions::ForeignKey.new(
@@ -77,7 +79,8 @@ RSpec.describe DbSchema::Runner do
           DbSchema::Changes::CreateTable.new(
             :users,
             fields:  users_fields,
-            indices: users_indices
+            indices: users_indices,
+            checks:  users_checks
           ),
           DbSchema::Changes::DropTable.new(:people)
         ]
@@ -148,13 +151,15 @@ RSpec.describe DbSchema::Runner do
           DbSchema::Changes::AlterTable.new(
             :people,
             fields:  field_changes,
-            indices: index_changes
+            indices: index_changes,
+            checks:  check_changes
           )
         ]
       end
 
       let(:field_changes) { [] }
       let(:index_changes) { [] }
+      let(:check_changes) { [] }
       let(:foreign_key_changes) { [] }
 
       context 'containing CreateColumn & DropColumn' do
@@ -457,12 +462,14 @@ RSpec.describe DbSchema::Runner do
             fields: [
               DbSchema::Changes::DropColumn.new(:referenced_field)
             ],
-            indices: []
+            indices: [],
+            checks:  []
           ),
           DbSchema::Changes::AlterTable.new(
             :referring_table,
             fields:  [],
-            indices: []
+            indices: [],
+            checks:  []
           ),
           DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_old_id_fkey),
           DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_referenced_field_fkey),
@@ -523,7 +530,8 @@ RSpec.describe DbSchema::Runner do
               fields: [DbSchema::Definitions::Index::Field.new(:city_name)],
               type:   :gist
             )
-          ]
+          ],
+          checks: []
         )
       ]
 

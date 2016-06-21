@@ -7,13 +7,27 @@ RSpec.describe DbSchema::Changes do
         [
           DbSchema::Definitions::Field::Integer.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:name, length: 20),
+          DbSchema::Definitions::Field::Varchar.new(:email),
           DbSchema::Definitions::Field::Integer.new(:city_id)
+        ]
+      end
+
+      let(:users_checks) do
+        [
+          DbSchema::Definitions::CheckConstraint.new(
+            name:      :name_or_email,
+            condition: 'name IS NOT NULL OR email IS NOT NULL'
+          )
         ]
       end
 
       let(:users_foreign_keys) do
         [
-          DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
+          DbSchema::Definitions::ForeignKey.new(
+            name:   :users_city_id_fkey,
+            fields: [:city_id],
+            table:  :cities
+          )
         ]
       end
 
@@ -26,7 +40,11 @@ RSpec.describe DbSchema::Changes do
 
       let(:posts_foreign_keys) do
         [
-          DbSchema::Definitions::ForeignKey.new(name: :posts_city_id_fkey, fields: [:city_id], table: :cities)
+          DbSchema::Definitions::ForeignKey.new(
+            name:   :posts_city_id_fkey,
+            fields: [:city_id],
+            table:  :cities
+          )
         ]
       end
 
@@ -40,14 +58,23 @@ RSpec.describe DbSchema::Changes do
 
       let(:desired_schema) do
         [
-          DbSchema::Definitions::Table.new(:users, fields: users_fields, foreign_keys: users_foreign_keys),
+          DbSchema::Definitions::Table.new(
+            :users,
+            fields:       users_fields,
+            checks:       users_checks,
+            foreign_keys: users_foreign_keys
+          ),
           DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
         ]
       end
 
       let(:actual_schema) do
         [
-          DbSchema::Definitions::Table.new(:posts, fields: posts_fields, foreign_keys: posts_foreign_keys),
+          DbSchema::Definitions::Table.new(
+            :posts,
+            fields:       posts_fields,
+            foreign_keys: posts_foreign_keys
+          ),
           DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
         ]
       end
@@ -56,7 +83,11 @@ RSpec.describe DbSchema::Changes do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         expect(changes).to include(
-          DbSchema::Changes::CreateTable.new(:users, fields: users_fields)
+          DbSchema::Changes::CreateTable.new(
+            :users,
+            fields: users_fields,
+            checks: users_checks
+          )
         )
         expect(changes).to include(DbSchema::Changes::DropTable.new(:posts))
         expect(changes).to include(
@@ -101,6 +132,13 @@ RSpec.describe DbSchema::Changes do
           )
         ]
 
+        checks = [
+          DbSchema::Definitions::CheckConstraint.new(
+            name:      :location_check,
+            condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
+          )
+        ]
+
         foreign_keys = [
           DbSchema::Definitions::ForeignKey.new(
             name:   :users_city_id_fkey,
@@ -120,6 +158,7 @@ RSpec.describe DbSchema::Changes do
             :users,
             fields:       fields,
             indices:      indices,
+            checks:       checks,
             foreign_keys: foreign_keys
           )
         ]
@@ -147,6 +186,13 @@ RSpec.describe DbSchema::Changes do
           )
         ]
 
+        checks = [
+          DbSchema::Definitions::CheckConstraint.new(
+            name:      :location_check,
+            condition: 'city_id IS NOT NULL AND country_id IS NOT NULL'
+          )
+        ]
+
         foreign_keys = [
           DbSchema::Definitions::ForeignKey.new(
             name: :users_country_id_fkey,
@@ -166,6 +212,7 @@ RSpec.describe DbSchema::Changes do
             :users,
             fields:       fields,
             indices:      indices,
+            checks:       checks,
             foreign_keys: foreign_keys
           )
         ]
@@ -202,6 +249,14 @@ RSpec.describe DbSchema::Changes do
             unique: true
           ),
           DbSchema::Changes::DropIndex.new(:users_type_index)
+        ])
+
+        expect(alter_table.checks).to eq([
+          DbSchema::Changes::DropCheckConstraint.new(:location_check),
+          DbSchema::Changes::CreateCheckConstraint.new(
+            name:      :location_check,
+            condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
+          )
         ])
 
         expect(changes.drop(1)).to eq([

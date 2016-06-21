@@ -15,7 +15,8 @@ module DbSchema
             changes << CreateTable.new(
               table_name,
               fields:  desired.fields,
-              indices: desired.indices
+              indices: desired.indices,
+              checks:  desired.checks
             )
 
             fkey_operations = desired.foreign_keys.map do |fkey|
@@ -31,12 +32,14 @@ module DbSchema
           elsif actual != desired
             field_operations = field_changes(desired.fields, actual.fields)
             index_operations = index_changes(desired.indices, actual.indices)
+            check_operations = check_changes(desired.checks, actual.checks)
             fkey_operations  = foreign_key_changes(table_name, desired.foreign_keys, actual.foreign_keys)
 
             changes << AlterTable.new(
               table_name,
               fields:  field_operations,
-              indices: index_operations
+              indices: index_operations,
+              checks:  check_operations
             )
 
             changes.concat(fkey_operations)
@@ -114,6 +117,30 @@ module DbSchema
         end
       end
 
+      def check_changes(desired_checks, actual_checks)
+        check_names = [desired_checks, actual_checks].flatten.map(&:name).uniq
+
+        check_names.each.with_object([]) do |check_name, table_changes|
+          desired = desired_checks.find { |check| check.name == check_name }
+          actual  = actual_checks.find  { |check| check.name == check_name }
+
+          if desired && !actual
+            table_changes << CreateCheckConstraint.new(
+              name:      check_name,
+              condition: desired.condition
+            )
+          elsif actual && !desired
+            table_changes << DropCheckConstraint.new(check_name)
+          elsif actual != desired
+            table_changes << DropCheckConstraint.new(check_name)
+            table_changes << CreateCheckConstraint.new(
+              name:      check_name,
+              condition: desired.condition
+            )
+          end
+        end
+      end
+
       def foreign_key_changes(table_name, desired_foreign_keys, actual_foreign_keys)
         key_names = [desired_foreign_keys, actual_foreign_keys].flatten.map(&:name).uniq
 
@@ -144,13 +171,14 @@ module DbSchema
     end
 
     class CreateTable
-      include Dry::Equalizer(:name, :fields, :indices)
-      attr_reader :name, :fields, :indices
+      include Dry::Equalizer(:name, :fields, :indices, :checks)
+      attr_reader :name, :fields, :indices, :checks
 
-      def initialize(name, fields: [], indices: [])
+      def initialize(name, fields: [], indices: [], checks: [])
         @name    = name
         @fields  = fields
         @indices = indices
+        @checks  = checks
       end
     end
 
@@ -164,13 +192,14 @@ module DbSchema
     end
 
     class AlterTable
-      include Dry::Equalizer(:name, :fields, :indices)
-      attr_reader :name, :fields, :indices
+      include Dry::Equalizer(:name, :fields, :indices, :checks)
+      attr_reader :name, :fields, :indices, :checks
 
-      def initialize(name, fields:, indices:)
+      def initialize(name, fields:, indices:, checks:)
         @name    = name
         @fields  = fields
         @indices = indices
+        @checks  = checks
       end
     end
 
@@ -258,6 +287,12 @@ module DbSchema
     end
 
     class DropIndex < ColumnOperation
+    end
+
+    class CreateCheckConstraint < Definitions::CheckConstraint
+    end
+
+    class DropCheckConstraint < ColumnOperation
     end
 
     class CreateForeignKey
