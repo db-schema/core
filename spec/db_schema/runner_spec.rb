@@ -12,6 +12,8 @@ RSpec.describe DbSchema::Runner do
       column :created_at,   :Timestamptz
 
       index :address
+
+      constraint :address_length, Sequel.function(:char_length, :address) => 3..50
     end
 
     database.create_table :countries do
@@ -57,7 +59,14 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
-  let(:users_checks) { [] }
+  let(:users_checks) {
+    [
+      DbSchema::Definitions::CheckConstraint.new(
+        name:      :min_name_length,
+        condition: 'character_length(name::text) > 4'
+      )
+    ]
+  }
 
   let(:users_foreign_keys) do
     [
@@ -142,6 +151,11 @@ RSpec.describe DbSchema::Runner do
         expect(email_index[:condition]).to eq('email IS NOT NULL')
         expect(names_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:names)])
         expect(names_index[:type]).to eq(:gin)
+
+        expect(users.checks.count).to eq(1)
+        name_length_check = users.checks.first
+        expect(name_length_check.name).to eq(:min_name_length)
+        expect(name_length_check.condition).to eq('character_length(name::text) > 4')
       end
     end
 
@@ -363,6 +377,28 @@ RSpec.describe DbSchema::Runner do
           # non-BTree indexes don't support index ordering
           expect(time_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:created_at)])
           expect(time_index[:type]).to eq(:brin)
+        end
+      end
+
+      context 'containing CreateCheckConstraint & DropCheckConstraint' do
+        let(:check_changes) do
+          [
+            DbSchema::Changes::DropCheckConstraint.new(:address_length),
+            DbSchema::Changes::CreateCheckConstraint.new(
+              name:      :min_address_length,
+              condition: 'character_length(address) >= 10'
+            )
+          ]
+        end
+
+        it 'applies all the changes' do
+          subject.run!
+
+          people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+          expect(people.checks.count).to eq(1)
+          address_check = people.checks.first
+          expect(address_check.name).to eq(:min_address_length)
+          expect(address_check.condition).to eq('character_length(address::text) >= 10')
         end
       end
     end

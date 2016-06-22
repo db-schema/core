@@ -66,6 +66,10 @@ module DbSchema
               where:  index.condition
             )
           end
+
+          change.checks.each do |check|
+            constraint(check.name, check.condition)
+          end
         end
       end
 
@@ -122,6 +126,15 @@ module DbSchema
               )
             when Changes::DropIndex
               drop_index([], name: index.name)
+            end
+          end
+
+          change.checks.each do |check|
+            case check
+            when Changes::CreateCheckConstraint
+              add_constraint(check.name, check.condition)
+            when Changes::DropCheckConstraint
+              drop_constraint(check.name)
             end
           end
         end
