@@ -160,7 +160,6 @@ RSpec.describe DbSchema::Runner do
       let(:field_changes) { [] }
       let(:index_changes) { [] }
       let(:check_changes) { [] }
-      let(:foreign_key_changes) { [] }
 
       context 'containing CreateColumn & DropColumn' do
         let(:field_changes) do
