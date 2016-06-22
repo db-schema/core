@@ -400,6 +400,76 @@ RSpec.describe DbSchema::Runner do
           expect(address_check.name).to eq(:min_address_length)
           expect(address_check.condition).to eq('character_length(address::text) >= 10')
         end
+
+        context 'when adding field with a check' do
+          let(:field_changes) do
+            [
+              DbSchema::Changes::CreateColumn.new(
+                DbSchema::Definitions::Field::Integer.new(:age)
+              )
+            ]
+          end
+
+          let(:check_changes) do
+            [
+              DbSchema::Changes::CreateCheckConstraint.new(
+                name:      :age_check,
+                condition: 'age > 18'
+              )
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+            expect(people.fields).to include(
+              DbSchema::Definitions::Field::Integer.new(:age)
+            )
+            expect(people.checks).to include(
+              DbSchema::Definitions::CheckConstraint.new(
+                name:      :age_check,
+                condition: 'age > 18'
+              )
+            )
+          end
+        end
+
+        context 'when removing field with a check' do
+          before(:each) do
+            database.alter_table :people do
+              add_column :age, :integer
+              add_constraint :age_check, 'age > 18'
+            end
+          end
+
+          let(:field_changes) do
+            [
+              DbSchema::Changes::DropColumn.new(:age)
+            ]
+          end
+
+          let(:check_changes) do
+            [
+              DbSchema::Changes::DropCheckConstraint.new(:age_check)
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+            expect(people.fields).not_to include(
+              DbSchema::Definitions::Field::Integer.new(:age)
+            )
+            expect(people.checks).not_to include(
+              DbSchema::Definitions::CheckConstraint.new(
+                name:      :age_check,
+                condition: 'age > 18'
+              )
+            )
+          end
+        end
       end
     end
 

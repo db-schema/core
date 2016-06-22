@@ -79,6 +79,12 @@ module DbSchema
 
       def alter_table(change)
         DbSchema.connection.alter_table(change.name) do
+          change.checks.each do |check|
+            if check.is_a?(Changes::DropCheckConstraint)
+              drop_constraint(check.name)
+            end
+          end
+
           change.fields.each do |field|
             case field
             when Changes::CreateColumn
@@ -130,11 +136,8 @@ module DbSchema
           end
 
           change.checks.each do |check|
-            case check
-            when Changes::CreateCheckConstraint
+            if check.is_a?(Changes::CreateCheckConstraint)
               add_constraint(check.name, check.condition)
-            when Changes::DropCheckConstraint
-              drop_constraint(check.name)
             end
           end
         end
