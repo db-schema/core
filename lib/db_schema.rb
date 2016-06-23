@@ -18,6 +18,7 @@ module DbSchema
       actual_schema  = Reader.read_schema
 
       changes = Changes.between(desired_schema, actual_schema)
+      log_changes(changes) if configuration.debug?
       Runner.new(changes).run!
     end
 
@@ -57,6 +58,15 @@ module DbSchema
     def reset!
       @configuration = nil
       @connection    = nil
+    end
+
+  private
+    def log_changes(changes)
+      if changes.respond_to?(:ai)
+        puts changes.ai
+      else
+        puts changes.inspect
+      end
     end
   end
 end
