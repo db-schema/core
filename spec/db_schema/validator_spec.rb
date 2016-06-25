@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Validator do
-  describe '#valid?' do
-    subject { DbSchema::Validator.new(schema) }
+  describe '.validate' do
+    let(:result) { DbSchema::Validator.validate(schema) }
 
     let(:schema) do
       [
@@ -52,8 +52,8 @@ RSpec.describe DbSchema::Validator do
     end
 
     context 'on a valid schema' do
-      it 'returns true' do
-        expect(subject).to be_valid
+      it 'returns a valid result' do
+        expect(result).to be_valid
       end
     end
 
@@ -69,8 +69,11 @@ RSpec.describe DbSchema::Validator do
         ]
       end
 
-      it 'returns false' do
-        expect(subject).not_to be_valid
+      it 'returns an invalid result with errors' do
+        expect(result).not_to be_valid
+        expect(result.errors).to eq([
+          'Index "invalid_index" refers to a missing field "users.address"'
+        ])
       end
     end
   end
