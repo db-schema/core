@@ -13,6 +13,36 @@ module DbSchema
               end
             end
           end
+
+          table.foreign_keys.each do |fkey|
+            fkey.fields.each do |field_name|
+              unless field_names.include?(field_name)
+                error_message = %(Foreign key "#{fkey.name}" constrains a missing field "#{table.name}.#{field_name}")
+                errors << error_message
+              end
+            end
+
+            if referenced_table = schema.find { |table| table.name == fkey.table }
+              if fkey.references_primary_key?
+                unless referenced_table.fields.any?(&:primary_key?)
+                  error_message = %(Foreign key "#{fkey.name}" refers to primary key of table "#{fkey.table}" which does not have a primary key)
+                  errors << error_message
+                end
+              else
+                referenced_table_field_names = referenced_table.fields.map(&:name)
+
+                fkey.keys.each do |key|
+                  unless referenced_table_field_names.include?(key)
+                    error_message = %(Foreign key "#{fkey.name}" refers to a missing field "#{fkey.table}.#{key}")
+                    errors << error_message
+                  end
+                end
+              end
+            else
+              error_message = %(Foreign key "#{fkey.name}" refers to a missing table "#{fkey.table}")
+              errors << error_message
+            end
+          end
         end
 
         Result.new(errors)
