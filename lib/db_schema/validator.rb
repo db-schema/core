@@ -3,6 +3,12 @@ module DbSchema
     class << self
       def validate(schema)
         errors = schema.each_with_object([]) do |table, errors|
+          primary_keys_count = table.fields.select(&:primary_key?).count
+          if primary_keys_count > 1
+            error_message = %(Table "#{table.name}" has #{primary_keys_count} primary keys)
+            errors << error_message
+          end
+
           field_names = table.fields.map(&:name)
 
           table.indices.each do |index|

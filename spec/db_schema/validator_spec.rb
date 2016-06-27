@@ -69,6 +69,25 @@ RSpec.describe DbSchema::Validator do
       end
     end
 
+    context 'on a schema with multiple primary keys in one table' do
+      let(:users_fields) do
+        [
+          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Varchar.new(:email, primary_key: true),
+          DbSchema::Definitions::Field::Varchar.new(:name, null: false)
+        ]
+      end
+
+      let(:users_indices) { [] }
+
+      it 'returns an invalid result with errors' do
+        expect(result).not_to be_valid
+        expect(result.errors).to eq([
+          'Table "users" has 2 primary keys'
+        ])
+      end
+    end
+
     context 'on a schema with index on unknown field' do
       let(:users_indices) do
         [
