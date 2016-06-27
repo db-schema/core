@@ -115,6 +115,48 @@ RSpec.describe DbSchema do
       expect(database.indexes(:cities)).to be_empty
     end
 
+    context 'with an invalid schema' do
+      it 'raises an InvalidSchemaError' do
+        message = <<-MSG
+Requested schema is invalid:
+
+* Index "users_name_index" refers to a missing field "users.name"
+* Foreign key "users_city_id_fkey" refers to primary key of table "cities" which does not have a primary key
+* Foreign key "cities_country_id_fkey" refers to a missing table "countries"
+* Foreign key "posts_user_name_fkey" refers to a missing field "users.name"
+        MSG
+
+        expect {
+          subject.describe do |db|
+            db.table :users do |t|
+              t.primary_key :id
+              t.varchar :email, null: false
+              t.integer :city_id
+
+              t.index :name, unique: true
+
+              t.foreign_key :city_id, references: :cities
+            end
+
+            db.table :cities do |t|
+              t.varchar :name
+              t.integer :country_id
+
+              t.foreign_key :country_id, references: :countries
+            end
+
+            db.table :posts do |t|
+              t.primary_key :id
+              t.varchar :title
+              t.integer :user_name
+
+              t.foreign_key :user_name, references: [:users, :name]
+            end
+          end
+        }.to raise_error(DbSchema::InvalidSchemaError, message)
+      end
+    end
+
     after(:each) do
       database.tables.each do |table_name|
         database.foreign_key_list(table_name).each do |foreign_key|

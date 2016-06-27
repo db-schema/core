@@ -16,10 +16,12 @@ module DbSchema
   class << self
     def describe(&block)
       desired_schema = DSL.new(block).schema
-      actual_schema  = Reader.read_schema
+      validate(desired_schema)
 
+      actual_schema = Reader.read_schema
       changes = Changes.between(desired_schema, actual_schema)
       log_changes(changes) if configuration.debug?
+
       Runner.new(changes).run!
     end
 
@@ -62,6 +64,20 @@ module DbSchema
     end
 
   private
+    def validate(schema)
+      validation_result = Validator.validate(schema)
+
+      unless validation_result.valid?
+        message = "Requested schema is invalid:\n\n"
+
+        validation_result.errors.each do |error|
+          message << "* #{error}\n"
+        end
+
+        raise InvalidSchemaError, message
+      end
+    end
+
     def log_changes(changes)
       if changes.respond_to?(:ai)
         puts changes.ai
@@ -70,4 +86,6 @@ module DbSchema
       end
     end
   end
+
+  class InvalidSchemaError < ArgumentError; end
 end
