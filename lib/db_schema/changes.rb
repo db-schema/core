@@ -35,12 +35,14 @@ module DbSchema
             check_operations = check_changes(desired.checks, actual.checks)
             fkey_operations  = foreign_key_changes(table_name, desired.foreign_keys, actual.foreign_keys)
 
-            changes << AlterTable.new(
-              table_name,
-              fields:  field_operations,
-              indices: index_operations,
-              checks:  check_operations
-            )
+            if field_operations.any? || index_operations.any? || check_operations.any?
+              changes << AlterTable.new(
+                table_name,
+                fields:  field_operations,
+                indices: index_operations,
+                checks:  check_operations
+              )
+            end
 
             changes.concat(fkey_operations)
           end

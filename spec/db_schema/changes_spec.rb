@@ -195,9 +195,9 @@ RSpec.describe DbSchema::Changes do
 
         foreign_keys = [
           DbSchema::Definitions::ForeignKey.new(
-            name: :users_country_id_fkey,
+            name:   :users_country_id_fkey,
             fields: [:country_id],
-            table: :countries
+            table:  :countries
           ),
           DbSchema::Definitions::ForeignKey.new(
             name:      :users_group_id_fkey,
@@ -280,6 +280,59 @@ RSpec.describe DbSchema::Changes do
           ),
           DbSchema::Changes::DropForeignKey.new(:users, :users_country_id_fkey)
         ])
+      end
+
+      context 'with just foreign keys changed' do
+        let(:posts_fields) do
+          [
+            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Varchar.new(:title),
+            DbSchema::Definitions::Field::Integer.new(:user_id, null: false),
+            DbSchema::Definitions::Field::Integer.new(:category_id, null: false)
+          ]
+        end
+
+        let(:desired_schema) do
+          [
+            DbSchema::Definitions::Table.new(
+              :posts,
+              fields: posts_fields,
+              foreign_keys: [
+                DbSchema::Definitions::ForeignKey.new(
+                  name:   :posts_user_id_fkey,
+                  fields: [:user_id],
+                  table:  :users
+                )
+              ]
+            )
+          ]
+        end
+
+        let(:actual_schema) do
+          [
+            DbSchema::Definitions::Table.new(
+              :posts,
+              fields: posts_fields,
+              foreign_keys: [
+                DbSchema::Definitions::ForeignKey.new(
+                  name:   :posts_category_id_fkey,
+                  fields: [:category_id],
+                  table:  :categories
+                )
+              ]
+            )
+          ]
+        end
+
+        it 'returns only foreign key operations' do
+          changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+          expect(changes.count).to eq(2)
+          expect(changes.map(&:class)).to eq([
+            DbSchema::Changes::CreateForeignKey,
+            DbSchema::Changes::DropForeignKey
+          ])
+        end
       end
     end
   end
