@@ -79,65 +79,69 @@ module DbSchema
 
       def alter_table(change)
         DbSchema.connection.alter_table(change.name) do
-          change.checks.each do |check|
-            if check.is_a?(Changes::DropCheckConstraint)
-              drop_constraint(check.name)
-            end
-          end
-
-          change.fields.each do |field|
-            case field
+          Utils.sort_by_class(
+            change.fields + change.indices + change.checks,
+            [
+              DbSchema::Changes::DropPrimaryKey,
+              DbSchema::Changes::DropCheckConstraint,
+              DbSchema::Changes::DropIndex,
+              DbSchema::Changes::DropColumn,
+              DbSchema::Changes::RenameColumn,
+              DbSchema::Changes::AlterColumnType,
+              DbSchema::Changes::AllowNull,
+              DbSchema::Changes::DisallowNull,
+              DbSchema::Changes::AlterColumnDefault,
+              DbSchema::Changes::CreateColumn,
+              DbSchema::Changes::CreateIndex,
+              DbSchema::Changes::CreateCheckConstraint,
+              DbSchema::Changes::CreatePrimaryKey
+            ]
+          ).each do |element|
+            case element
             when Changes::CreateColumn
-              if field.primary_key?
-                add_primary_key(field.name)
+              if element.primary_key?
+                add_primary_key(element.name)
               else
-                options = Runner.map_options(field.type, field.options)
-                add_column(field.name, field.type.capitalize, options)
+                options = Runner.map_options(element.type, element.options)
+                add_column(element.name, element.type.capitalize, options)
               end
             when Changes::DropColumn
-              drop_column(field.name)
+              drop_column(element.name)
             when Changes::RenameColumn
-              rename_column(field.old_name, field.new_name)
+              rename_column(element.old_name, element.new_name)
             when Changes::AlterColumnType
-              attributes = Runner.map_options(field.new_type, field.new_attributes)
-              set_column_type(field.name, field.new_type.capitalize, attributes)
+              attributes = Runner.map_options(element.new_type, element.new_attributes)
+              set_column_type(element.name, element.new_type.capitalize, attributes)
             when Changes::CreatePrimaryKey
               raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
             when Changes::DropPrimaryKey
               raise NotImplementedError, 'Removing a primary key while leaving the column is currently unsupported'
             when Changes::AllowNull
-              set_column_allow_null(field.name)
+              set_column_allow_null(element.name)
             when Changes::DisallowNull
-              set_column_not_null(field.name)
+              set_column_not_null(element.name)
             when Changes::AlterColumnDefault
-              set_column_default(field.name, field.new_default)
-            end
-          end
-
-          change.indices.each do |index|
-            case index
+              set_column_default(element.name, element.new_default)
             when Changes::CreateIndex
-              fields = if index.btree?
-                index.fields.map(&:to_sequel)
+              fields = if element.btree?
+                element.fields.map(&:to_sequel)
               else
-                index.fields.map(&:name)
+                element.fields.map(&:name)
               end
 
               add_index(
                 fields,
-                name:   index.name,
-                unique: index.unique?,
-                type:   index.type,
-                where:  index.condition
+                name:   element.name,
+                unique: element.unique?,
+                type:   element.type,
+                where:  element.condition
               )
             when Changes::DropIndex
-              drop_index([], name: index.name)
-            end
-          end
-
-          change.checks.each do |check|
-            if check.is_a?(Changes::CreateCheckConstraint)
-              add_constraint(check.name, check.condition)
+              drop_index([], name: element.name)
+            when Changes::CreateCheckConstraint
+              add_constraint(element.name, element.condition)
+            when Changes::DropCheckConstraint
+              drop_constraint(element.name)
             end
           end
         end

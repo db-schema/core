@@ -400,75 +400,129 @@ RSpec.describe DbSchema::Runner do
           expect(address_check.name).to eq(:min_address_length)
           expect(address_check.condition).to eq('character_length(address::text) >= 10')
         end
+      end
 
-        context 'when adding field with a check' do
-          let(:field_changes) do
-            [
-              DbSchema::Changes::CreateColumn.new(
-                DbSchema::Definitions::Field::Integer.new(:age)
-              )
-            ]
-          end
-
-          let(:check_changes) do
-            [
-              DbSchema::Changes::CreateCheckConstraint.new(
-                name:      :age_check,
-                condition: 'age > 18'
-              )
-            ]
-          end
-
-          it 'applies all the changes' do
-            subject.run!
-
-            people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
-            expect(people.fields).to include(
-              DbSchema::Definitions::Field::Integer.new(:age)
+      context "creating a field along with it's index" do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Varchar.new(:email)
             )
-            expect(people.checks).to include(
-              DbSchema::Definitions::CheckConstraint.new(
-                name:      :age_check,
-                condition: 'age > 18'
-              )
-            )
-          end
+          ]
         end
 
-        context 'when removing field with a check' do
-          before(:each) do
-            database.alter_table :people do
-              add_column :age, :integer
-              add_constraint :age_check, 'age > 18'
-            end
-          end
-
-          let(:field_changes) do
-            [
-              DbSchema::Changes::DropColumn.new(:age)
-            ]
-          end
-
-          let(:check_changes) do
-            [
-              DbSchema::Changes::DropCheckConstraint.new(:age_check)
-            ]
-          end
-
-          it 'applies all the changes' do
-            subject.run!
-
-            people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
-            expect(people.fields).not_to include(
-              DbSchema::Definitions::Field::Integer.new(:age)
+        let(:index_changes) do
+          [
+            DbSchema::Changes::CreateIndex.new(
+              name: :people_email_index,
+              fields: [
+                DbSchema::Definitions::Index::Field.new(:email)
+              ]
             )
-            expect(people.checks).not_to include(
-              DbSchema::Definitions::CheckConstraint.new(
-                name:      :age_check,
-                condition: 'age > 18'
-              )
-            )
+          ]
+        end
+
+        it 'creates the field before creating the index' do
+          subject.run!
+
+          people = DbSchema::Reader.read_schema.find do |table|
+            table.name == :people
           end
+
+          expect(people.fields.map(&:name)).to include(:email)
+          expect(people.indices).to include(
+            DbSchema::Definitions::Index.new(
+              name: :people_email_index,
+              fields: [
+                DbSchema::Definitions::Index::Field.new(:email)
+              ]
+            )
+          )
+        end
+      end
+
+      context "dropping a field along with it's index" do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::DropColumn.new(:address)
+          ]
+        end
+
+        let(:index_changes) do
+          [
+            DbSchema::Changes::DropIndex.new(:people_address_index)
+          ]
+        end
+
+        it 'drops the index before dropping the field' do
+          subject.run!
+
+          people = DbSchema::Reader.read_schema.find do |table|
+            table.name == :people
+          end
+
+          expect(people.fields.map(&:name)).not_to include(:address)
+          expect(people.indices).to be_empty
+        end
+      end
+
+      context "creating a field along with it's check constraint" do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Varchar.new(:email)
+            )
+          ]
+        end
+
+        let(:check_changes) do
+          [
+            DbSchema::Changes::CreateCheckConstraint.new(
+              name:      :email_length,
+              condition: 'char_length(email) > 5'
+            )
+          ]
+        end
+
+        it 'creates the field before creating the check' do
+          subject.run!
+
+          people = DbSchema::Reader.read_schema.find do |table|
+            table.name == :people
+          end
+
+          expect(people.fields.map(&:name)).to include(:email)
+          expect(people.checks).to include(
+            DbSchema::Definitions::CheckConstraint.new(
+              name:      :email_length,
+              condition: 'char_length(email::text) > 5'
+            )
+          )
+        end
+      end
+
+      context "dropping a field along with it's check constraint" do
+        let(:field_changes) do
+          [
+            DbSchema::Changes::DropColumn.new(:address)
+          ]
+        end
+
+        let(:check_changes) do
+          [
+            DbSchema::Changes::DropCheckConstraint.new(:address_length)
+          ]
+        end
+
+        it 'drops the check before dropping the field' do
+          subject.run!
+
+          people = DbSchema::Reader.read_schema.find do |table|
+            table.name == :people
+          end
+
+          expect(people.fields.map(&:name)).not_to include(:address)
+          expect(people.checks).to be_empty
         end
       end
     end
