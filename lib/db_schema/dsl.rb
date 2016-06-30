@@ -3,19 +3,20 @@ module DbSchema
     attr_reader :block
 
     def initialize(block)
-      @block = block
+      @block  = block
+      @schema = []
     end
 
     def schema
       block.call(self)
 
-      tables
+      @schema
     end
 
     def table(name, &block)
       table_yielder = TableYielder.new(name, block)
 
-      tables << Definitions::Table.new(
+      @schema << Definitions::Table.new(
         name,
         fields:       table_yielder.fields,
         indices:      table_yielder.indices,
@@ -24,9 +25,8 @@ module DbSchema
       )
     end
 
-  private
-    def tables
-      @tables ||= []
+    def enum(name, values)
+      @schema << Definitions::Enum.new(name.to_sym, values.map(&:to_sym))
     end
 
     class TableYielder

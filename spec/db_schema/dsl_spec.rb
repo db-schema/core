@@ -17,6 +17,8 @@ RSpec.describe DbSchema::DSL do
           t.check :valid_sex, "sex IN ('M', 'F')"
         end
 
+        db.enum :happiness, [:sad, :ok, :good, :happy]
+
         db.table :posts do |t|
           t.primary_key :id
           t.varchar :title
@@ -39,7 +41,7 @@ RSpec.describe DbSchema::DSL do
     subject { DbSchema::DSL.new(schema_block) }
 
     it 'returns an array of Definitions::Table instances' do
-      users, posts = subject.schema
+      users, happiness, posts = subject.schema
 
       expect(users.name).to eq(:users)
       expect(users.fields.count).to eq(5)
@@ -118,6 +120,10 @@ RSpec.describe DbSchema::DSL do
       expect(user_name_fkey.on_delete).to eq(:no_action)
       expect(user_name_fkey.on_update).to eq(:cascade)
       expect(user_name_fkey).not_to be_deferrable
+
+      expect(happiness).to be_a(DbSchema::Definitions::Enum)
+      expect(happiness.name).to eq(:happiness)
+      expect(happiness.values).to eq(%i(sad ok good happy))
     end
   end
 end
