@@ -25,6 +25,8 @@ if defined?(AwesomePrint)
           :dbschema_check_constraint
         when ::DbSchema::Definitions::ForeignKey
           :dbschema_foreign_key
+        when ::DbSchema::Definitions::Enum
+          :dbschema_enum
         when ::DbSchema::Changes::CreateTable
           :dbschema_create_table
         when ::DbSchema::Changes::DropTable
@@ -128,6 +130,14 @@ if defined?(AwesomePrint)
         data << colorize('deferrable', :nilclass) if object.deferrable?
 
         "#<#{object.class} #{object.name.ai} on #{fields} #{references}#{data.join(', ')}>"
+      end
+
+      def awesome_dbschema_enum(object)
+        values = object.values.map do |value|
+          colorize(value.to_s, :string)
+        end.join(', ')
+
+        "#<DbSchema::Definitions::Enum #{object.name.ai} (#{values})>"
       end
 
       def awesome_dbschema_create_table(object)
