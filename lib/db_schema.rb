@@ -33,7 +33,10 @@ module DbSchema
         database: configuration.database,
         user:     configuration.user,
         password: configuration.password
-      )
+      ).tap do |db|
+        db.extension :pg_enum
+        db.extension :pg_array
+      end
     end
 
     def configure(connection_parameters)

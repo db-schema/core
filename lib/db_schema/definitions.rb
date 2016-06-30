@@ -106,6 +106,16 @@ module DbSchema
         @foreign_keys = foreign_keys
       end
     end
+
+    class Enum
+      include Dry::Equalizer(:name, :values)
+      attr_reader :name, :values
+
+      def initialize(name, values)
+        @name   = name
+        @values = values
+      end
+    end
   end
 end
 
