@@ -39,6 +39,12 @@ module DbSchema
           array.select { |object| object.is_a?(klass) }
         end
       end
+
+      def filter_by_class(array, klass)
+        array.select do |element|
+          element.is_a?(klass)
+        end
+      end
     end
   end
 end

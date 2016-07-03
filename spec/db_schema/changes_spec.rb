@@ -335,5 +335,31 @@ RSpec.describe DbSchema::Changes do
         end
       end
     end
+
+    context 'with enums added and removed' do
+      let(:desired_schema) do
+        [
+          DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad))
+        ]
+      end
+
+      let(:actual_schema) do
+        [
+          DbSchema::Definitions::Enum.new(:skill, %i(beginner advanced expert))
+        ]
+      end
+
+      it 'returns changes between schemas' do
+        changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+        expect(changes.count).to eq(2)
+        expect(changes).to include(
+          DbSchema::Changes::CreateEnum.new(:happiness, %i(good ok bad))
+        )
+        expect(changes).to include(
+          DbSchema::Changes::DropEnum.new(:skill)
+        )
+      end
+    end
   end
 end

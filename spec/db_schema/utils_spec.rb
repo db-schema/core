@@ -84,4 +84,20 @@ RSpec.describe DbSchema::Utils do
       expect(sorted_objects.map(&:class)).to eq([class_a, class_b, class_b, class_c, class_c])
     end
   end
+
+  describe '.filter_by_class' do
+    let(:array) do
+      [
+        [1, 2],
+        { a: 1 },
+        [3, 4],
+        123,
+        'abc'
+      ]
+    end
+
+    it 'returns an array limited to instances of a given class' do
+      expect(subject.filter_by_class(array, ::Array)).to eq([[1, 2], [3, 4]])
+    end
+  end
 end
