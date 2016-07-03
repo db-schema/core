@@ -61,9 +61,34 @@ module DbSchema
           actual  = actual_enums.find  { |enum| enum.name == enum_name }
 
           if desired && !actual
-            changes << DbSchema::Changes::CreateEnum.new(enum_name, desired.values)
+            changes << CreateEnum.new(enum_name, desired.values)
           elsif actual && !desired
-            changes << DbSchema::Changes::DropEnum.new(enum_name)
+            changes << DropEnum.new(enum_name)
+          elsif actual != desired
+            new_values     = desired.values - actual.values
+            dropped_values = actual.values - desired.values
+
+            if dropped_values.any?
+              raise UnsupportedOperation, "Enum #{enum_name.inspect} contains values #{dropped_values.inspect} that are not present in the database; dropping values from enums is not supported."
+            end
+
+            desired_remaining_fields = desired.values - new_values
+            actual_remaining_fields  = actual.values - dropped_values
+
+            if desired_remaining_fields != actual_remaining_fields
+              raise UnsupportedOperation, "Enum #{enum_name.inspect} contains values #{desired_remaining_fields.inspect} that are present in the database in a different order (#{actual_remaining_fields.inspect}); reordering values in enums is not supported."
+            end
+
+            new_values.reverse.each do |value|
+              value_index = desired.values.index(value)
+
+              if value_index == desired.values.count - 1
+                changes << AddValueToEnum.new(enum_name, value)
+              else
+                next_value = desired.values[value_index + 1]
+                changes << AddValueToEnum.new(enum_name, value, before: next_value)
+              end
+            end
           end
         end
 
@@ -193,11 +218,11 @@ module DbSchema
       end
 
       def extract_tables(schema)
-        Utils.filter_by_class(schema, DbSchema::Definitions::Table)
+        Utils.filter_by_class(schema, Definitions::Table)
       end
 
       def extract_enums(schema)
-        Utils.filter_by_class(schema, DbSchema::Definitions::Enum)
+        Utils.filter_by_class(schema, Definitions::Enum)
       end
     end
 
@@ -350,6 +375,17 @@ module DbSchema
     end
 
     class DropEnum < ColumnOperation
+    end
+
+    class AddValueToEnum
+      include Dry::Equalizer(:enum_name, :new_value, :before)
+      attr_reader :enum_name, :new_value, :before
+
+      def initialize(enum_name, new_value, before: nil)
+        @enum_name = enum_name
+        @new_value = new_value
+        @before    = before
+      end
     end
   end
 end

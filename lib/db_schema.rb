@@ -91,4 +91,5 @@ module DbSchema
   end
 
   class InvalidSchemaError < ArgumentError; end
+  class UnsupportedOperation < ArgumentError; end
 end
