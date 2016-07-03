@@ -72,11 +72,8 @@ module DbSchema
               raise UnsupportedOperation, "Enum #{enum_name.inspect} contains values #{dropped_values.inspect} that are not present in the database; dropping values from enums is not supported."
             end
 
-            desired_remaining_fields = desired.values - new_values
-            actual_remaining_fields  = actual.values - dropped_values
-
-            if desired_remaining_fields != actual_remaining_fields
-              raise UnsupportedOperation, "Enum #{enum_name.inspect} contains values #{desired_remaining_fields.inspect} that are present in the database in a different order (#{actual_remaining_fields.inspect}); reordering values in enums is not supported."
+            if desired.values - new_values != actual.values
+              raise UnsupportedOperation, "Enum #{enum_name.inspect} contains values #{(desired.values - new_values).inspect} that are present in the database in a different order (#{actual.values.inspect}); reordering values in enums is not supported."
             end
 
             new_values.reverse.each do |value|
