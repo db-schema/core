@@ -3,6 +3,13 @@ require 'spec_helper'
 RSpec.describe DbSchema::Runner do
   let(:database) { DbSchema.connection }
 
+  let(:enums) do
+    DbSchema::Utils.filter_by_class(
+      DbSchema::Reader.read_schema,
+      DbSchema::Definitions::Enum
+    )
+  end
+
   before(:each) do
     database.create_table :people do
       primary_key :id
@@ -674,7 +681,81 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
-    it 'runs all operations in a transaction' do
+    context 'with CreateEnum & DropEnum' do
+      before(:each) do
+        database.create_enum :status, %i(registered confirmed_email subscriber)
+      end
+
+      let(:changes) do
+        [
+          DbSchema::Changes::CreateEnum.new(:happiness, %i(happy ok sad)),
+          DbSchema::Changes::DropEnum.new(:status)
+        ]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        expect(enums).to eq([
+          DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
+        ])
+      end
+    end
+
+    context 'with AddValueToEnum' do
+      before(:each) do
+        database.create_enum :happiness, %i(good ok bad)
+      end
+
+      context 'without a :before option' do
+        let(:changes) do
+          [
+            DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy)
+          ]
+        end
+
+        it 'adds the new value to the end of enum values list' do
+          subject.run!
+
+          expect(enums.count).to eq(1)
+          expect(enums.first.values).to eq(%i(good ok bad unhappy))
+        end
+      end
+
+      context 'with a :before option' do
+        let(:changes) do
+          [
+            DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
+          ]
+        end
+
+        it 'adds the new value before the specified existing value' do
+          subject.run!
+
+          expect(enums.count).to eq(1)
+          expect(enums.first.values).to eq(%i(happy good ok bad))
+        end
+      end
+
+      context 'adding several consecutive values' do
+        let(:changes) do
+          [
+            DbSchema::Changes::AddValueToEnum.new(:happiness, :depressed),
+            DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy, before: :depressed),
+            DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
+          ]
+        end
+
+        it 'adds the new values correctly' do
+          subject.run!
+
+          expect(enums.count).to eq(1)
+          expect(enums.first.values).to eq(%i(happy good ok bad unhappy depressed))
+        end
+      end
+    end
+
+    it 'runs most operations in a transaction' do
       changes = [
         DbSchema::Changes::AlterTable.new(
           :people,
@@ -745,6 +826,10 @@ RSpec.describe DbSchema::Runner do
           drop_foreign_key([], name: foreign_key[:name])
         end
       end
+    end
+
+    enums.each do |enum|
+      database.drop_enum(enum.name)
     end
 
     database.tables.each do |table_name|

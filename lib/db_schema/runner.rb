@@ -20,8 +20,17 @@ module DbSchema
             self.class.create_foreign_key(change)
           when Changes::DropForeignKey
             self.class.drop_foreign_key(change)
+          when Changes::CreateEnum
+            self.class.create_enum(change)
+          when Changes::DropEnum
+            self.class.drop_enum(change)
           end
         end
+      end
+
+      # Postgres doesn't allow modifying enums inside a transaction
+      Utils.filter_by_class(changes, Changes::AddValueToEnum).each do |change|
+        self.class.add_value_to_enum(change)
       end
     end
 
@@ -30,10 +39,13 @@ module DbSchema
       Utils.sort_by_class(
         changes,
         [
+          Changes::AddValueToEnum,
           Changes::DropForeignKey,
+          Changes::CreateEnum,
           Changes::CreateTable,
           Changes::AlterTable,
           Changes::DropTable,
+          Changes::DropEnum,
           Changes::CreateForeignKey
         ]
       )
@@ -156,6 +168,22 @@ module DbSchema
       def drop_foreign_key(change)
         DbSchema.connection.alter_table(change.table_name) do
           drop_foreign_key([], name: change.fkey_name)
+        end
+      end
+
+      def create_enum(change)
+        DbSchema.connection.create_enum(change.name, change.values)
+      end
+
+      def drop_enum(change)
+        DbSchema.connection.drop_enum(change.name)
+      end
+
+      def add_value_to_enum(change)
+        if change.add_to_the_end?
+          DbSchema.connection.add_enum_value(change.enum_name, change.new_value)
+        else
+          DbSchema.connection.add_enum_value(change.enum_name, change.new_value, before: change.before)
         end
       end
 

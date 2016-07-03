@@ -383,6 +383,10 @@ module DbSchema
         @new_value = new_value
         @before    = before
       end
+
+      def add_to_the_end?
+        before.nil?
+      end
     end
   end
 end
