@@ -4,12 +4,15 @@ RSpec.describe DbSchema::DSL do
   describe '#schema' do
     let(:schema_block) do
       -> (db) do
+        db.enum :user_status, %i(user moderator admin)
+
         db.table :users do |t|
           t.primary_key :id
-          t.varchar :name, null: false
-          t.varchar :email, default: 'mail@example.com'
-          t.char    :sex
-          t.array   :strings, of: :varchar
+          t.varchar     :name, null: false
+          t.varchar     :email, default: 'mail@example.com'
+          t.char        :sex
+          t.array       :strings, of: :varchar
+          t.user_status :status, null: false
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
           t.index :strings, using: :gin
@@ -41,14 +44,14 @@ RSpec.describe DbSchema::DSL do
     subject { DbSchema::DSL.new(schema_block) }
 
     it 'returns an array of Definitions::Table instances' do
-      users, happiness, posts = subject.schema
+      user_status, users, happiness, posts = subject.schema
 
       expect(users.name).to eq(:users)
-      expect(users.fields.count).to eq(5)
+      expect(users.fields.count).to eq(6)
       expect(posts.name).to eq(:posts)
       expect(posts.fields.count).to eq(8)
 
-      id, name, email, sex, strings = users.fields
+      id, name, email, sex, strings, status = users.fields
 
       expect(id).to be_a(DbSchema::Definitions::Field::Integer)
       expect(id.name).to eq(:id)
@@ -69,6 +72,11 @@ RSpec.describe DbSchema::DSL do
       expect(strings).to be_a(DbSchema::Definitions::Field::Array)
       expect(strings.name).to eq(:strings)
       expect(strings.options[:element_type]).to eq(:varchar)
+
+      expect(status).to be_a(DbSchema::Definitions::Field::Custom)
+      expect(status.name).to eq(:status)
+      expect(status.type_name).to eq(:user_status)
+      expect(status).not_to be_null
 
       expect(users.indices.count).to eq(2)
       email_index, strings_index = users.indices

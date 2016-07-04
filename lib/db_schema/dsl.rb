@@ -116,6 +116,14 @@ module DbSchema
         end
       end
 
+      def method_missing(method_name, name, *args, &block)
+        fields << Definitions::Field::Custom.new(
+          name,
+          type_name: method_name,
+          **args.first
+        )
+      end
+
       def fields
         @fields ||= []
       end
