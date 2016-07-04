@@ -27,6 +27,7 @@ module DbSchema
           c.column_default AS default,
           c.is_nullable AS null,
           c.data_type AS type,
+          c.udt_name AS custom_type_name,
           c.character_maximum_length AS char_length,
           c.numeric_precision AS num_precision,
           c.numeric_scale AS num_scale,
@@ -217,14 +218,24 @@ GROUP BY name
             {}
           end
 
-          Definitions::Field.build(
-            data[:name].to_sym,
-            type,
-            primary_key: primary_key,
-            null:        nullable,
-            default:     default,
-            **options
-          )
+          if data[:type] == 'USER-DEFINED'
+            Definitions::Field::Custom.new(
+              data[:name].to_sym,
+              type_name:   data[:custom_type_name].to_sym,
+              primary_key: primary_key,
+              null:        nullable,
+              default:     default
+            )
+          else
+            Definitions::Field.build(
+              data[:name].to_sym,
+              type,
+              primary_key: primary_key,
+              null:        nullable,
+              default:     default,
+              **options
+            )
+          end
         end
 
         def build_foreign_key(data)
