@@ -20,7 +20,7 @@ RSpec.describe DbSchema::Validator do
           :cities,
           fields: [DbSchema::Definitions::Field::Varchar.new(:name)]
         ),
-        DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
+        enum
       ]
     end
 
@@ -62,6 +62,10 @@ RSpec.describe DbSchema::Validator do
           table:  :users
         )
       ]
+    end
+
+    let(:enum) do
+      DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
     end
 
     context 'on a valid schema' do
@@ -199,6 +203,17 @@ RSpec.describe DbSchema::Validator do
         expect(result).not_to be_valid
         expect(result.errors).to eq([
           'Foreign key "posts_user_name_fkey" refers to a missing field "users.name"'
+        ])
+      end
+    end
+
+    context 'on a schema with an empty enum' do
+      let(:enum) { DbSchema::Definitions::Enum.new(:happiness, []) }
+
+      it 'returns an invalid result with errors' do
+        expect(result).not_to be_valid
+        expect(result.errors).to eq([
+          'Enum "happiness" contains no values'
         ])
       end
     end

@@ -3,8 +3,9 @@ module DbSchema
     class << self
       def validate(schema)
         tables = Utils.filter_by_class(schema, Definitions::Table)
+        enums  = Utils.filter_by_class(schema, Definitions::Enum)
 
-        errors = tables.each_with_object([]) do |table, errors|
+        table_errors = tables.each_with_object([]) do |table, errors|
           primary_keys_count = table.fields.select(&:primary_key?).count
           if primary_keys_count > 1
             error_message = %(Table "#{table.name}" has #{primary_keys_count} primary keys)
@@ -53,7 +54,14 @@ module DbSchema
           end
         end
 
-        Result.new(errors)
+        enum_errors = enums.each_with_object([]) do |enum, errors|
+          if enum.values.empty?
+            error_message = %(Enum "#{enum.name}" contains no values)
+            errors << error_message
+          end
+        end
+
+        Result.new(table_errors + enum_errors)
       end
     end
 
