@@ -19,7 +19,8 @@ RSpec.describe DbSchema::Validator do
         DbSchema::Definitions::Table.new(
           :cities,
           fields: [DbSchema::Definitions::Field::Varchar.new(:name)]
-        )
+        ),
+        DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
       ]
     end
 

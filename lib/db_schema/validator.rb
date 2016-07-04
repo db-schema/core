@@ -2,7 +2,9 @@ module DbSchema
   module Validator
     class << self
       def validate(schema)
-        errors = schema.each_with_object([]) do |table, errors|
+        tables = Utils.filter_by_class(schema, Definitions::Table)
+
+        errors = tables.each_with_object([]) do |table, errors|
           primary_keys_count = table.fields.select(&:primary_key?).count
           if primary_keys_count > 1
             error_message = %(Table "#{table.name}" has #{primary_keys_count} primary keys)
