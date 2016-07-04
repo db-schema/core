@@ -60,6 +60,12 @@ if defined?(AwesomePrint)
           :dbschema_create_foreign_key
         when ::DbSchema::Changes::DropForeignKey
           :dbschema_drop_foreign_key
+        when ::DbSchema::Changes::CreateEnum
+          :dbschema_enum
+        when ::DbSchema::Changes::DropEnum
+          :dbschema_column_operation
+        when ::DbSchema::Changes::AddValueToEnum
+          :dbschema_add_value_to_enum
         else
           cast_without_dbschema(object, type)
         end
@@ -197,6 +203,12 @@ if defined?(AwesomePrint)
 
       def awesome_dbschema_column_operation(object)
         "#<#{object.class} #{object.name.ai}>"
+      end
+
+      def awesome_dbschema_add_value_to_enum(object)
+        before = " before #{object.before.ai}" unless object.add_to_the_end?
+
+        "#<DbSchema::Changes::AddValueToEnum #{object.new_value.ai} to #{object.enum_name.ai}#{before}>"
       end
 
       def format_dbschema_fields(fields)
