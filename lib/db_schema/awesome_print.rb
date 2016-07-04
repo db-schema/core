@@ -137,7 +137,7 @@ if defined?(AwesomePrint)
           colorize(value.to_s, :string)
         end.join(', ')
 
-        "#<DbSchema::Definitions::Enum #{object.name.ai} (#{values})>"
+        "#<#{object.class} #{object.name.ai} (#{values})>"
       end
 
       def awesome_dbschema_create_table(object)
