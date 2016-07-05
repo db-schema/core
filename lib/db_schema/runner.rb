@@ -59,7 +59,7 @@ module DbSchema
               primary_key(field.name)
             else
               options = Runner.map_options(field.class.type, field.options)
-              column(field.name, field.class.type.capitalize, options)
+              column(field.name, field.type.capitalize, options)
             end
           end
 

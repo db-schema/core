@@ -184,9 +184,9 @@ if defined?(AwesomePrint)
         attributes = object.new_attributes.map do |k, v|
           key = colorize("#{k}:", :symbol)
           "#{key} #{v.ai}"
-        end.join(', ')
+        end.unshift(nil).join(', ')
 
-        "#<DbSchema::Changes::AlterColumnType #{object.name.ai}, #{object.new_type.ai}, #{attributes}>"
+        "#<DbSchema::Changes::AlterColumnType #{object.name.ai}, #{object.new_type.ai}#{attributes}>"
       end
 
       def awesome_dbschema_alter_column_default(object)

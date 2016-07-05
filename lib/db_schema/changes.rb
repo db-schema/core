@@ -283,7 +283,7 @@ module DbSchema
       end
 
       def type
-        field.class.type
+        field.type
       end
 
       def primary_key?
