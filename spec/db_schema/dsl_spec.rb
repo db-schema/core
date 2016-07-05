@@ -13,6 +13,7 @@ RSpec.describe DbSchema::DSL do
           t.char        :sex
           t.array       :strings, of: :varchar
           t.user_status :status, null: false
+          t.happiness   :mood
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
           t.index :strings, using: :gin
@@ -47,11 +48,11 @@ RSpec.describe DbSchema::DSL do
       user_status, users, happiness, posts = subject.schema
 
       expect(users.name).to eq(:users)
-      expect(users.fields.count).to eq(6)
+      expect(users.fields.count).to eq(7)
       expect(posts.name).to eq(:posts)
       expect(posts.fields.count).to eq(8)
 
-      id, name, email, sex, strings, status = users.fields
+      id, name, email, sex, strings, status, mood = users.fields
 
       expect(id).to be_a(DbSchema::Definitions::Field::Integer)
       expect(id.name).to eq(:id)
@@ -77,6 +78,10 @@ RSpec.describe DbSchema::DSL do
       expect(status.name).to eq(:status)
       expect(status.type_name).to eq(:user_status)
       expect(status).not_to be_null
+
+      expect(mood).to be_a(DbSchema::Definitions::Field::Custom)
+      expect(mood.name).to eq(:mood)
+      expect(mood.type).to eq(:happiness)
 
       expect(users.indices.count).to eq(2)
       email_index, strings_index = users.indices
