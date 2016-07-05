@@ -106,7 +106,15 @@ module DbSchema
             table_changes << DropColumn.new(field_name)
           elsif actual != desired
             if (actual.class.type != desired.class.type) || (actual.attributes != desired.attributes)
-              table_changes << AlterColumnType.new(field_name, new_type: desired.class.type, **desired.attributes)
+              if desired.custom_type?
+                table_changes << AlterColumnType.new(field_name, new_type: desired.type_name)
+              else
+                table_changes << AlterColumnType.new(
+                  field_name,
+                  new_type: desired.class.type,
+                  **desired.attributes
+                )
+              end
             end
 
             if desired.primary_key? && !actual.primary_key?

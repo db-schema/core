@@ -40,6 +40,10 @@ module DbSchema
           end
         end
 
+        def custom_type?
+          false
+        end
+
         class << self
           def register(*types)
             types.each do |type|

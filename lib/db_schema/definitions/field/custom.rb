@@ -12,6 +12,10 @@ module DbSchema
         def attributes
           super.merge(type_name: type_name)
         end
+
+        def custom_type?
+          true
+        end
       end
     end
   end

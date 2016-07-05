@@ -114,7 +114,8 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field::Varchar.new(:type, null: false, default: 'guest'),
           DbSchema::Definitions::Field::Integer.new(:city_id),
           DbSchema::Definitions::Field::Integer.new(:country_id),
-          DbSchema::Definitions::Field::Integer.new(:group_id)
+          DbSchema::Definitions::Field::Integer.new(:group_id),
+          DbSchema::Definitions::Field::Custom.new(:status, type_name: :user_status)
         ]
 
         indices = [
@@ -172,7 +173,8 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field::Integer.new(:type),
           DbSchema::Definitions::Field::Integer.new(:city_id),
           DbSchema::Definitions::Field::Integer.new(:country_id),
-          DbSchema::Definitions::Field::Integer.new(:group_id)
+          DbSchema::Definitions::Field::Integer.new(:group_id),
+          DbSchema::Definitions::Field::Integer.new(:status)
         ]
 
         indices = [
@@ -231,6 +233,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::AlterColumnType.new(:type, new_type: :varchar),
           DbSchema::Changes::DisallowNull.new(:type),
           DbSchema::Changes::AlterColumnDefault.new(:type, new_default: 'guest'),
+          DbSchema::Changes::AlterColumnType.new(:status, new_type: :user_status),
           DbSchema::Changes::DropColumn.new(:age)
         ])
 
