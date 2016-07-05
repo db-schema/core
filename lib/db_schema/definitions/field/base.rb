@@ -2,7 +2,7 @@ module DbSchema
   module Definitions
     module Field
       class Base
-        include Dry::Equalizer(:name, :class, :primary_key?, :options)
+        include Dry::Equalizer(:name, :type, :primary_key?, :options)
         attr_reader :name, :default
 
         def initialize(name, primary_key: false, null: true, default: nil, **attributes)
@@ -42,6 +42,10 @@ module DbSchema
 
         def custom_type?
           false
+        end
+
+        def type
+          self.class.type
         end
 
         class << self

@@ -9,12 +9,12 @@ module DbSchema
           @type_name = type_name
         end
 
-        def attributes
-          super.merge(type_name: type_name)
-        end
-
         def custom_type?
           true
+        end
+
+        def type
+          type_name
         end
       end
     end
