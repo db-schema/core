@@ -12,6 +12,15 @@ module DbSchema
             errors << error_message
           end
 
+          table.fields.each do |field|
+            if field.is_a?(Definitions::Field::Custom)
+              unless enums.map(&:name).include?(field.type_name)
+                error_message = %(Field "#{table.name}.#{field.name}" has unknown type "#{field.type_name}")
+                errors << error_message
+              end
+            end
+          end
+
           field_names = table.fields.map(&:name)
 
           table.indices.each do |index|

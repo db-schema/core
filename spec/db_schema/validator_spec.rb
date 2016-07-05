@@ -29,7 +29,8 @@ RSpec.describe DbSchema::Validator do
         DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
         DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
         DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
-        DbSchema::Definitions::Field::Integer.new(:age)
+        DbSchema::Definitions::Field::Integer.new(:age),
+        DbSchema::Definitions::Field::Custom.new(:happiness, type_name: :user_happiness)
       ]
     end
 
@@ -65,7 +66,7 @@ RSpec.describe DbSchema::Validator do
     end
 
     let(:enum) do
-      DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
+      DbSchema::Definitions::Enum.new(:user_happiness, %i(happy ok sad))
     end
 
     context 'on a valid schema' do
@@ -208,12 +209,31 @@ RSpec.describe DbSchema::Validator do
     end
 
     context 'on a schema with an empty enum' do
-      let(:enum) { DbSchema::Definitions::Enum.new(:happiness, []) }
+      let(:enum) { DbSchema::Definitions::Enum.new(:user_happiness, []) }
 
       it 'returns an invalid result with errors' do
         expect(result).not_to be_valid
         expect(result.errors).to eq([
-          'Enum "happiness" contains no values'
+          'Enum "user_happiness" contains no values'
+        ])
+      end
+    end
+
+    context 'on a schema with a field of unknown type' do
+      let(:users_fields) do
+        [
+          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
+          DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
+          DbSchema::Definitions::Field::Integer.new(:age),
+          DbSchema::Definitions::Field::Custom.new(:sorrow, type_name: :user_sorrow)
+        ]
+      end
+
+      it 'returns an invalid result with errors' do
+        expect(result).not_to be_valid
+        expect(result.errors).to eq([
+          'Field "users.sorrow" has unknown type "user_sorrow"'
         ])
       end
     end
