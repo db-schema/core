@@ -21,7 +21,7 @@ RSpec.describe DbSchema::Reader do
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4], default: 3.45
           column :created_at, :timestamp, size: 3
-          column :updated_at, :timestamp
+          column :updated_at, :timestamptz, default: Sequel.function(:now)
           column :period, 'interval HOUR'
           column :other_period, :interval, size: 4
           column :some_bit, :bit
@@ -101,9 +101,10 @@ RSpec.describe DbSchema::Reader do
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at.name).to eq(:created_at)
         expect(created_at.options[:precision]).to eq(3)
-        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
         expect(updated_at.name).to eq(:updated_at)
         expect(updated_at.options[:precision]).to eq(6)
+        expect(updated_at.default).to eq('now()')
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.name).to eq(:period)
         expect(period.options[:fields]).to eq(:hour)

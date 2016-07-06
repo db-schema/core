@@ -19,7 +19,7 @@ module DbSchema
     end
 
     module Postgres
-      DEFAULT_VALUE = /\A('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false)/
+      DEFAULT_VALUE = /\A(('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false)|(?<function>[A-Za-z_]+\(\)))/
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
    SELECT c.column_name AS name,
@@ -177,6 +177,8 @@ GROUP BY name
                 match[:float].to_f
               elsif match[:boolean]
                 match[:boolean] == 'true'
+              elsif match[:function]
+                match[:function]
               end
             end
           end
