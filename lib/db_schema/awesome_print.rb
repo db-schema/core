@@ -15,6 +15,8 @@ if defined?(AwesomePrint)
         case object
         when ::DbSchema::Definitions::Table
           :dbschema_table
+        when ::DbSchema::Definitions::Field::Custom
+          :dbschema_custom_field
         when ::DbSchema::Definitions::Field::Base
           :dbschema_field
         when ::DbSchema::Definitions::Index
@@ -95,6 +97,21 @@ if defined?(AwesomePrint)
         end
 
         "#<#{object.class} #{object.name.ai}#{options}#{primary_key}>"
+      end
+
+      def awesome_dbschema_custom_field(object)
+        options = object.options.map do |k, v|
+          key = colorize("#{k}:", :symbol)
+          "#{key} #{v.ai}"
+        end.unshift(nil).join(', ')
+
+        primary_key = if object.primary_key?
+          ', ' + colorize('primary key', :nilclass)
+        else
+          ''
+        end
+
+        "#<#{object.class} (#{object.type.ai}) #{object.name.ai}#{options}#{primary_key}>"
       end
 
       def awesome_dbschema_index(object)
