@@ -9,7 +9,7 @@ module DbSchema
           @name        = name
           @primary_key = primary_key
           @null        = null
-          @default     = default
+          @default     = process_default(default)
           @attributes  = attributes
         end
 
@@ -46,6 +46,14 @@ module DbSchema
 
         def type
           self.class.type
+        end
+
+        def process_default(default)
+          if default.is_a?(Symbol)
+            Sequel.function(default)
+          else
+            default
+          end
         end
 
         class << self

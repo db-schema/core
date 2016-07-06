@@ -104,7 +104,7 @@ RSpec.describe DbSchema::Reader do
         expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
         expect(updated_at.name).to eq(:updated_at)
         expect(updated_at.options[:precision]).to eq(6)
-        expect(updated_at.default).to eq('now()')
+        expect(updated_at.default).to eq(Sequel.function(:now))
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.name).to eq(:period)
         expect(period.options[:fields]).to eq(:hour)
