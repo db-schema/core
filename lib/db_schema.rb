@@ -82,6 +82,9 @@ module DbSchema
     end
 
     def log_changes(changes)
+      return if changes.empty?
+
+      puts 'DbSchema is applying these changes to the database:'
       if changes.respond_to?(:ai)
         puts changes.ai
       else
