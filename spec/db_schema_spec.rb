@@ -8,7 +8,7 @@ RSpec.describe DbSchema do
       database.create_table :users do
         column :id,    :Integer, primary_key: true
         column :name,  :Varchar, null: false
-        column :email, :Varchar, length: 100
+        column :email, :Varchar, size: 100
 
         index :email
       end
@@ -154,6 +154,44 @@ Requested schema is invalid:
             end
           end
         }.to raise_error(DbSchema::InvalidSchemaError, message)
+      end
+    end
+
+    context 'with differences left after run' do
+      before(:each) do
+        allow_any_instance_of(DbSchema::Runner).to receive(:run!)
+      end
+
+      def apply_schema
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :name, null: false
+            t.varchar :email, length: 100
+
+            t.index :email
+          end
+        end
+      end
+
+      context 'with post_check enabled' do
+        it 'raises a SchemaMismatch' do
+          expect {
+            apply_schema
+          }.to raise_error(DbSchema::SchemaMismatch)
+        end
+      end
+
+      context 'with post_check disabled' do
+        before(:each) do
+          DbSchema.configure(database: 'db_schema_test', post_check: false)
+        end
+
+        it 'ignores the mismatch' do
+          expect {
+            apply_schema
+          }.not_to raise_error
+        end
       end
     end
 

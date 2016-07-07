@@ -20,9 +20,30 @@ module DbSchema
 
       actual_schema = Reader.read_schema
       changes = Changes.between(desired_schema, actual_schema)
-      log_changes(changes) if configuration.debug?
+      return if changes.empty?
 
+      log_changes(changes) if configuration.debug?
       Runner.new(changes).run!
+
+      if configuration.post_check_enabled?
+        unapplied_changes = Changes.between(desired_schema, Reader.read_schema)
+
+        if unapplied_changes.any?
+          readable_changes = if unapplied_changes.respond_to?(:ai)
+            unapplied_changes.ai
+          else
+            unapplied_changes.inspect
+          end
+
+          message = <<-ERROR
+Your database still differs from the expected schema after applying it; if you are 100% sure this is ok you can turn these checks off with DbSchema.configure(post_check: false). Here are the differences:
+
+#{readable_changes}
+          ERROR
+
+          raise SchemaMismatch, message
+        end
+      end
     end
 
     def connection
@@ -94,5 +115,6 @@ module DbSchema
   end
 
   class InvalidSchemaError < ArgumentError; end
+  class SchemaMismatch < RuntimeError; end
   class UnsupportedOperation < ArgumentError; end
 end
