@@ -1,24 +1,33 @@
 # DbSchema
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/db_schema`. To experiment with that code, run `bin/console` for an interactive prompt.
+DbSchema is an opinionated database schema management tool that lets you maintain your DB schema with a single ruby file.
 
-TODO: Delete this and the text above, and describe your gem
+It goes like this:
+* you create a `schema.rb` file where you describe the schema you want in a special DSL
+* you make your application load this file as early as possible during the application bootup in development and test environments
+* each time you need to change the schema you just change the `schema.rb` file and commit it to your VCS
+
+As a result you always have an up-to-date database schema. No need to run and rollback migrations, no need to even think about the extra step - DbSchema compares the schema you want with the schema your database has and applies all necessary changes to the latter.
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
-```ruby
+``` ruby
 gem 'db_schema'
 ```
 
 And then execute:
 
-    $ bundle
+``` sh
+$ bundle
+```
 
 Or install it yourself as:
 
-    $ gem install db_schema
+``` sh
+$ gem install db_schema
+```
 
 ## Usage
 
@@ -32,10 +41,8 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/db_schema.
-
+Bug reports and pull requests are welcome on GitHub at https://github.com/7even/db_schema.
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
