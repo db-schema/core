@@ -221,6 +221,60 @@ end
 
 Be warned though that you have to specify the condition exactly as PostgreSQL outputs it in `psql` with `\d table_name` command; otherwise your index will be recreated on each DbSchema run. This will be fixed in a later DbSchema version.
 
+#### Foreign keys
+
+The `#foreign_key` method defines a foreign key. In it's minimal form it takes a referencing field name and referenced table name:
+
+``` ruby
+db.table :users do |t|
+  t.primary_key :id
+  t.varchar :name
+end
+
+db.table :posts do |t|
+  t.integer :user_id
+  t.varchar :title
+
+  t.foreign_key :user_id, references: :users
+end
+```
+
+The syntax above assumes that this foreign key references the primary key. If you need to reference another field you can pass a 2-element array in `:references` option, the first element being table name and the second being field name:
+
+``` ruby
+db.table :users do |t|
+  t.varchar :name
+  t.index :name, unique: true # you can only reference either primary keys or unique columns
+end
+
+db.table :posts do |t|
+  t.varchar :username
+  t.foreign_key :username, references: [:users, :name]
+end
+```
+
+As with indexes, you can pass your custom name in the `:name` option; default foreign key name looks like `"#{table_name}_#{fkey_fields.first}_fkey"`.
+
+You can also define a composite foreign key consisting of (and referencing) multiple columns; just list them all:
+
+``` ruby
+db.table :table_a do |t|
+  t.integer :col1
+  t.integer :col2
+  t.index :col1, :col2, unique: true
+end
+
+db.table :table_b do |t|
+  t.integer :a_col1
+  t.integer :a_col2
+  t.foreign_key :a_col1, :a_col2, references: [:table_a, :col1, :col2]
+end
+```
+
+There are 3 more options to the `#foreign_key` method: `:on_update`, `:on_delete` and `:deferrable`. First two define an action that will be taken when a referenced column is changed or the whole referenced row is deleted, respectively; you can set these to one of `:no_action` (the default), `:restrict`, `:cascade`, `:set_null` or `:set_default`. See [PostgreSQL documentation](https://www.postgresql.org/docs/current/static/ddl-constraints.html#DDL-CONSTRAINTS-FK) for more information.
+
+Passing `deferrable: true` defines a foreign key that is checked at the end of transaction.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
