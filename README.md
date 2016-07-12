@@ -152,6 +152,75 @@ db.table :posts do |t|
 end
 ```
 
+#### Indexes
+
+Indexes are created using the `#index` method: you pass it the field name you want to index:
+
+``` ruby
+db.table :users do |t|
+  t.varchar :email
+  t.index :email
+end
+```
+
+Unique indexes are created with `unique: true`:
+
+``` ruby
+t.index :email, unique: true
+```
+
+Passing several field names makes a multiple index:
+
+``` ruby
+db.table :users do |t|
+  t.varchar :first_name
+  t.varchar :last_name
+
+  t.index :first_name, :last_name
+end
+```
+
+If you want to specify a custom name for your index, you can pass it in the `:name` option:
+
+``` ruby
+t.index :first_name, :last_name, name: :username_index
+```
+
+Otherwise the index name will be generated as `"#{table_name}_#{field_names.join('_')}_index"` so the index above will be called `users_first_name_last_name_index`.
+
+You can specify the order of each field in your index - it's either `ASC` (`:asc`, the default), `DESC` (`:desc`), `ASC NULLS FIRST` (`:asc_nulls_first`), or `DESC NULLS LAST` (`:desc_nulls_last`). It looks like this:
+
+``` ruby
+db.table :some_table do |t|
+  t.integer :col1
+  t.integer :col2
+  t.integer :col3
+  t.integer :col4
+
+  t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
+end
+```
+
+By default B-tree indexes are created; if you need to create an index of a different type you can pass it in the `:using` option:
+
+``` ruby
+db.table :users do |t|
+  t.array :interests, of: :varchar
+  t.index :interests, using: :gin
+end
+```
+
+You can also create a partial index if you pass some condition as SQL string in the `:where` option:
+
+``` ruby
+db.table :users do |t|
+  t.varchar :email
+  t.index :email, unique: true, where: 'email IS NOT NULL'
+end
+```
+
+Be warned though that you have to specify the condition exactly as PostgreSQL outputs it in `psql` with `\d table_name` command; otherwise your index will be recreated on each DbSchema run. This will be fixed in a later DbSchema version.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
