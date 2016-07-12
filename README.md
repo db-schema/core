@@ -92,8 +92,8 @@ Passing `null: false` to the field definition makes it `NOT NULL`; passing some 
 
 Other attributes are type specific, like `:length` for varchars; the following table lists them all (values in parentheses are default attribute values).
 
-| Type        | Attributes       |
-| ----------- | ---------------- |
+| Type          | Attributes       |
+| ------------- | ---------------- |
 | `smallint`    |                  |
 | `integer`     |                  |
 | `bigint`      |                  |
