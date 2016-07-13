@@ -293,6 +293,32 @@ end
 
 As with partial index conditions, for now you have to specify the SQL exactly as `psql` outputs it (otherwise the constraint will be recreated on each run).
 
+### Enum types
+
+PostgreSQL allows developers to create custom enum types; value of enum type is one of a fixed set of values stored in the type definition.
+
+Enum types are declared with the `#enum` method (note that you must call it from the top level of your schema and not from within some table definition):
+
+``` ruby
+db.enum :user_status, [:registered, :confirmed_email]
+```
+
+Then you can create fields of that type exactly as you would create a field of any built-in type - just call the method with the same name as the type you defined:
+
+``` ruby
+db.table :users do |t|
+  t.user_status :status, default: 'registered'
+end
+```
+
+After the enum type is created, you can add more values to it. They don't have to appear in the end of the values list - you can add new values to the middle or even to the beginning of the list:
+
+``` ruby
+db.enum :user_status, [:guest, :registered, :sent_confirmation_email, :confirmed_email, :subscriber]
+```
+
+Reordering and deleting values from enum types is not supported.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
