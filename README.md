@@ -275,6 +275,24 @@ There are 3 more options to the `#foreign_key` method: `:on_update`, `:on_delete
 
 Passing `deferrable: true` defines a foreign key that is checked at the end of transaction.
 
+#### Check constraints
+
+A check constraint is like a validation on the database side: it checks if the inserted/updated row has valid values.
+
+To define a check constraint you can use the `#check` method passing it the constraint name (no auto-generated names here, sorry) and the condition that must be satisfied, in a form of SQL string.
+
+``` ruby
+db.table :users do |t|
+  t.primary_key :id
+  t.varchar :name
+  t.integer :age, null: false
+
+  t.check :valid_age, 'age >= 18'
+end
+```
+
+As with partial index conditions, for now you have to specify the SQL exactly as `psql` outputs it (otherwise the constraint will be recreated on each run).
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
