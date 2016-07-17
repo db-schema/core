@@ -157,6 +157,26 @@ Requested schema is invalid:
       end
     end
 
+    context 'in dry run mode' do
+      before(:each) do
+        DbSchema.configure(database: 'db_schema_test', dry_run: true)
+      end
+
+      it 'does not make any changes' do
+        expect {
+          subject.describe do |db|
+            db.table :users do |t|
+              t.primary_key :id
+              t.varchar :name, null: false
+              t.varchar :email, length: 100
+
+              t.index :email
+            end
+          end
+        }.not_to change { DbSchema::Reader.read_schema }
+      end
+    end
+
     context 'with differences left after run' do
       before(:each) do
         allow_any_instance_of(DbSchema::Runner).to receive(:run!)

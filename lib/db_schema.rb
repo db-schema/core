@@ -23,6 +23,8 @@ module DbSchema
       return if changes.empty?
 
       log_changes(changes) if configuration.debug?
+      return if configuration.dry_run?
+
       Runner.new(changes).run!
 
       if configuration.post_check_enabled?
