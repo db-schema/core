@@ -273,5 +273,6 @@ GROUP BY name
     end
 
     registry['postgres'] = Postgres
+    registry['postgresql'] = Postgres
   end
 end
