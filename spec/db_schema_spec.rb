@@ -264,6 +264,15 @@ Requested schema is invalid:
       expect(subject.configuration.password).to eq(nil)
     end
 
+    context 'with extra options' do
+      it 'passes them to configuration object' do
+        subject.configure_from_yaml(path, :development, debug: true)
+
+        expect(subject.configuration.database).to eq('db_schema_dev')
+        expect(subject.configuration).to be_debug
+      end
+    end
+
     after(:each) do
       subject.reset!
     end

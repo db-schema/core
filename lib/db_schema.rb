@@ -51,7 +51,7 @@ module DbSchema
       @connection    = nil
     end
 
-    def configure_from_yaml(yaml_path, environment)
+    def configure_from_yaml(yaml_path, environment, **other_options)
       data = Utils.symbolize_keys(YAML.load_file(yaml_path))
       filtered_data = Utils.filter_by_keys(
         data[environment.to_sym],
@@ -59,7 +59,7 @@ module DbSchema
       )
       renamed_data = Utils.rename_keys(filtered_data, username: :user)
 
-      configure(renamed_data)
+      configure(renamed_data.merge(other_options))
     end
 
     def configuration
