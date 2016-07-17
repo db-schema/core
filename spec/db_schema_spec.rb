@@ -251,6 +251,10 @@ Requested schema is invalid:
 
   describe '.configuration' do
     context 'without a prior call to .configure' do
+      before(:each) do
+        subject.reset!
+      end
+
       it 'raises a RuntimeError' do
         expect {
           subject.configuration
