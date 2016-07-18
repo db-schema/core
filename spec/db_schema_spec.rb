@@ -5,6 +5,8 @@ RSpec.describe DbSchema do
 
   describe '.describe' do
     before(:each) do
+      subject.configure(database: 'db_schema_test', log_changes: false)
+
       database.create_table :users do
         column :id,    :Integer, primary_key: true
         column :name,  :Varchar, null: false
@@ -159,7 +161,7 @@ Requested schema is invalid:
 
     context 'in dry run mode' do
       before(:each) do
-        DbSchema.configure(database: 'db_schema_test', dry_run: true)
+        DbSchema.configure(database: 'db_schema_test', log_changes: false, dry_run: true)
       end
 
       it 'does not make any changes' do
@@ -204,7 +206,7 @@ Requested schema is invalid:
 
       context 'with post_check disabled' do
         before(:each) do
-          DbSchema.configure(database: 'db_schema_test', post_check: false)
+          DbSchema.configure(database: 'db_schema_test', log_changes: false, post_check: false)
         end
 
         it 'ignores the mismatch' do
@@ -266,10 +268,10 @@ Requested schema is invalid:
 
     context 'with extra options' do
       it 'passes them to configuration object' do
-        subject.configure_from_yaml(path, :development, debug: true)
+        subject.configure_from_yaml(path, :development, log_changes: true)
 
         expect(subject.configuration.database).to eq('db_schema_dev')
-        expect(subject.configuration).to be_debug
+        expect(subject.configuration).to be_log_changes
       end
     end
 

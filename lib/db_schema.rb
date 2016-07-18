@@ -22,7 +22,7 @@ module DbSchema
       changes = Changes.between(desired_schema, actual_schema)
       return if changes.empty?
 
-      log_changes(changes) if configuration.debug?
+      log_changes(changes) if configuration.log_changes?
       return if configuration.dry_run?
 
       Runner.new(changes).run!
