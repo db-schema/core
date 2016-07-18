@@ -20,7 +20,7 @@ RSpec.describe DbSchema::Reader do
           column :age, :integer, default: 20
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4], default: 3.45
-          column :created_at, :timestamp, size: 3
+          column :created_at, :timestamp
           column :updated_at, :timestamptz, default: Sequel.function(:now)
           column :period, 'interval HOUR'
           column :other_period, :interval, size: 4
@@ -100,10 +100,8 @@ RSpec.describe DbSchema::Reader do
         expect(lng.options[:scale]).to eq(4)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at.name).to eq(:created_at)
-        expect(created_at.options[:precision]).to eq(3)
         expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
         expect(updated_at.name).to eq(:updated_at)
-        expect(updated_at.options[:precision]).to eq(6)
         expect(updated_at.default).to eq(Sequel.function(:now))
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.name).to eq(:period)
@@ -146,7 +144,6 @@ RSpec.describe DbSchema::Reader do
         expect(created_on.name).to eq(:created_on)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timetz)
         expect(created_at.name).to eq(:created_at)
-        expect(created_at.options[:precision]).to eq(6)
 
         expect(users.indices.count).to eq(3)
         email_index, name_index, * = users.indices

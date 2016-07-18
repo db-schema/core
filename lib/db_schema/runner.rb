@@ -203,8 +203,6 @@ module DbSchema
               end
             end
           end
-        when :timestamp, :timestamptz, :time, :timetz
-          Utils.rename_keys(options, precision: :size)
         when :interval
           Utils.rename_keys(options, precision: :size) do |new_options|
             new_options[:type] = "INTERVAL #{new_options.delete(:fields).upcase}"

@@ -195,14 +195,6 @@ GROUP BY name
               num_precision: :precision,
               num_scale: :scale
             )
-          when :'timestamp without time zone',
-               :'timestamp with time zone',
-               :'time without time zone',
-               :'time with time zone'
-            Utils.rename_keys(
-              Utils.filter_by_keys(data, :dt_precision),
-              dt_precision: :precision
-            )
           when :interval
             Utils.rename_keys(
               Utils.filter_by_keys(data, :dt_precision, :interval_type),

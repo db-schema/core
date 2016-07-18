@@ -126,7 +126,6 @@ RSpec.describe DbSchema::Runner do
         expect(created_at.name).to eq(:created_at)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at).not_to be_null
-        expect(created_at.options[:precision]).to eq(6)
         expect(period.name).to eq(:period)
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.options[:fields]).to eq(:second)
@@ -196,7 +195,7 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
             ),
             DbSchema::Changes::CreateColumn.new(
-              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, precision: 3)
+              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false)
             )
           ]
         end
@@ -212,7 +211,6 @@ RSpec.describe DbSchema::Runner do
           expect(address.name).to eq(:address)
           expect(created_at.name).to eq(:created_at)
           expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
-          expect(created_at.options[:precision]).to eq(6)
           expect(first_name.name).to eq(:first_name)
           expect(first_name).to be_a(DbSchema::Definitions::Field::Varchar)
           expect(last_name.name).to eq(:last_name)
@@ -225,7 +223,6 @@ RSpec.describe DbSchema::Runner do
           expect(uid.name).to eq(:uid)
           expect(updated_at.name).to eq(:updated_at)
           expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
-          expect(updated_at.options[:precision]).to eq(3)
         end
       end
 
@@ -265,7 +262,7 @@ RSpec.describe DbSchema::Runner do
             [
               DbSchema::Changes::AlterColumnType.new(:address, new_type: :varchar),
               DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
-              DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamp, precision: 2)
+              DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamp)
             ]
           end
 
@@ -281,7 +278,6 @@ RSpec.describe DbSchema::Runner do
             expect(country_name).to be_a(DbSchema::Definitions::Field::Varchar)
             expect(country_name.options[:length]).to eq(40)
             expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
-            expect(created_at.options[:precision]).to eq(2)
           end
         end
       end
