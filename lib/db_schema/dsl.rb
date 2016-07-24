@@ -86,8 +86,7 @@ module DbSchema
         checks << Definitions::CheckConstraint.new(name: name, condition: condition)
       end
 
-      def foreign_key(fields, references:, name: nil, on_update: :no_action, on_delete: :no_action, deferrable: false)
-        fkey_fields = Array(fields)
+      def foreign_key(*fkey_fields, references:, name: nil, on_update: :no_action, on_delete: :no_action, deferrable: false)
         fkey_name = name || :"#{table_name}_#{fkey_fields.first}_fkey"
 
         if references.is_a?(Array)
