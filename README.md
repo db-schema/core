@@ -265,7 +265,7 @@ db.table :posts do |t|
 end
 ```
 
-**Important: you can't rename a table or a column just by changing it's name - this will result in a column with the old name being deleted and a new column added, all data in that table or column will be lost.**
+**Important: you can't rename a table or a column just by changing it's name in the schema definition - this will result in a column with the old name being deleted and a column with the new name being added; all data in that table or column will be lost.**
 
 ##### Indexes
 
