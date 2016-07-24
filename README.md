@@ -6,7 +6,7 @@ It works like this:
 
 * you create a `schema.rb` file where you describe the schema you want in a special DSL
 * you make your application load this file as early as possible during the application bootup in development and test environments
-* you make a rake task that loads your `schema.rb` and tell your favorite deployment tool to run it on each deploy
+* you create a rake task that loads your `schema.rb` and tell your favorite deployment tool to run it on each deploy
 * each time you need to change the schema you just change the `schema.rb` file and commit it to your VCS
 
 As a result you always have an up-to-date database schema. No need to run and rollback migrations, no need to even think about the extra step - DbSchema compares the schema you want with the schema your database has and applies all necessary changes to the latter. This operation is [idempotent](https://en.wikipedia.org/wiki/Idempotence) - if DbSchema sees that the database already has the requested schema it does nothing.
@@ -75,8 +75,8 @@ DbSchema DSL looks like this:
 DbSchema.describe do |db|
   db.table :users do |t|
     t.primary_key :id
-    t.varchar :email, null: false
-    t.varchar :password_digest, length: 40
+    t.varchar     :email,           null: false
+    t.varchar     :password_digest, length: 40
     t.timestamptz :created_at
     t.timestamptz :updated_at
 
@@ -178,9 +178,7 @@ end
 
 ##### Fields
 
-Fields of any types are defined by calling methods
-
-You can define a field of any type by calling the appropriate method inside the table block passing it the field name and it's attributes. Most of the attributes are optional.
+You can define a field of any type by calling the corresponding method inside the table block passing it the field name and it's attributes. Most of the attributes are optional.
 
 Here's an example table with various kinds of data:
 
@@ -203,7 +201,7 @@ db.table :people do |t|
 end
 ```
 
-Passing `null: false` to the field definition makes it `NOT NULL`; passing some value under the `:default` key makes it the default value. Passing a symbol as a default is interpreted as a function call so `t.timestamp :created_at, default: :now` defines a field with a default value of `NOW()`; strings, numbers, timestamps etc are evaluated "as is".
+Passing `null: false` to the field definition makes it `NOT NULL`; passing some value under the `:default` key makes it the default value. A symbol passed as a default is interpreted as a function call so `t.timestamp :created_at, default: :now` defines a field with a default value of `NOW()`; strings, numbers, timestamps etc are evaluated "as is".
 
 Other attributes are type specific, like `:length` for varchars; the following table lists them all (values in parentheses are default attribute values).
 
@@ -267,6 +265,8 @@ db.table :posts do |t|
 end
 ```
 
+**Important: you can't rename a table or a column just by changing it's name - this will result in a column with the old name being deleted and a new column added, all data in that table or column will be lost.**
+
 ##### Indexes
 
 Indexes are created using the `#index` method: you pass it the field name you want to index:
@@ -316,7 +316,7 @@ db.table :some_table do |t|
 end
 ```
 
-By default B-tree indexes are created; if you need to create an index of a different type you can pass it in the `:using` option:
+By default B-tree indexes are created; if you need an index of a different type you can pass it in the `:using` option:
 
 ``` ruby
 db.table :users do |t|
@@ -489,7 +489,7 @@ All configuration options are described in the following table:
 
 By default DbSchema logs the changes it applies to your database; you can disable that by setting `log_changes` to false.
 
-DbSchema provides an opt-out post-run schema check; it ensures that there are no remaining differences between your `schema.rb` and the actual database schema. If DbSchema still sees any differences it will keep applying them on each run - usually this is harmless (because it does not really change your schema) but in the case of a partial index with a complex condition it may rebuild the index which is an expensive operation on a large table. You can set `post_check` to false if you are 100% sure that your persistent changes are not a problem for you but I would strongly suggest that you turn it on from time to time just to make sure nothing dangerous appears in these persistent changes.
+DbSchema provides an opt-out post-run schema check; it ensures that there are no remaining differences between your `schema.rb` and the actual database schema. If DbSchema still sees any differences it will keep applying them on each run - usually this is harmless (because it does not really change your schema) but in the case of a partial index with a complex condition it may rebuild the index which is an expensive operation on a large table. You can set `post_check` to false if you are 100% sure that your persistent changes are not a problem for you but I strongly recommend that you turn it on from time to time just to make sure nothing dangerous appears in these persistent changes.
 
 The `post_check` option is likely to become off by default when DbSchema becomes more stable and battle-tested, and when the partial index problem will be solved.
 
@@ -507,12 +507,11 @@ Dry run may be useful while you are building your schema definition for an exist
 * array element type attributes are not supported
 * precision in time & datetime types isn't supported
 * no support for databases other than PostgreSQL
+* no support for renaming tables & columns
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment. To install this gem onto your local machine, run `bundle exec rake install`.
 
 ## Contributing
 
