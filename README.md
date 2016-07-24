@@ -100,6 +100,39 @@ Then you just call `rake db:schema:apply` from your deploy script before restart
 
 ### DSL
 
+Database schema is defined with a block passed to `DbSchema.describe` method.
+This block receives a `db` object on which you can call `#table` to define a table
+and `#enum` to define a custom enum type. Everything that belongs to a specific table
+is described in a block passed to `#table`.
+
+``` ruby
+DbSchema.describe do |db|
+  db.table :users do |t|
+    t.primary_key :id
+    t.varchar     :email,    null: false
+    t.varchar     :password, null: false
+    t.varchar     :name,     null: false
+    t.integer     :age
+    t.user_status :status,   null: false, default: 'registered'
+
+    t.index :email, unique: true
+  end
+
+  db.enum :user_status, [:registered, :confirmed_email, :subscriber]
+
+  db.table :posts do |t|
+    t.primary_key :id
+    t.integer     :user_id, null: false
+    t.varchar     :title,   null: false, length: 50
+    t.text        :content
+    t.array       :tags,    of: :varchar
+
+    t.index       :user_id
+    t.foreign_key :user_id, references: :users
+  end
+end
+```
+
 #### Tables
 
 Tables are described with the `#table` method; you pass it the name of the table and describe the table structure in the block:
