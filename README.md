@@ -496,6 +496,17 @@ There is also a dry run mode which does not apply the changes to your database -
 
 Dry run may be useful while you are building your schema definition for an existing app; adjust your `schema.rb` and apply it in dry run mode until it fits your database and next dry run doesn't report any changes. Don't forget to turn `dry_run` off afterwards!
 
+## Known problems and limitations
+
+* primary keys are hardcoded to a single NOT NULL integer field with a postgres sequence attached
+* "partial index problem": some conditions of partial indexes and check constraints can cause
+  a false positive result of checking for differences between `schema.rb` and actual database schema,
+  resulting in unwanted operations on each run (the worst of them being the recreation of an index
+  on a large table)
+* array element type attributes are not supported
+* precision in time & datetime types isn't supported
+* no support for databases other than PostgreSQL
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
@@ -504,7 +515,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/7even/db_schema.
+Bug reports and pull requests are welcome on GitHub at [7even/db_schema](https://github.com/7even/db_schema).
 
 ## License
 
