@@ -9,9 +9,40 @@ It works like this:
 * you make a rake task that loads your `schema.rb` and tell your favorite deployment tool to run it on each deploy
 * each time you need to change the schema you just change the `schema.rb` file and commit it to your VCS
 
-As a result you always have an up-to-date database schema. No need to run and rollback migrations, no need to even think about the extra step - DbSchema compares the schema you want with the schema your database has and applies all necessary changes to the latter.
+As a result you always have an up-to-date database schema. No need to run and rollback migrations, no need to even think about the extra step - DbSchema compares the schema you want with the schema your database has and applies all necessary changes to the latter. This operation is [idempotent](https://en.wikipedia.org/wiki/Idempotence) - if DbSchema sees that the database already has the requested schema it does nothing.
 
 *Currently DbSchema only supports PostgreSQL.*
+
+## Reasons to use
+
+With DbSchema you almost never need to write migrations by hand and manage a collection of migration files.
+This gives you a list of important benefits:
+
+* no more `YouHaveABunchOfPendingMigrations` errors - all needed operations are computed from the differences between the schema definition and the actual database schema
+* no need to write separate :up and :down migrations - this is all handled automatically
+
+But the main reason of DbSchema existence is the pain of switching
+between long-running VCS branches with different migrations
+without resetting the database. Have you ever switched
+to a different branch only to see something like this?
+
+![](https://cloud.githubusercontent.com/assets/351591/17085038/7da81118-51d6-11e6-91d9-99885235d037.png)
+
+Yeah, you must remember the oldest `NO FILE` migration,
+switch back to the previous branch,
+roll back every migration up to that `NO FILE`,
+then switch the branch again and migrate these `down` migrations.
+Every migration or rollback loads the whole app, resulting in 10+ seconds wasted.
+And at the end of it all you are trying to recall why did you ever
+want to switch to that branch.
+
+DbSchema does not rely on migration files and/or `schema_migrations` table in the database
+so it seamlessly changes the schema to the one defined in the branch you switched to.
+There is no step 2.
+
+Of course if you are switching from a branch that defines table A to a branch
+that doesn't define table A then you lose that table with all the data in it.
+But you would lose it even with manual migrations.
 
 ## Installation
 
