@@ -20,6 +20,7 @@ This gives you a list of important benefits:
 
 * no more `YouHaveABunchOfPendingMigrations` errors - all needed operations are computed from the differences between the schema definition and the actual database schema
 * no need to write separate :up and :down migrations - this is all handled automatically
+* there is no `structure.sql` with a database dump that constantly changes without reason
 
 But the main reason of DbSchema existence is the pain of switching
 between long-running VCS branches with different migrations
