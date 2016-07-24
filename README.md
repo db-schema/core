@@ -11,6 +11,8 @@ It works like this:
 
 As a result you always have an up-to-date database schema. No need to run and rollback migrations, no need to even think about the extra step - DbSchema compares the schema you want with the schema your database has and applies all necessary changes to the latter.
 
+*Currently DbSchema only supports PostgreSQL.*
+
 ## Installation
 
 Add this line to your application's Gemfile:
