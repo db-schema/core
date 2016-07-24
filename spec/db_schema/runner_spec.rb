@@ -345,7 +345,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreateIndex & DropIndex' do
         let(:field_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email))
+            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Array.new(:interests, of: :varchar))
           ]
         end
 
@@ -358,9 +358,9 @@ RSpec.describe DbSchema::Runner do
             ),
             DbSchema::Changes::DropIndex.new(:people_address_index),
             DbSchema::Changes::CreateIndex.new(
-              name:   :people_created_at_index,
-              fields: [DbSchema::Definitions::Index::Field.new(:created_at, nulls: :first)],
-              type:   :brin
+              name:   :people_interests_index,
+              fields: [DbSchema::Definitions::Index::Field.new(:interests)],
+              type:   :gin
             )
           ]
         end
@@ -371,15 +371,15 @@ RSpec.describe DbSchema::Runner do
           indices = DbSchema::Reader::Postgres.indices_data_for(:people)
           expect(indices.count).to eq(2)
           name_index = indices.find { |index| index[:name] == :people_name_index }
-          time_index = indices.find { |index| index[:name] == :people_created_at_index }
+          interests_index = indices.find { |index| index[:name] == :people_interests_index }
 
           expect(name_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:name, order: :desc)])
           expect(name_index[:unique]).to eq(false)
           expect(name_index[:type]).to eq(:btree)
           expect(name_index[:condition]).to eq('name IS NOT NULL')
           # non-BTree indexes don't support index ordering
-          expect(time_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:created_at)])
-          expect(time_index[:type]).to eq(:brin)
+          expect(interests_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:interests)])
+          expect(interests_index[:type]).to eq(:gin)
         end
       end
 
