@@ -2,10 +2,11 @@
 
 DbSchema is an opinionated database schema management tool that lets you maintain your DB schema with a single ruby file.
 
-It goes like this:
+It works like this:
 
 * you create a `schema.rb` file where you describe the schema you want in a special DSL
 * you make your application load this file as early as possible during the application bootup in development and test environments
+* you make a rake task that loads your `schema.rb` and tell your favorite deployment tool to run it on each deploy
 * each time you need to change the schema you just change the `schema.rb` file and commit it to your VCS
 
 As a result you always have an up-to-date database schema. No need to run and rollback migrations, no need to even think about the extra step - DbSchema compares the schema you want with the schema your database has and applies all necessary changes to the latter.
@@ -50,7 +51,54 @@ DbSchema.describe do |db|
 end
 ```
 
-### Tables
+Before DbSchema connects to the database you need to configure it:
+
+``` ruby
+DbSchema.configure(adapter: 'postgresql', database: 'my_database', user: 'bob', password: 'secret')
+# or in Rails
+DbSchema.configure_from_yaml(Rails.root.join('config', 'database.yml'), Rails.env)
+```
+
+Then you can load your schema definition (it is executable - it instantly applies itself to your database):
+
+``` ruby
+load 'path/to/schema.rb'
+```
+
+In order to get an always-up-to-date database schema in development and test environments you need to load the schema definition when your application is starting up. For instance, in Rails an initializer would be a good place to do that.
+
+On the other hand, in production environment this can cause race condition problems as your schema can be applied concurrently by different worker processes (this also applies to staging and any other environments where the application is being run by multi-worker servers); therefore it is wiser to disable schema auto loading in such environments and run it from a rake task on each deploy.
+
+Here's an initializer example for a Rails app:
+
+``` ruby
+# config/initializers/db_schema.rb
+DbSchema.configure_from_yaml(Rails.root.join('config', 'database.yml'), Rails.env)
+
+if Rails.env.development? || Rails.env.test?
+  load Rails.root.join('db', 'schema.rb')
+end
+```
+
+And the rake task:
+
+``` ruby
+# lib/tasks/db_schema.rake
+namespace :db do
+  namespace :schema do
+    desc 'Apply database schema'
+    task apply: :environment do
+      load Rails.root.join('db', 'schema.rb')
+    end
+  end
+end
+```
+
+Then you just call `rake db:schema:apply` from your deploy script before restarting the app.
+
+### DSL
+
+#### Tables
 
 Tables are described with the `#table` method; you pass it the name of the table and describe the table structure in the block:
 
@@ -61,7 +109,7 @@ db.table :users do |t|
 end
 ```
 
-#### Fields
+##### Fields
 
 Fields of any types are defined by calling methods
 
@@ -152,7 +200,7 @@ db.table :posts do |t|
 end
 ```
 
-#### Indexes
+##### Indexes
 
 Indexes are created using the `#index` method: you pass it the field name you want to index:
 
@@ -221,7 +269,7 @@ end
 
 Be warned though that you have to specify the condition exactly as PostgreSQL outputs it in `psql` with `\d table_name` command; otherwise your index will be recreated on each DbSchema run. This will be fixed in a later DbSchema version.
 
-#### Foreign keys
+##### Foreign keys
 
 The `#foreign_key` method defines a foreign key. In it's minimal form it takes a referencing field name and referenced table name:
 
@@ -275,7 +323,7 @@ There are 3 more options to the `#foreign_key` method: `:on_update`, `:on_delete
 
 Passing `deferrable: true` defines a foreign key that is checked at the end of transaction.
 
-#### Check constraints
+##### Check constraints
 
 A check constraint is like a validation on the database side: it checks if the inserted/updated row has valid values.
 
@@ -293,7 +341,7 @@ end
 
 As with partial index conditions, for now you have to specify the SQL exactly as `psql` outputs it (otherwise the constraint will be recreated on each run).
 
-### Enum types
+#### Enum types
 
 PostgreSQL allows developers to create custom enum types; value of enum type is one of a fixed set of values stored in the type definition.
 
@@ -318,6 +366,69 @@ db.enum :user_status, [:guest, :registered, :sent_confirmation_email, :confirmed
 ```
 
 Reordering and deleting values from enum types is not supported.
+
+### Configuration
+
+DbSchema must be configured prior to applying the schema. There are 2 methods you can use for that: `configure` and `configure_from_yaml`.
+
+#### DbSchema.configure
+
+`configure` is a generic method that receives a hash with all configuration options:
+
+``` ruby
+DbSchema.configure(
+  adapter:  'postgresql',
+  host:     ENV['db_host'],
+  port:     ENV['db_port'],
+  database: ENV['db_name'],
+  user:     ENV['db_user'],
+  password: ENV['db_password']
+)
+```
+
+#### DbSchema.configure_from_yaml
+
+`configure_from_yaml` is designed to use with Rails so you don't have to duplicate database connection settings from your `database.yml` in DbSchema configuration. Pass it the full path to your `database.yml` file and your current application environment (`development`, `production` etc), and it will read the db connection settings from that file.
+
+``` ruby
+DbSchema.configure_from_yaml(Rails.root.join('config', 'database.yml'), Rails.env)
+```
+
+If you need to specify other options you can simply pass them as keyword arguments after the environment:
+
+``` ruby
+DbSchema.configure_from_yaml(
+  Rails.root.join('config', 'database.yml'),
+  Rails.env,
+  dry_run: true
+)
+```
+
+#### Configuration options
+
+All configuration options are described in the following table:
+
+| Option      | Default value | Description                                      |
+| ----------- | ------------- | ------------------------------------------------ |
+| adapter     | `'postgres'`  | Database adapter                                 |
+| host        | `'localhost'` | Database host                                    |
+| port        | `5432`        | Database port                                    |
+| database    | (no default)  | Database name                                    |
+| user        | `nil`         | Database user                                    |
+| password    | `''`          | Database password                                |
+| log_changes | `true`        | When true, schema changes are logged             |
+| post_check  | `true`        | When true, database schema is checked afterwards |
+| dry_run     | `false`       | When true, no operations are actually made       |
+
+By default DbSchema logs the changes it applies to your database; you can disable that by setting `log_changes` to false.
+
+DbSchema provides an opt-out post-run schema check; it ensures that there are no remaining differences between your `schema.rb` and the actual database schema. If DbSchema still sees any differences it will keep applying them on each run - usually this is harmless (because it does not really change your schema) but in the case of a partial index with a complex condition it may rebuild the index which is an expensive operation on a large table. You can set `post_check` to false if you are 100% sure that your persistent changes are not a problem for you but I would strongly suggest that you turn it on from time to time just to make sure nothing dangerous appears in these persistent changes.
+
+The `post_check` option is likely to become off by default when DbSchema becomes more stable and battle-tested, and when the partial index problem will be solved.
+
+There is also a dry run mode which does not apply the changes to your database - it just logs the necessary changes (if you leave `log_changes` set to `true`). Post check is also skipped in that case.
+
+Dry run may be useful while you are building your schema definition for an existing app; adjust your `schema.rb` and apply it in dry run mode until it fits your database and next dry run doesn't report any changes. Don't forget to turn `dry_run` off afterwards!
 
 ## Development
 
