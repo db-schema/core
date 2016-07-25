@@ -130,7 +130,7 @@ end
 
 Then you just call `rake db:schema:apply` from your deploy script before restarting the app.
 
-### DSL
+## DSL
 
 Database schema is defined with a block passed to `DbSchema.describe` method.
 This block receives a `db` object on which you can call `#table` to define a table
@@ -165,7 +165,7 @@ DbSchema.describe do |db|
 end
 ```
 
-#### Tables
+### Tables
 
 Tables are described with the `#table` method; you pass it the name of the table and describe the table structure in the block:
 
@@ -176,7 +176,7 @@ db.table :users do |t|
 end
 ```
 
-##### Fields
+#### Fields
 
 You can define a field of any type by calling the corresponding method inside the table block passing it the field name and it's attributes. Most of the attributes are optional.
 
@@ -267,7 +267,7 @@ end
 
 **Important: you can't rename a table or a column just by changing it's name in the schema definition - this will result in a column with the old name being deleted and a column with the new name being added; all data in that table or column will be lost.**
 
-##### Indexes
+#### Indexes
 
 Indexes are created using the `#index` method: you pass it the field name you want to index:
 
@@ -336,7 +336,7 @@ end
 
 Be warned though that you have to specify the condition exactly as PostgreSQL outputs it in `psql` with `\d table_name` command; otherwise your index will be recreated on each DbSchema run. This will be fixed in a later DbSchema version.
 
-##### Foreign keys
+#### Foreign keys
 
 The `#foreign_key` method defines a foreign key. In it's minimal form it takes a referencing field name and referenced table name:
 
@@ -390,7 +390,7 @@ There are 3 more options to the `#foreign_key` method: `:on_update`, `:on_delete
 
 Passing `deferrable: true` defines a foreign key that is checked at the end of transaction.
 
-##### Check constraints
+#### Check constraints
 
 A check constraint is like a validation on the database side: it checks if the inserted/updated row has valid values.
 
@@ -408,7 +408,7 @@ end
 
 As with partial index conditions, for now you have to specify the SQL exactly as `psql` outputs it (otherwise the constraint will be recreated on each run).
 
-#### Enum types
+### Enum types
 
 PostgreSQL allows developers to create custom enum types; value of enum type is one of a fixed set of values stored in the type definition.
 
@@ -434,11 +434,11 @@ db.enum :user_status, [:guest, :registered, :sent_confirmation_email, :confirmed
 
 Reordering and deleting values from enum types is not supported.
 
-### Configuration
+## Configuration
 
 DbSchema must be configured prior to applying the schema. There are 2 methods you can use for that: `configure` and `configure_from_yaml`.
 
-#### DbSchema.configure
+### DbSchema.configure
 
 `configure` is a generic method that receives a hash with all configuration options:
 
@@ -453,7 +453,7 @@ DbSchema.configure(
 )
 ```
 
-#### DbSchema.configure_from_yaml
+### DbSchema.configure_from_yaml
 
 `configure_from_yaml` is designed to use with Rails so you don't have to duplicate database connection settings from your `database.yml` in DbSchema configuration. Pass it the full path to your `database.yml` file and your current application environment (`development`, `production` etc), and it will read the db connection settings from that file.
 
@@ -471,7 +471,7 @@ DbSchema.configure_from_yaml(
 )
 ```
 
-#### Configuration options
+### Configuration options
 
 All configuration options are described in the following table:
 
