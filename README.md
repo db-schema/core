@@ -32,7 +32,10 @@ to a different branch only to see something like this?
 Yeah, you must remember the oldest `NO FILE` migration,
 switch back to the previous branch,
 roll back every migration up to that `NO FILE`,
+discard all changes in `schema.rb`/`structure.sql` (and model annotations if you have any),
 then switch the branch again and migrate these `down` migrations.
+If you already wrote some code to be committed to the new branch
+you need to make sure it won't get discarded so a simple `git reset --hard` won't do.
 Every migration or rollback loads the whole app, resulting in 10+ seconds wasted.
 And at the end of it all you are trying to recall why did you ever
 want to switch to that branch.
