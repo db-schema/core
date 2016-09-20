@@ -6,6 +6,8 @@ RSpec.describe DbSchema::DSL do
       -> (db) do
         db.enum :user_status, %i(user moderator admin)
 
+        db.extension :hstore
+
         db.table :users do |t|
           t.primary_key :id
           t.varchar     :name, null: false
@@ -45,8 +47,13 @@ RSpec.describe DbSchema::DSL do
 
     subject { DbSchema::DSL.new(schema_block) }
 
-    it 'returns an array of Definitions::Table instances' do
-      user_status, users, happiness, posts = subject.schema
+    it 'returns a schema definition' do
+      user_status, hstore, users, happiness, posts = subject.schema
+
+      expect(user_status.name).to eq(:user_status)
+      expect(user_status.values).to eq(%i(user moderator admin))
+
+      expect(hstore).to eq(DbSchema::Definitions::Extension.new(:hstore))
 
       expect(users.name).to eq(:users)
       expect(users.fields.count).to eq(8)
