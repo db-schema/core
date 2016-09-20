@@ -10,6 +10,13 @@ RSpec.describe DbSchema::Runner do
     )
   end
 
+  let(:extensions) do
+    DbSchema::Utils.filter_by_class(
+      DbSchema::Reader.read_schema,
+      DbSchema::Definitions::Extension
+    )
+  end
+
   before(:each) do
     database.create_table :people do
       primary_key :id
@@ -748,6 +755,31 @@ RSpec.describe DbSchema::Runner do
           expect(enums.count).to eq(1)
           expect(enums.first.values).to eq(%i(happy good ok bad unhappy depressed))
         end
+      end
+    end
+
+    context 'with CreateExtension & DropExtension' do
+      before(:each) do
+        database.run('CREATE EXTENSION hstore')
+      end
+
+      let(:changes) do
+        [
+          DbSchema::Changes::CreateExtension.new(:ltree),
+          DbSchema::Changes::DropExtension.new(:hstore)
+        ]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        expect(extensions).to eq([
+          DbSchema::Definitions::Extension.new(:ltree)
+        ])
+      end
+
+      after(:each) do
+        database.run('DROP EXTENSION ltree')
       end
     end
 

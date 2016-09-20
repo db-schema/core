@@ -24,6 +24,10 @@ module DbSchema
             self.class.create_enum(change)
           when Changes::DropEnum
             self.class.drop_enum(change)
+          when Changes::CreateExtension
+            self.class.create_extension(change)
+          when Changes::DropExtension
+            self.class.drop_extension(change)
           end
         end
       end
@@ -39,6 +43,7 @@ module DbSchema
       Utils.sort_by_class(
         changes,
         [
+          Changes::CreateExtension,
           Changes::AddValueToEnum,
           Changes::DropForeignKey,
           Changes::CreateEnum,
@@ -46,7 +51,8 @@ module DbSchema
           Changes::AlterTable,
           Changes::DropTable,
           Changes::DropEnum,
-          Changes::CreateForeignKey
+          Changes::CreateForeignKey,
+          Changes::DropExtension
         ]
       )
     end
@@ -185,6 +191,14 @@ module DbSchema
         else
           DbSchema.connection.add_enum_value(change.enum_name, change.new_value, before: change.before)
         end
+      end
+
+      def create_extension(change)
+        DbSchema.connection.run("CREATE EXTENSION #{change.name}")
+      end
+
+      def drop_extension(change)
+        DbSchema.connection.run("DROP EXTENSION #{change.name}")
       end
 
       def map_options(type, options)
