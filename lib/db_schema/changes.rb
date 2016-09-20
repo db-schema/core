@@ -89,7 +89,16 @@ module DbSchema
           end
         end
 
-        table_changes + enum_changes
+        desired_extensions = extract_extensions(desired_schema)
+        actual_extensions  = extract_extensions(actual_schema)
+
+        extension_changes = (desired_extensions - actual_extensions).map do |extension|
+          CreateExtension.new(extension.name)
+        end + (actual_extensions - desired_extensions).map do |extension|
+          DropExtension.new(extension.name)
+        end
+
+        table_changes + enum_changes + extension_changes
       end
 
     private
@@ -224,6 +233,10 @@ module DbSchema
 
       def extract_enums(schema)
         Utils.filter_by_class(schema, Definitions::Enum)
+      end
+
+      def extract_extensions(schema)
+        Utils.filter_by_class(schema, Definitions::Extension)
       end
     end
 
@@ -391,6 +404,12 @@ module DbSchema
       def add_to_the_end?
         before.nil?
       end
+    end
+
+    class CreateExtension < Definitions::Extension
+    end
+
+    class DropExtension < ColumnOperation
     end
   end
 end

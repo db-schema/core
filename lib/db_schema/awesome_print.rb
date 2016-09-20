@@ -70,6 +70,9 @@ if defined?(AwesomePrint)
           :dbschema_column_operation
         when ::DbSchema::Changes::AddValueToEnum
           :dbschema_add_value_to_enum
+        when ::DbSchema::Changes::CreateExtension,
+             ::DbSchema::Changes::DropExtension
+          :dbschema_column_operation
         else
           cast_without_dbschema(object, type)
         end
