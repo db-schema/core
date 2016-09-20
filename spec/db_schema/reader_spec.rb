@@ -8,9 +8,11 @@ RSpec.describe DbSchema::Reader do
       end
     end
 
-    context 'on a database with tables' do
+    context 'on a non-empty database' do
       before(:each) do
         DbSchema.connection.create_enum :rainbow, %w(red orange yellow green blue purple)
+
+        DbSchema.connection.run('CREATE EXTENSION hstore')
 
         DbSchema.connection.create_table :users do
           column :id, :serial, primary_key: true
@@ -58,10 +60,12 @@ RSpec.describe DbSchema::Reader do
       end
 
       it 'returns the database schema' do
-        rainbow, users, posts = subject.read_schema
+        rainbow, hstore, users, posts = subject.read_schema
 
         expect(rainbow.name).to eq(:rainbow)
         expect(rainbow.values).to eq(%i(red orange yellow green blue purple))
+
+        expect(hstore.name).to eq(:hstore)
 
         expect(users.name).to eq(:users)
         expect(posts.name).to eq(:posts)
@@ -197,6 +201,7 @@ RSpec.describe DbSchema::Reader do
         DbSchema.connection.drop_table(:posts)
         DbSchema.connection.drop_table(:users)
         DbSchema.connection.drop_enum(:rainbow)
+        DbSchema.connection.run('DROP EXTENSION hstore')
       end
     end
   end

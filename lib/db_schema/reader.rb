@@ -87,10 +87,20 @@ LEFT JOIN pg_am
 GROUP BY name
       SQL
 
+      EXTENSIONS_QUERY = <<-SQL.freeze
+SELECT extname
+  FROM pg_extension
+ WHERE extname != 'plpgsql'
+      SQL
+
       class << self
         def read_schema
           enums = DbSchema.connection[ENUMS_QUERY].map do |enum_data|
             Definitions::Enum.new(enum_data[:name].to_sym, enum_data[:values].map(&:to_sym))
+          end
+
+          extensions = DbSchema.connection[EXTENSIONS_QUERY].map do |extension_data|
+            Definitions::Extension.new(extension_data[:extname].to_sym)
           end
 
           tables = DbSchema.connection.tables.map do |table_name|
@@ -124,7 +134,7 @@ GROUP BY name
             )
           end
 
-          enums + tables
+          enums + extensions + tables
         end
 
         def indices_data_for(table_name)

@@ -29,6 +29,8 @@ if defined?(AwesomePrint)
           :dbschema_foreign_key
         when ::DbSchema::Definitions::Enum
           :dbschema_enum
+        when ::DbSchema::Definitions::Extension
+          :dbschema_column_operation
         when ::DbSchema::Changes::CreateTable
           :dbschema_create_table
         when ::DbSchema::Changes::DropTable
