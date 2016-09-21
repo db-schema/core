@@ -40,6 +40,7 @@ require_relative 'field/json'
 require_relative 'field/array'
 require_relative 'field/range'
 
+require_relative 'field/extensions/hstore'
 require_relative 'field/extensions/ltree'
 
 require_relative 'field/custom'
