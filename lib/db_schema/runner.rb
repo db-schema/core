@@ -194,11 +194,11 @@ module DbSchema
       end
 
       def create_extension(change)
-        DbSchema.connection.run("CREATE EXTENSION #{change.name}")
+        DbSchema.connection.run(%Q(CREATE EXTENSION "#{change.name}"))
       end
 
       def drop_extension(change)
-        DbSchema.connection.run("DROP EXTENSION #{change.name}")
+        DbSchema.connection.run(%Q(DROP EXTENSION "#{change.name}"))
       end
 
       def map_options(type, options)

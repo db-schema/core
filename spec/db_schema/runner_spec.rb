@@ -766,6 +766,7 @@ RSpec.describe DbSchema::Runner do
       let(:changes) do
         [
           DbSchema::Changes::CreateExtension.new(:ltree),
+          DbSchema::Changes::CreateExtension.new(:'uuid-ossp'),
           DbSchema::Changes::DropExtension.new(:hstore)
         ]
       end
@@ -774,12 +775,14 @@ RSpec.describe DbSchema::Runner do
         subject.run!
 
         expect(extensions).to eq([
-          DbSchema::Definitions::Extension.new(:ltree)
+          DbSchema::Definitions::Extension.new(:ltree),
+          DbSchema::Definitions::Extension.new(:'uuid-ossp')
         ])
       end
 
       after(:each) do
         database.run('DROP EXTENSION ltree')
+        database.run('DROP EXTENSION "uuid-ossp"')
       end
     end
 
