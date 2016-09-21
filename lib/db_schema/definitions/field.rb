@@ -3,7 +3,11 @@ module DbSchema
     module Field
       class << self
         def build(name, type, **options)
-          type_class_for(type).new(name, **options)
+          if registry.key?(type)
+            type_class_for(type).new(name, **options)
+          else
+            Custom.new(name, type_name: type, **options)
+          end
         end
 
         def type_class_for(type)
@@ -35,4 +39,7 @@ require_relative 'field/uuid'
 require_relative 'field/json'
 require_relative 'field/array'
 require_relative 'field/range'
+
+require_relative 'field/extensions/ltree'
+
 require_relative 'field/custom'

@@ -174,6 +174,9 @@ SELECT extname
       private
         def build_field(data, primary_key: false)
           type = data[:type].to_sym.downcase
+          if type == :'user-defined'
+            type = data[:custom_type_name].to_sym
+          end
 
           nullable = (data[:null] != 'NO')
 
@@ -222,24 +225,14 @@ SELECT extname
             {}
           end
 
-          if data[:type] == 'USER-DEFINED'
-            Definitions::Field::Custom.new(
-              data[:name].to_sym,
-              type_name:   data[:custom_type_name].to_sym,
-              primary_key: primary_key,
-              null:        nullable,
-              default:     default
-            )
-          else
-            Definitions::Field.build(
-              data[:name].to_sym,
-              type,
-              primary_key: primary_key,
-              null:        nullable,
-              default:     default,
-              **options
-            )
-          end
+          Definitions::Field.build(
+            data[:name].to_sym,
+            type,
+            primary_key: primary_key,
+            null:        nullable,
+            default:     default,
+            **options
+          )
         end
 
         def build_foreign_key(data)
