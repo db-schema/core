@@ -44,6 +44,8 @@ require_relative 'field/extensions/chkpass'
 require_relative 'field/extensions/citext'
 require_relative 'field/extensions/cube'
 require_relative 'field/extensions/hstore'
+require_relative 'field/extensions/isn'
 require_relative 'field/extensions/ltree'
+require_relative 'field/extensions/seg'
 
 require_relative 'field/custom'
