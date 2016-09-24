@@ -1,4 +1,4 @@
-# DbSchema [![Build Status](https://travis-ci.org/7even/db_schema.svg?branch=master)](https://travis-ci.org/7even/db_schema)
+# DbSchema [![Build Status](https://travis-ci.org/7even/db_schema.svg?branch=master)](https://travis-ci.org/7even/db_schema) [![Gem Version](https://badge.fury.io/rb/db_schema.svg)](https://badge.fury.io/rb/db_schema)
 
 DbSchema is an opinionated database schema management tool that lets you maintain your DB schema with a single ruby file.
 
