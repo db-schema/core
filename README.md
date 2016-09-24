@@ -53,7 +53,7 @@ But you would lose it even with manual migrations.
 Add this line to your application's Gemfile:
 
 ``` ruby
-gem 'db_schema'
+gem 'db_schema', '~> 0.1.1'
 ```
 
 And then execute:
