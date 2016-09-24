@@ -142,6 +142,8 @@ is described in a block passed to `#table`.
 
 ``` ruby
 DbSchema.describe do |db|
+  db.extension :hstore
+
   db.table :users do |t|
     t.primary_key :id
     t.varchar     :email,    null: false
@@ -149,6 +151,7 @@ DbSchema.describe do |db|
     t.varchar     :name,     null: false
     t.integer     :age
     t.user_status :status,   null: false, default: 'registered'
+    t.hstore      :tracking, null: false, default: ''
 
     t.index :email, unique: true
   end
@@ -252,6 +255,20 @@ Other attributes are type specific, like `:length` for varchars; the following t
 | `tsrange`     |                  |
 | `tstzrange`   |                  |
 | `daterange`   |                  |
+| `chkpass`     |                  |
+| `citext`      |                  |
+| `cube`        |                  |
+| `hstore`      |                  |
+| `ean13`       |                  |
+| `isbn13`      |                  |
+| `ismn13`      |                  |
+| `issn13`      |                  |
+| `isbn`        |                  |
+| `ismn`        |                  |
+| `issn`        |                  |
+| `upc`         |                  |
+| `ltree`       |                  |
+| `seg`         |                  |
 
 The `of` attribute of the array type is the only required attribute (you need to specify the array element type here); other attributes either have default values or can be omitted at all.
 
@@ -436,6 +453,16 @@ db.enum :user_status, [:guest, :registered, :sent_confirmation_email, :confirmed
 ```
 
 Reordering and deleting values from enum types is not supported.
+
+### Extensions
+
+PostgreSQL has a [wide variety](https://www.postgresql.org/docs/9.5/static/contrib.html) of extensions providing additional data types, functions and operators. You can use DbSchema to add and remove extensions in your database:
+
+``` ruby
+db.extension :hstore
+```
+
+*Note that adding and removing extensions in Postgres requires superuser privileges.*
 
 ## Configuration
 
