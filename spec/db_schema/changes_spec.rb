@@ -457,5 +457,31 @@ RSpec.describe DbSchema::Changes do
         end
       end
     end
+
+    context 'with extensions added and removed' do
+      let(:desired_schema) do
+        [
+          DbSchema::Definitions::Extension.new(:ltree)
+        ]
+      end
+
+      let(:actual_schema) do
+        [
+          DbSchema::Definitions::Extension.new(:hstore)
+        ]
+      end
+
+      it 'returns changes between schemas' do
+        changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+        expect(changes.count).to eq(2)
+        expect(changes).to include(
+          DbSchema::Changes::CreateExtension.new(:ltree)
+        )
+        expect(changes).to include(
+          DbSchema::Changes::DropExtension.new(:hstore)
+        )
+      end
+    end
   end
 end

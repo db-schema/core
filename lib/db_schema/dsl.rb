@@ -29,6 +29,10 @@ module DbSchema
       @schema << Definitions::Enum.new(name.to_sym, values.map(&:to_sym))
     end
 
+    def extension(name)
+      @schema << Definitions::Extension.new(name.to_sym)
+    end
+
     class TableYielder
       attr_reader :table_name
 

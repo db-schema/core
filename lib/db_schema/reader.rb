@@ -87,10 +87,20 @@ LEFT JOIN pg_am
 GROUP BY name
       SQL
 
+      EXTENSIONS_QUERY = <<-SQL.freeze
+SELECT extname
+  FROM pg_extension
+ WHERE extname != 'plpgsql'
+      SQL
+
       class << self
         def read_schema
           enums = DbSchema.connection[ENUMS_QUERY].map do |enum_data|
             Definitions::Enum.new(enum_data[:name].to_sym, enum_data[:values].map(&:to_sym))
+          end
+
+          extensions = DbSchema.connection[EXTENSIONS_QUERY].map do |extension_data|
+            Definitions::Extension.new(extension_data[:extname].to_sym)
           end
 
           tables = DbSchema.connection.tables.map do |table_name|
@@ -124,7 +134,7 @@ GROUP BY name
             )
           end
 
-          enums + tables
+          enums + extensions + tables
         end
 
         def indices_data_for(table_name)
@@ -164,6 +174,9 @@ GROUP BY name
       private
         def build_field(data, primary_key: false)
           type = data[:type].to_sym.downcase
+          if type == :'user-defined'
+            type = data[:custom_type_name].to_sym
+          end
 
           nullable = (data[:null] != 'NO')
 
@@ -212,24 +225,14 @@ GROUP BY name
             {}
           end
 
-          if data[:type] == 'USER-DEFINED'
-            Definitions::Field::Custom.new(
-              data[:name].to_sym,
-              type_name:   data[:custom_type_name].to_sym,
-              primary_key: primary_key,
-              null:        nullable,
-              default:     default
-            )
-          else
-            Definitions::Field.build(
-              data[:name].to_sym,
-              type,
-              primary_key: primary_key,
-              null:        nullable,
-              default:     default,
-              **options
-            )
-          end
+          Definitions::Field.build(
+            data[:name].to_sym,
+            type,
+            primary_key: primary_key,
+            null:        nullable,
+            default:     default,
+            **options
+          )
         end
 
         def build_foreign_key(data)
