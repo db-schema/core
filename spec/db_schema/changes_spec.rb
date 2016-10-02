@@ -121,15 +121,15 @@ RSpec.describe DbSchema::Changes do
         indices = [
           DbSchema::Definitions::Index.new(
             name:      :users_name_index,
-            fields:    [DbSchema::Definitions::Index::Field.new(:name)],
+            columns:   [DbSchema::Definitions::Index::TableField.new(:name)],
             unique:    true,
             condition: 'email IS NOT NULL'
           ),
           DbSchema::Definitions::Index.new(
-            name:   :users_email_index,
-            fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
-            type:   :hash,
-            unique: true
+            name:    :users_email_index,
+            columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
+            type:    :hash,
+            unique:  true
           )
         ]
 
@@ -179,12 +179,12 @@ RSpec.describe DbSchema::Changes do
 
         indices = [
           DbSchema::Definitions::Index.new(
-            name: :users_name_index,
-            fields: [DbSchema::Definitions::Index::Field.new(:name)]
+            name:    :users_name_index,
+            columns: [DbSchema::Definitions::Index::TableField.new(:name)]
           ),
           DbSchema::Definitions::Index.new(
-            name: :users_type_index,
-            fields: [DbSchema::Definitions::Index::Field.new(:type)]
+            name:    :users_type_index,
+            columns: [DbSchema::Definitions::Index::TableField.new(:type)]
           )
         ]
 
@@ -241,15 +241,15 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(
             name:      :users_name_index,
-            fields:    [DbSchema::Definitions::Index::Field.new(:name)],
+            columns:   [DbSchema::Definitions::Index::TableField.new(:name)],
             unique:    true,
             condition: 'email IS NOT NULL'
           ),
           DbSchema::Changes::CreateIndex.new(
-            name:   :users_email_index,
-            fields: [DbSchema::Definitions::Index::Field.new(:email, order: :desc)],
-            type:   :hash,
-            unique: true
+            name:    :users_email_index,
+            columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
+            type:    :hash,
+            unique:  true
           ),
           DbSchema::Changes::DropIndex.new(:users_type_index)
         ])

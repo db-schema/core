@@ -98,8 +98,8 @@ RSpec.describe DbSchema::DSL do
       expect(users.indices.count).to eq(2)
       email_index, strings_index = users.indices
       expect(email_index.name).to eq(:users_email_idx)
-      expect(email_index.fields).to eq([
-        DbSchema::Definitions::Index::Field.new(:email)
+      expect(email_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:email)
       ])
       expect(email_index).to be_unique
       expect(email_index).to be_btree
@@ -111,17 +111,17 @@ RSpec.describe DbSchema::DSL do
 
       user_id_index, sorted_index = posts.indices
       expect(user_id_index.name).to eq(:posts_user_id_index)
-      expect(user_id_index.fields).to eq([
-        DbSchema::Definitions::Index::Field.new(:user_id)
+      expect(user_id_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:user_id)
       ])
       expect(user_id_index).not_to be_unique
 
       expect(sorted_index.name).to eq(:posts_col1_col2_col3_col4_index)
-      expect(sorted_index.fields).to eq([
-        DbSchema::Definitions::Index::Field.new(:col1),
-        DbSchema::Definitions::Index::Field.new(:col2, order: :desc),
-        DbSchema::Definitions::Index::Field.new(:col3, nulls: :first),
-        DbSchema::Definitions::Index::Field.new(:col4, order: :desc, nulls: :last)
+      expect(sorted_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:col1),
+        DbSchema::Definitions::Index::TableField.new(:col2, order: :desc),
+        DbSchema::Definitions::Index::TableField.new(:col3, nulls: :first),
+        DbSchema::Definitions::Index::TableField.new(:col4, order: :desc, nulls: :last)
       ])
 
       expect(users.checks.count).to eq(1)

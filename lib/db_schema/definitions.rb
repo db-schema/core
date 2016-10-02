@@ -3,12 +3,12 @@ require 'dry/equalizer'
 module DbSchema
   module Definitions
     class Index
-      include Dry::Equalizer(:name, :fields, :unique?, :type, :condition)
-      attr_reader :name, :fields, :type, :condition
+      include Dry::Equalizer(:name, :columns, :unique?, :type, :condition)
+      attr_reader :name, :columns, :type, :condition
 
-      def initialize(name:, fields:, unique: false, type: :btree, condition: nil)
+      def initialize(name:, columns:, unique: false, type: :btree, condition: nil)
         @name      = name.to_sym
-        @fields    = fields
+        @columns   = columns
         @unique    = unique
         @type      = type
         @condition = condition
@@ -22,7 +22,7 @@ module DbSchema
         type == :btree
       end
 
-      class Field
+      class Column
         include Dry::Equalizer(:name, :order, :nulls)
         attr_reader :name, :order, :nulls
 
@@ -46,6 +46,18 @@ module DbSchema
           else
             Sequel.desc(name, nulls: nulls)
           end
+        end
+      end
+
+      class TableField < Column
+        def expression?
+          false
+        end
+      end
+
+      class Expression < Column
+        def expression?
+          true
         end
       end
     end

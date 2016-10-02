@@ -155,7 +155,7 @@ module DbSchema
           if desired && !actual
             table_changes << CreateIndex.new(
               name:      index_name,
-              fields:    desired.fields,
+              columns:   desired.columns,
               unique:    desired.unique?,
               type:      desired.type,
               condition: desired.condition
@@ -166,7 +166,7 @@ module DbSchema
             table_changes << DropIndex.new(index_name)
             table_changes << CreateIndex.new(
               name:      index_name,
-              fields:    desired.fields,
+              columns:   desired.columns,
               unique:    desired.unique?,
               type:      desired.type,
               condition: desired.condition

@@ -55,11 +55,11 @@ module DbSchema
         fields << Definitions::Field.build(name, type, options)
       end
 
-      def index(*fields, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
-        index_fields = fields.map do |field_name|
-          Definitions::Index::Field.new(field_name.to_sym)
-        end + ordered_fields.map do |field_name, field_order_options|
-          options = case field_order_options
+      def index(*columns, name: nil, unique: false, using: :btree, where: nil, **ordered_columns)
+        index_columns = columns.map do |column_name|
+          Definitions::Index::TableField.new(column_name.to_sym)
+        end + ordered_columns.map do |column_name, column_order_options|
+          options = case column_order_options
           when :asc
             {}
           when :desc
@@ -72,14 +72,14 @@ module DbSchema
             raise ArgumentError, 'Only :asc, :desc, :asc_nulls_first and :desc_nulls_last options are supported.'
           end
 
-          Definitions::Index::Field.new(field_name.to_sym, **options)
+          Definitions::Index::TableField.new(column_name.to_sym, **options)
         end
 
-        index_name = name || "#{table_name}_#{index_fields.map(&:name).join('_')}_index"
+        index_name = name || "#{table_name}_#{index_columns.map(&:name).join('_')}_index"
 
         indices << Definitions::Index.new(
           name:      index_name,
-          fields:    index_fields,
+          columns:   index_columns,
           unique:    unique,
           type:      using,
           condition: where

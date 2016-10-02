@@ -152,18 +152,18 @@ RSpec.describe DbSchema::Reader do
         expect(users.indices.count).to eq(3)
         email_index, name_index, * = users.indices
 
-        expect(email_index.fields).to eq([
-          DbSchema::Definitions::Index::Field.new(:email),
-          DbSchema::Definitions::Index::Field.new(:name, order: :desc),
-          DbSchema::Definitions::Index::Field.new(:lat, nulls: :first),
-          DbSchema::Definitions::Index::Field.new(:lng, order: :desc, nulls: :last)
+        expect(email_index.columns).to eq([
+          DbSchema::Definitions::Index::TableField.new(:email),
+          DbSchema::Definitions::Index::TableField.new(:name, order: :desc),
+          DbSchema::Definitions::Index::TableField.new(:lat, nulls: :first),
+          DbSchema::Definitions::Index::TableField.new(:lng, order: :desc, nulls: :last)
         ])
         expect(email_index).to be_unique
         expect(email_index.type).to eq(:btree)
         expect(email_index.condition).to eq('email IS NOT NULL')
 
-        expect(name_index.fields).to eq([
-          DbSchema::Definitions::Index::Field.new(:name)
+        expect(name_index.columns).to eq([
+          DbSchema::Definitions::Index::TableField.new(:name)
         ])
         expect(name_index.type).to eq(:spgist)
 
@@ -174,8 +174,8 @@ RSpec.describe DbSchema::Reader do
 
         expect(posts.indices.count).to eq(1)
         user_id_index = posts.indices.first
-        expect(user_id_index.fields).to eq([
-          DbSchema::Definitions::Index::Field.new(:user_id)
+        expect(user_id_index.columns).to eq([
+          DbSchema::Definitions::Index::TableField.new(:user_id)
         ])
         expect(user_id_index).not_to be_unique
 

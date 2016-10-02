@@ -146,7 +146,7 @@ SELECT extname
             positions = index[:column_positions].split(' ').map(&:to_i)
             options   = index[:index_options].split(' ').map(&:to_i)
 
-            fields = column_names.values_at(*positions).zip(options).map do |column_name, column_order_options|
+            columns = column_names.values_at(*positions).zip(options).map do |column_name, column_order_options|
               options = case column_order_options
               when 0
                 {}
@@ -158,12 +158,12 @@ SELECT extname
                 { order: :desc, nulls: :last }
               end
 
-              DbSchema::Definitions::Index::Field.new(column_name.to_sym, **options)
+              DbSchema::Definitions::Index::TableField.new(column_name.to_sym, **options)
             end
 
             {
               name:      index[:name].to_sym,
-              fields:    fields,
+              columns:   columns,
               unique:    index[:unique],
               type:      index[:index_type].to_sym,
               condition: index[:condition]

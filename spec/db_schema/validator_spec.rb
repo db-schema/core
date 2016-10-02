@@ -46,9 +46,9 @@ RSpec.describe DbSchema::Validator do
       [
         DbSchema::Definitions::Index.new(
           name: :users_name_index,
-          fields: [
-            DbSchema::Definitions::Index::Field.new(:first_name),
-            DbSchema::Definitions::Index::Field.new(:last_name)
+          columns: [
+            DbSchema::Definitions::Index::TableField.new(:first_name),
+            DbSchema::Definitions::Index::TableField.new(:last_name)
           ],
           unique: true
         )
@@ -99,8 +99,8 @@ RSpec.describe DbSchema::Validator do
         [
           DbSchema::Definitions::Index.new(
             name: :invalid_index,
-            fields: [
-              DbSchema::Definitions::Index::Field.new(:address)
+            columns: [
+              DbSchema::Definitions::Index::TableField.new(:address)
             ]
           )
         ]
