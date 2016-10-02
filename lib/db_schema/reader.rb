@@ -60,8 +60,8 @@ SELECT conname AS name,
           indisunique AS unique,
           indoption AS index_options,
           pg_get_expr(indpred, indrelid, true) AS condition,
-          pg_get_expr(indexprs, indrelid, true) AS expression,
-          amname AS index_type
+          amname AS index_type,
+          indexrelid AS index_oid
      FROM pg_class, pg_index
 LEFT JOIN pg_opclass
        ON pg_opclass.oid = ANY(pg_index.indclass::int[])
@@ -75,7 +75,16 @@ LEFT JOIN pg_am
         AND pg_class.oid = pg_index.indrelid
         AND indisprimary != 't'
 )
-  GROUP BY name, column_positions, indisunique, index_options, condition, expression, index_type
+  GROUP BY name, column_positions, indisunique, index_options, condition, index_type, index_oid
+      SQL
+
+      EXPRESSION_INDICES_QUERY = <<-SQL.freeze
+    WITH index_ids AS (SELECT unnest(?) AS index_id),
+         elements AS (SELECT unnest(?) AS element)
+  SELECT index_id,
+         array_agg(pg_get_indexdef(index_id, element, 't')) AS definitions
+    FROM index_ids, elements
+GROUP BY index_id;
       SQL
 
       ENUMS_QUERY = <<-SQL.freeze
@@ -139,14 +148,17 @@ SELECT extname
 
         def indices_data_for(table_name)
           column_names = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].reduce({}) do |names, column|
-            names.merge(column[:pos] => column[:name])
+            names.merge(column[:pos] => column[:name].to_sym)
           end
 
-          DbSchema.connection[INDICES_QUERY, table_name.to_s].map do |index|
+          indices_data     = DbSchema.connection[INDICES_QUERY, table_name.to_s].to_a
+          expressions_data = index_expressions_data(indices_data)
+
+          indices_data.map do |index|
             positions = index[:column_positions].split(' ').map(&:to_i)
             options   = index[:index_options].split(' ').map(&:to_i)
 
-            columns = column_names.values_at(*positions).zip(options).map do |column_name, column_order_options|
+            columns = positions.zip(options).map do |column_position, column_order_options|
               options = case column_order_options
               when 0
                 {}
@@ -158,7 +170,12 @@ SELECT extname
                 { order: :desc, nulls: :last }
               end
 
-              DbSchema::Definitions::Index::TableField.new(column_name.to_sym, **options)
+              if column_position.zero?
+                expression = expressions_data.fetch(index[:index_oid]).shift
+                DbSchema::Definitions::Index::Expression.new(expression, **options)
+              else
+                DbSchema::Definitions::Index::TableField.new(column_names.fetch(column_position), **options)
+              end
             end
 
             {
@@ -172,6 +189,29 @@ SELECT extname
         end
 
       private
+        def index_expressions_data(indices_data)
+          expressions_stats = indices_data.each_with_object(ids: [], max: 0) do |index_data, stats|
+            expressions_count = index_data[:column_positions].split(' ').count('0')
+
+            if expressions_count > 0
+              stats[:ids] << index_data[:index_oid]
+              stats[:max] = [stats[:max], expressions_count].max
+            end
+          end
+
+          if expressions_stats[:max] > 0
+            DbSchema.connection[
+              EXPRESSION_INDICES_QUERY,
+              Sequel.pg_array(expressions_stats[:ids]),
+              Sequel.pg_array((1..expressions_stats[:max]).to_a)
+            ].each_with_object({}) do |index_data, indices_data|
+              indices_data[index_data[:index_id]] = index_data[:definitions]
+            end
+          else
+            {}
+          end
+        end
+
         def build_field(data, primary_key: false)
           type = data[:type].to_sym.downcase
           if type == :'user-defined'

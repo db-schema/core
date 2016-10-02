@@ -40,6 +40,10 @@ RSpec.describe DbSchema::Reader do
             Sequel.desc(:lng, nulls: :last)
           ], unique: true, where: 'email IS NOT NULL'
           index [:name], type: :spgist
+          index [
+            Sequel.asc(Sequel.lit('lower(email)')),
+            Sequel.desc(Sequel.lit('lower(name)'))
+          ], unique: true, name: :users_expression_index
 
           constraint :is_adult, 'age > 18'
         end
@@ -149,8 +153,8 @@ RSpec.describe DbSchema::Reader do
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timetz)
         expect(created_at.name).to eq(:created_at)
 
-        expect(users.indices.count).to eq(3)
-        email_index, name_index, * = users.indices
+        expect(users.indices.count).to eq(4)
+        email_index, expression_index, name_index, * = users.indices
 
         expect(email_index.columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:email),
@@ -161,6 +165,12 @@ RSpec.describe DbSchema::Reader do
         expect(email_index).to be_unique
         expect(email_index.type).to eq(:btree)
         expect(email_index.condition).to eq('email IS NOT NULL')
+
+        expect(expression_index.columns).to eq([
+          DbSchema::Definitions::Index::Expression.new('lower(email::text)'),
+          DbSchema::Definitions::Index::Expression.new('lower(name::text)', order: :desc)
+        ])
+        expect(expression_index).to be_unique
 
         expect(name_index.columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:name)
