@@ -53,11 +53,19 @@ module DbSchema
         def expression?
           false
         end
+
+        def index_name_segment
+          name
+        end
       end
 
       class Expression < Column
         def expression?
           true
+        end
+
+        def index_name_segment
+          name.scan(/\b[A-Za-z0-9_]+\b/).join('_')
         end
       end
     end
