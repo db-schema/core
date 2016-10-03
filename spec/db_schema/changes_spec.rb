@@ -121,7 +121,7 @@ RSpec.describe DbSchema::Changes do
         indices = [
           DbSchema::Definitions::Index.new(
             name:      :users_name_index,
-            columns:   [DbSchema::Definitions::Index::TableField.new(:name)],
+            columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
             unique:    true,
             condition: 'email IS NOT NULL'
           ),
@@ -241,7 +241,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(
             name:      :users_name_index,
-            columns:   [DbSchema::Definitions::Index::TableField.new(:name)],
+            columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
             unique:    true,
             condition: 'email IS NOT NULL'
           ),
