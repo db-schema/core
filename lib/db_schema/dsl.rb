@@ -56,21 +56,18 @@ module DbSchema
       end
 
       def index(*columns, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
-        # TODO: refactor to one big hash with all columns of the index
         if columns.last.is_a?(Hash)
-          *unordered_columns, ordered_expressions = columns
+          *ascending_columns, ordered_expressions = columns
         else
-          unordered_columns = columns
+          ascending_columns = columns
           ordered_expressions = {}
         end
 
-        index_columns = unordered_columns.map do |column_name|
-          if column_name.is_a?(String)
-            Definitions::Index::Expression.new(column_name)
-          else
-            Definitions::Index::TableField.new(column_name)
-          end
-        end + ordered_fields.merge(ordered_expressions).map do |column_name, column_order_options|
+        columns_data = ascending_columns.each_with_object({}) do |column_name, columns|
+          columns[column_name] = :asc
+        end.merge(ordered_fields).merge(ordered_expressions)
+
+        index_columns = columns_data.map do |column_name, column_order_options|
           options = case column_order_options
           when :asc
             {}
