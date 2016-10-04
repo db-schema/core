@@ -24,7 +24,7 @@ module DbSchema
           field_names = table.fields.map(&:name)
 
           table.indices.each do |index|
-            index.columns.map(&:name).each do |field_name|
+            index.columns.reject(&:expression?).map(&:name).each do |field_name|
               unless field_names.include?(field_name)
                 error_message = %(Index "#{index.name}" refers to a missing field "#{table.name}.#{field_name}")
                 errors << error_message

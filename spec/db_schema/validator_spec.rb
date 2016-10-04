@@ -51,6 +51,12 @@ RSpec.describe DbSchema::Validator do
             DbSchema::Definitions::Index::TableField.new(:last_name)
           ],
           unique: true
+        ),
+        DbSchema::Definitions::Index.new(
+          name: :users_lower_name_index,
+          columns: [
+            DbSchema::Definitions::Index::Expression.new("lower(first_name) || ' ' || lower(last_name)")
+          ]
         )
       ]
     end
