@@ -70,14 +70,8 @@ module DbSchema
           end
 
           change.indices.each do |index|
-            columns = if index.btree?
-              index.columns.map(&:to_sequel)
-            else
-              index.columns.map(&:name)
-            end
-
             index(
-              columns,
+              index.columns_to_sequel,
               name:   index.name,
               unique: index.unique?,
               type:   index.type,
@@ -141,14 +135,8 @@ module DbSchema
             when Changes::AlterColumnDefault
               set_column_default(element.name, element.new_default)
             when Changes::CreateIndex
-              columns = if element.btree?
-                element.columns.map(&:to_sequel)
-              else
-                element.columns.map(&:name)
-              end
-
               add_index(
-                columns,
+                element.columns_to_sequel,
                 name:   element.name,
                 unique: element.unique?,
                 type:   element.type,

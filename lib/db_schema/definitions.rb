@@ -22,6 +22,14 @@ module DbSchema
         type == :btree
       end
 
+      def columns_to_sequel
+        if btree?
+          columns.map(&:ordered_expression)
+        else
+          columns.map(&:to_sequel)
+        end
+      end
+
       class Column
         include Dry::Equalizer(:name, :order, :nulls)
         attr_reader :name, :order, :nulls
@@ -40,32 +48,32 @@ module DbSchema
           @order == :desc
         end
 
-        def to_sequel
+        def ordered_expression
           if asc?
-            Sequel.asc(name, nulls: nulls)
+            Sequel.asc(to_sequel, nulls: nulls)
           else
-            Sequel.desc(name, nulls: nulls)
+            Sequel.desc(to_sequel, nulls: nulls)
           end
         end
       end
 
       class TableField < Column
-        def expression?
-          false
+        def index_name_segment
+          name
         end
 
-        def index_name_segment
+        def to_sequel
           name
         end
       end
 
       class Expression < Column
-        def expression?
-          true
-        end
-
         def index_name_segment
           name.scan(/\b[A-Za-z0-9_]+\b/).join('_')
+        end
+
+        def to_sequel
+          Sequel.lit("(#{name})")
         end
       end
     end
