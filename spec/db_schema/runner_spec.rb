@@ -56,19 +56,19 @@ RSpec.describe DbSchema::Runner do
   let(:users_indices) do
     [
       DbSchema::Definitions::Index.new(
-        name:   :index_users_on_name,
-        fields: [DbSchema::Definitions::Index::Field.new(:name)]
+        name:    :index_users_on_name,
+        columns: [DbSchema::Definitions::Index::Expression.new('lower(name)')]
       ),
       DbSchema::Definitions::Index.new(
         name:      :index_users_on_email,
-        fields:    [DbSchema::Definitions::Index::Field.new(:email, order: :desc, nulls: :last)],
+        columns:   [DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)],
         unique:    true,
         condition: 'email IS NOT NULL'
       ),
       DbSchema::Definitions::Index.new(
-        name:   :users_names_index,
-        fields: [DbSchema::Definitions::Index::Field.new(:names)],
-        type:   :gin
+        name:    :users_names_index,
+        columns: [DbSchema::Definitions::Index::TableField.new(:names)],
+        type:    :gin
       )
     ]
   end
@@ -155,14 +155,14 @@ RSpec.describe DbSchema::Runner do
         email_index = indices.find { |index| index[:name] == :index_users_on_email }
         names_index = indices.find { |index| index[:name] == :users_names_index }
 
-        expect(name_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:name)])
+        expect(name_index[:columns]).to eq([DbSchema::Definitions::Index::Expression.new('lower(name::text)')])
         expect(name_index[:unique]).to eq(false)
         expect(name_index[:type]).to eq(:btree)
-        expect(email_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:email, order: :desc, nulls: :last)])
+        expect(email_index[:columns]).to eq([DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)])
         expect(email_index[:unique]).to eq(true)
         expect(email_index[:type]).to eq(:btree)
         expect(email_index[:condition]).to eq('email IS NOT NULL')
-        expect(names_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:names)])
+        expect(names_index[:columns]).to eq([DbSchema::Definitions::Index::TableField.new(:names)])
         expect(names_index[:type]).to eq(:gin)
 
         expect(users.checks.count).to eq(1)
@@ -360,14 +360,14 @@ RSpec.describe DbSchema::Runner do
           [
             DbSchema::Changes::CreateIndex.new(
               name:      :people_name_index,
-              fields:    [DbSchema::Definitions::Index::Field.new(:name, order: :desc)],
+              columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)', order: :desc)],
               condition: 'name IS NOT NULL'
             ),
             DbSchema::Changes::DropIndex.new(:people_address_index),
             DbSchema::Changes::CreateIndex.new(
-              name:   :people_interests_index,
-              fields: [DbSchema::Definitions::Index::Field.new(:interests)],
-              type:   :gin
+              name:    :people_interests_index,
+              columns: [DbSchema::Definitions::Index::TableField.new(:interests)],
+              type:    :gin
             )
           ]
         end
@@ -380,12 +380,16 @@ RSpec.describe DbSchema::Runner do
           name_index = indices.find { |index| index[:name] == :people_name_index }
           interests_index = indices.find { |index| index[:name] == :people_interests_index }
 
-          expect(name_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:name, order: :desc)])
+          expect(name_index[:columns]).to eq([
+            DbSchema::Definitions::Index::Expression.new('lower(name::text)', order: :desc)
+          ])
           expect(name_index[:unique]).to eq(false)
           expect(name_index[:type]).to eq(:btree)
           expect(name_index[:condition]).to eq('name IS NOT NULL')
           # non-BTree indexes don't support index ordering
-          expect(interests_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:interests)])
+          expect(interests_index[:columns]).to eq([
+            DbSchema::Definitions::Index::TableField.new(:interests)
+          ])
           expect(interests_index[:type]).to eq(:gin)
         end
       end
@@ -425,8 +429,8 @@ RSpec.describe DbSchema::Runner do
           [
             DbSchema::Changes::CreateIndex.new(
               name: :people_email_index,
-              fields: [
-                DbSchema::Definitions::Index::Field.new(:email)
+              columns: [
+                DbSchema::Definitions::Index::TableField.new(:email)
               ]
             )
           ]
@@ -443,8 +447,8 @@ RSpec.describe DbSchema::Runner do
           expect(people.indices).to include(
             DbSchema::Definitions::Index.new(
               name: :people_email_index,
-              fields: [
-                DbSchema::Definitions::Index::Field.new(:email)
+              columns: [
+                DbSchema::Definitions::Index::TableField.new(:email)
               ]
             )
           )
@@ -797,9 +801,9 @@ RSpec.describe DbSchema::Runner do
           ],
           indices: [
             DbSchema::Changes::CreateIndex.new(
-              name:   :people_city_name_index,
-              fields: [DbSchema::Definitions::Index::Field.new(:city_name)],
-              type:   :gist
+              name:    :people_city_name_index,
+              columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],
+              type:    :gist
             )
           ],
           checks: []

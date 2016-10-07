@@ -356,6 +356,19 @@ end
 
 Be warned though that you have to specify the condition exactly as PostgreSQL outputs it in `psql` with `\d table_name` command; otherwise your index will be recreated on each DbSchema run. This will be fixed in a later DbSchema version.
 
+If you need an index on expression you can use the same syntax replacing column names with SQL strings containing the expressions:
+
+``` ruby
+db.table :users do |t|
+  t.timestamp :created_at
+  t.index 'date(created_at)'
+end
+```
+
+Expression indexes syntax allows specifying an order exactly like in a common index on table fields - just use a hash form like `t.index 'date(created_at)' => :desc`. You can also use an expression in a multiple index.
+
+As with partial index condition (and all other SQL segments in `db_schema`), you must write the expression in a way `psql` outputs it, so instead of `lower(email)` you should use `lower(email::text)` (assuming that `email` is a varchar field).
+
 #### Foreign keys
 
 The `#foreign_key` method defines a foreign key. In it's minimal form it takes a referencing field name and referenced table name:
@@ -519,7 +532,7 @@ All configuration options are described in the following table:
 
 By default DbSchema logs the changes it applies to your database; you can disable that by setting `log_changes` to false.
 
-DbSchema provides an opt-out post-run schema check; it ensures that there are no remaining differences between your `schema.rb` and the actual database schema. If DbSchema still sees any differences it will keep applying them on each run - usually this is harmless (because it does not really change your schema) but in the case of a partial index with a complex condition it may rebuild the index which is an expensive operation on a large table. You can set `post_check` to false if you are 100% sure that your persistent changes are not a problem for you but I strongly recommend that you turn it on from time to time just to make sure nothing dangerous appears in these persistent changes.
+DbSchema provides an opt-out post-run schema check; it ensures that there are no remaining differences between your `schema.rb` and the actual database schema. If DbSchema still sees any differences it will keep applying them on each run - usually this is harmless (because it does not really change your schema) but in the case of a partial index with a complex condition or an index on some expression it may rebuild the index which is an expensive operation on a large table. You can set `post_check` to false if you are 100% sure that your persistent changes are not a problem for you but I strongly recommend that you turn it on from time to time just to make sure nothing dangerous appears in these persistent changes.
 
 The `post_check` option is likely to become off by default when DbSchema becomes more stable and battle-tested, and when the partial index problem will be solved.
 

@@ -55,11 +55,20 @@ module DbSchema
         fields << Definitions::Field.build(name, type, options)
       end
 
-      def index(*fields, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
-        index_fields = fields.map do |field_name|
-          Definitions::Index::Field.new(field_name.to_sym)
-        end + ordered_fields.map do |field_name, field_order_options|
-          options = case field_order_options
+      def index(*columns, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
+        if columns.last.is_a?(Hash)
+          *ascending_columns, ordered_expressions = columns
+        else
+          ascending_columns = columns
+          ordered_expressions = {}
+        end
+
+        columns_data = ascending_columns.each_with_object({}) do |column_name, columns|
+          columns[column_name] = :asc
+        end.merge(ordered_fields).merge(ordered_expressions)
+
+        index_columns = columns_data.map do |column_name, column_order_options|
+          options = case column_order_options
           when :asc
             {}
           when :desc
@@ -72,14 +81,18 @@ module DbSchema
             raise ArgumentError, 'Only :asc, :desc, :asc_nulls_first and :desc_nulls_last options are supported.'
           end
 
-          Definitions::Index::Field.new(field_name.to_sym, **options)
+          if column_name.is_a?(String)
+            Definitions::Index::Expression.new(column_name, **options)
+          else
+            Definitions::Index::TableField.new(column_name, **options)
+          end
         end
 
-        index_name = name || "#{table_name}_#{index_fields.map(&:name).join('_')}_index"
+        index_name = name || "#{table_name}_#{index_columns.map(&:index_name_segment).join('_')}_index"
 
         indices << Definitions::Index.new(
           name:      index_name,
-          fields:    index_fields,
+          columns:   index_columns,
           unique:    unique,
           type:      using,
           condition: where

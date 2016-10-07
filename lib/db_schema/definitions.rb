@@ -3,12 +3,12 @@ require 'dry/equalizer'
 module DbSchema
   module Definitions
     class Index
-      include Dry::Equalizer(:name, :fields, :unique?, :type, :condition)
-      attr_reader :name, :fields, :type, :condition
+      include Dry::Equalizer(:name, :columns, :unique?, :type, :condition)
+      attr_reader :name, :columns, :type, :condition
 
-      def initialize(name:, fields:, unique: false, type: :btree, condition: nil)
+      def initialize(name:, columns:, unique: false, type: :btree, condition: nil)
         @name      = name.to_sym
-        @fields    = fields
+        @columns   = columns
         @unique    = unique
         @type      = type
         @condition = condition
@@ -22,7 +22,15 @@ module DbSchema
         type == :btree
       end
 
-      class Field
+      def columns_to_sequel
+        if btree?
+          columns.map(&:ordered_expression)
+        else
+          columns.map(&:to_sequel)
+        end
+      end
+
+      class Column
         include Dry::Equalizer(:name, :order, :nulls)
         attr_reader :name, :order, :nulls
 
@@ -40,12 +48,40 @@ module DbSchema
           @order == :desc
         end
 
-        def to_sequel
+        def ordered_expression
           if asc?
-            Sequel.asc(name, nulls: nulls)
+            Sequel.asc(to_sequel, nulls: nulls)
           else
-            Sequel.desc(name, nulls: nulls)
+            Sequel.desc(to_sequel, nulls: nulls)
           end
+        end
+      end
+
+      class TableField < Column
+        def expression?
+          false
+        end
+
+        def index_name_segment
+          name
+        end
+
+        def to_sequel
+          name
+        end
+      end
+
+      class Expression < Column
+        def expression?
+          true
+        end
+
+        def index_name_segment
+          name.scan(/\b[A-Za-z0-9_]+\b/).join('_')
+        end
+
+        def to_sequel
+          Sequel.lit("(#{name})")
         end
       end
     end

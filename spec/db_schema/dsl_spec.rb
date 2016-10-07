@@ -20,6 +20,7 @@ RSpec.describe DbSchema::DSL do
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
           t.index :strings, using: :gin
+          t.index 'lower(email)'
 
           t.check :valid_sex, "sex IN ('M', 'F')"
         end
@@ -38,6 +39,7 @@ RSpec.describe DbSchema::DSL do
 
           t.index :user_id
           t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
+          t.index 'col2 - col1' => :desc, 'col3 + col4' => :asc_nulls_first
 
           t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
           t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
@@ -95,33 +97,43 @@ RSpec.describe DbSchema::DSL do
       expect(created_at.name).to eq(:created_at)
       expect(created_at.default).to eq(Sequel.function(:now))
 
-      expect(users.indices.count).to eq(2)
-      email_index, strings_index = users.indices
+      expect(users.indices.count).to eq(3)
+      email_index, strings_index, lower_email_index = users.indices
       expect(email_index.name).to eq(:users_email_idx)
-      expect(email_index.fields).to eq([
-        DbSchema::Definitions::Index::Field.new(:email)
+      expect(email_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:email)
       ])
       expect(email_index).to be_unique
       expect(email_index).to be_btree
       expect(email_index.condition).to eq('email IS NOT NULL')
       expect(strings_index.name).to eq(:users_strings_index)
       expect(strings_index.type).to eq(:gin)
+      expect(lower_email_index.name).to eq(:users_lower_email_index)
+      expect(lower_email_index.columns).to eq([
+        DbSchema::Definitions::Index::Expression.new('lower(email)')
+      ])
 
-      expect(posts.indices.count).to eq(2)
+      expect(posts.indices.count).to eq(3)
 
-      user_id_index, sorted_index = posts.indices
+      user_id_index, sorted_index, expression_index = posts.indices
       expect(user_id_index.name).to eq(:posts_user_id_index)
-      expect(user_id_index.fields).to eq([
-        DbSchema::Definitions::Index::Field.new(:user_id)
+      expect(user_id_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:user_id)
       ])
       expect(user_id_index).not_to be_unique
 
       expect(sorted_index.name).to eq(:posts_col1_col2_col3_col4_index)
-      expect(sorted_index.fields).to eq([
-        DbSchema::Definitions::Index::Field.new(:col1),
-        DbSchema::Definitions::Index::Field.new(:col2, order: :desc),
-        DbSchema::Definitions::Index::Field.new(:col3, nulls: :first),
-        DbSchema::Definitions::Index::Field.new(:col4, order: :desc, nulls: :last)
+      expect(sorted_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:col1),
+        DbSchema::Definitions::Index::TableField.new(:col2, order: :desc),
+        DbSchema::Definitions::Index::TableField.new(:col3, nulls: :first),
+        DbSchema::Definitions::Index::TableField.new(:col4, order: :desc, nulls: :last)
+      ])
+
+      expect(expression_index.name).to eq(:posts_col2_col1_col3_col4_index)
+      expect(expression_index.columns).to eq([
+        DbSchema::Definitions::Index::Expression.new('col2 - col1', order: :desc),
+        DbSchema::Definitions::Index::Expression.new('col3 + col4', nulls: :first)
       ])
 
       expect(users.checks.count).to eq(1)

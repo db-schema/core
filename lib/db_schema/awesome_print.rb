@@ -21,8 +21,8 @@ if defined?(AwesomePrint)
           :dbschema_field
         when ::DbSchema::Definitions::Index
           :dbschema_index
-        when ::DbSchema::Definitions::Index::Field
-          :dbschema_index_field
+        when ::DbSchema::Definitions::Index::Column
+          :dbschema_index_column
         when ::DbSchema::Definitions::CheckConstraint
           :dbschema_check_constraint
         when ::DbSchema::Definitions::ForeignKey
@@ -120,17 +120,17 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_index(object)
-        fields = format_dbschema_fields(object.fields)
+        columns = format_dbschema_fields(object.columns)
         using = ' using ' + colorize(object.type.to_s, :symbol) unless object.btree?
 
         data = [nil]
         data << colorize('unique', :nilclass) if object.unique?
         data << colorize('condition: ', :symbol) + object.condition.ai unless object.condition.nil?
 
-        "#<#{object.class} #{object.name.ai} on #{fields}#{using}#{data.join(', ')}>"
+        "#<#{object.class} #{object.name.ai} on #{columns}#{using}#{data.join(', ')}>"
       end
 
-      def awesome_dbschema_index_field(object)
+      def awesome_dbschema_index_column(object)
         data = [object.name.ai]
 
         if object.desc?

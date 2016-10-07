@@ -72,12 +72,12 @@ RSpec.describe DbSchema do
       name_index  = users_indices.find { |index| index[:name] == :users_name_index }
       email_index = users_indices.find { |index| index[:name] == :users_email_index }
 
-      expect(name_index[:fields]).to eq([
-        DbSchema::Definitions::Index::Field.new(:first_name),
-        DbSchema::Definitions::Index::Field.new(:last_name, order: :desc)
+      expect(name_index[:columns]).to eq([
+        DbSchema::Definitions::Index::TableField.new(:first_name),
+        DbSchema::Definitions::Index::TableField.new(:last_name, order: :desc)
       ])
       expect(name_index[:unique]).to eq(false)
-      expect(email_index[:fields]).to eq([DbSchema::Definitions::Index::Field.new(:email)])
+      expect(email_index[:columns]).to eq([DbSchema::Definitions::Index::TableField.new(:email)])
       expect(email_index[:unique]).to eq(true)
 
       id, title, text, user_id = database.schema(:posts)
