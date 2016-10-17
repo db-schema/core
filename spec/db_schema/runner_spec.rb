@@ -38,7 +38,7 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
       DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
-      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false),
+      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false, default: :'now()'),
       DbSchema::Definitions::Field::Interval.new(:period, fields: :second, precision: 5),
       DbSchema::Definitions::Field::Bit.new(:some_bit),
       DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
@@ -127,6 +127,7 @@ RSpec.describe DbSchema::Runner do
         expect(created_at.name).to eq(:created_at)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at).not_to be_null
+        expect(created_at.default).to eq(:'now()')
         expect(period.name).to eq(:period)
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.options[:fields]).to eq(:second)
@@ -196,7 +197,7 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
             ),
             DbSchema::Changes::CreateColumn.new(
-              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false)
+              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, default: :'now()')
             )
           ]
         end
@@ -224,6 +225,7 @@ RSpec.describe DbSchema::Runner do
           expect(uid.name).to eq(:uid)
           expect(updated_at.name).to eq(:updated_at)
           expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+          expect(updated_at.default).to eq(:'now()')
         end
       end
 
@@ -340,6 +342,21 @@ RSpec.describe DbSchema::Runner do
 
           name = database.schema(:people)[1]
           expect(name.last[:default]).to eq("'John Smith'::character varying")
+        end
+
+        context 'with an expression' do
+          let(:field_changes) do
+            [
+              DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()')
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            created_at = database.schema(:people).last
+            expect(created_at.last[:default]).to eq('now()')
+          end
         end
       end
 

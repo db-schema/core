@@ -19,7 +19,7 @@ module DbSchema
     end
 
     module Postgres
-      DEFAULT_VALUE = /\A(('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false)|((?<function>[A-Za-z_]+)\(\)))/
+      DEFAULT_VALUE = /\A(('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false))/
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
    SELECT c.column_name AS name,
@@ -221,8 +221,8 @@ SELECT extname
           nullable = (data[:null] != 'NO')
 
           unless primary_key || data[:default].nil?
-            if match = DEFAULT_VALUE.match(data[:default])
-              default = if match[:string]
+            default = if match = DEFAULT_VALUE.match(data[:default])
+              if match[:string]
                 match[:string]
               elsif match[:integer]
                 match[:integer].to_i
@@ -230,9 +230,9 @@ SELECT extname
                 match[:float].to_f
               elsif match[:boolean]
                 match[:boolean] == 'true'
-              elsif match[:function]
-                match[:function].to_sym
               end
+            else
+              data[:default].to_sym
             end
           end
 
