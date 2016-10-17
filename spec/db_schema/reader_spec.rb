@@ -4,7 +4,7 @@ RSpec.describe DbSchema::Reader do
   describe '.read_schema' do
     context 'on an empty database' do
       it 'returns an empty array' do
-        expect(subject.read_schema).to eq([])
+        expect(subject.read_schema).to eq(DbSchema::Definitions::Schema.new)
       end
     end
 
@@ -64,7 +64,11 @@ RSpec.describe DbSchema::Reader do
       end
 
       it 'returns the database schema' do
-        rainbow, hstore, users, posts = subject.read_schema
+        schema = subject.read_schema
+
+        users, posts = schema.tables
+        rainbow      = schema.enums.first
+        hstore       = schema.extensions.first
 
         expect(rainbow.name).to eq(:rainbow)
         expect(rainbow.values).to eq(%i(red orange yellow green blue purple))

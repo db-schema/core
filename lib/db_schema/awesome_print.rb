@@ -13,6 +13,8 @@ if defined?(AwesomePrint)
 
       def cast_with_dbschema(object, type)
         case object
+        when ::DbSchema::Definitions::Schema
+          :dbschema_schema
         when ::DbSchema::Definitions::Table
           :dbschema_table
         when ::DbSchema::Definitions::Field::Custom
@@ -79,6 +81,15 @@ if defined?(AwesomePrint)
       end
 
     private
+      def awesome_dbschema_schema(object)
+        data = ["tables: #{object.tables.ai}"]
+        data << "enums: #{object.enums.ai}" if object.enums.any?
+        data << "extensions: #{object.extensions.ai}" if object.extensions.any?
+
+        data_string = data.join(', ')
+        "#<DbSchema::Definitions::Schema #{data_string}>"
+      end
+
       def awesome_dbschema_table(object)
         data = ["fields: #{object.fields.ai}"]
         data << "indices: #{object.indices.ai}" if object.indices.any?

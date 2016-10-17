@@ -5,14 +5,11 @@ module DbSchema
   module Changes
     class << self
       def between(desired_schema, actual_schema)
-        desired_tables = extract_tables(desired_schema)
-        actual_tables  = extract_tables(actual_schema)
-
-        table_names = [desired_tables, actual_tables].flatten.map(&:name).uniq
+        table_names = [desired_schema.tables, actual_schema.tables].flatten.map(&:name).uniq
 
         table_changes = table_names.each.with_object([]) do |table_name, changes|
-          desired = desired_tables.find { |table| table.name == table_name }
-          actual  = actual_tables.find  { |table| table.name == table_name }
+          desired = desired_schema.tables.find { |table| table.name == table_name }
+          actual  = actual_schema.tables.find  { |table| table.name == table_name }
 
           if desired && !actual
             changes << CreateTable.new(
@@ -51,14 +48,11 @@ module DbSchema
           end
         end
 
-        desired_enums = extract_enums(desired_schema)
-        actual_enums  = extract_enums(actual_schema)
-
-        enum_names = [desired_enums, actual_enums].flatten.map(&:name).uniq
+        enum_names = [desired_schema.enums, actual_schema.enums].flatten.map(&:name).uniq
 
         enum_changes = enum_names.each_with_object([]) do |enum_name, changes|
-          desired = desired_enums.find { |enum| enum.name == enum_name }
-          actual  = actual_enums.find  { |enum| enum.name == enum_name }
+          desired = desired_schema.enums.find { |enum| enum.name == enum_name }
+          actual  = actual_schema.enums.find  { |enum| enum.name == enum_name }
 
           if desired && !actual
             changes << CreateEnum.new(enum_name, desired.values)
@@ -89,12 +83,9 @@ module DbSchema
           end
         end
 
-        desired_extensions = extract_extensions(desired_schema)
-        actual_extensions  = extract_extensions(actual_schema)
-
-        extension_changes = (desired_extensions - actual_extensions).map do |extension|
+        extension_changes = (desired_schema.extensions - actual_schema.extensions).map do |extension|
           CreateExtension.new(extension.name)
-        end + (actual_extensions - desired_extensions).map do |extension|
+        end + (actual_schema.extensions - desired_schema.extensions).map do |extension|
           DropExtension.new(extension.name)
         end
 
@@ -225,18 +216,6 @@ module DbSchema
             table_changes << CreateForeignKey.new(table_name, foreign_key)
           end
         end
-      end
-
-      def extract_tables(schema)
-        Utils.filter_by_class(schema, Definitions::Table)
-      end
-
-      def extract_enums(schema)
-        Utils.filter_by_class(schema, Definitions::Enum)
-      end
-
-      def extract_extensions(schema)
-        Utils.filter_by_class(schema, Definitions::Extension)
       end
     end
 

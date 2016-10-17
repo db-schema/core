@@ -143,7 +143,7 @@ SELECT extname
             )
           end
 
-          enums + extensions + tables
+          Definitions::Schema.new(tables: tables, enums: enums, extensions: extensions)
         end
 
         def indices_data_for(table_name)

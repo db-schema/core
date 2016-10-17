@@ -50,7 +50,11 @@ RSpec.describe DbSchema::DSL do
     subject { DbSchema::DSL.new(schema_block) }
 
     it 'returns a schema definition' do
-      user_status, hstore, users, happiness, posts = subject.schema
+      schema = subject.schema
+
+      users, posts           = schema.tables
+      user_status, happiness = schema.enums
+      hstore                 = schema.extensions.first
 
       expect(user_status.name).to eq(:user_status)
       expect(user_status.values).to eq(%i(user moderator admin))

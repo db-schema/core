@@ -4,17 +4,11 @@ RSpec.describe DbSchema::Runner do
   let(:database) { DbSchema.connection }
 
   let(:enums) do
-    DbSchema::Utils.filter_by_class(
-      DbSchema::Reader.read_schema,
-      DbSchema::Definitions::Enum
-    )
+    DbSchema::Reader.read_schema.enums
   end
 
   let(:extensions) do
-    DbSchema::Utils.filter_by_class(
-      DbSchema::Reader.read_schema,
-      DbSchema::Definitions::Extension
-    )
+    DbSchema::Reader.read_schema.extensions
   end
 
   before(:each) do
@@ -118,7 +112,7 @@ RSpec.describe DbSchema::Runner do
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
-        users = DbSchema::Reader.read_schema.find { |table| table.name == :users }
+        users = DbSchema::Reader.read_schema.tables.find { |table| table.name == :users }
         id, name, email, country_id, created_at, period, some_bit, some_bits, some_varbit, names = users.fields
         expect(id.name).to eq(:id)
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
@@ -213,7 +207,7 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
           address, country_name, created_at, first_name, last_name, age, uid, updated_at = people.fields
           expect(address.name).to eq(:address)
           expect(created_at.name).to eq(:created_at)
@@ -277,7 +271,7 @@ RSpec.describe DbSchema::Runner do
             subject.run!
 
             schema = DbSchema::Reader.read_schema
-            people = schema.find { |table| table.name == :people }
+            people = schema.tables.find { |table| table.name == :people }
             address, country_name, created_at = people.fields.last(3)
 
             expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
@@ -408,7 +402,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
           expect(people.checks.count).to eq(1)
           address_check = people.checks.first
           expect(address_check.name).to eq(:min_address_length)
@@ -439,7 +433,7 @@ RSpec.describe DbSchema::Runner do
         it 'creates the field before creating the index' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -471,7 +465,7 @@ RSpec.describe DbSchema::Runner do
         it 'drops the index before dropping the field' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -501,7 +495,7 @@ RSpec.describe DbSchema::Runner do
         it 'creates the field before creating the check' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -531,7 +525,7 @@ RSpec.describe DbSchema::Runner do
         it 'drops the check before dropping the field' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -683,7 +677,7 @@ RSpec.describe DbSchema::Runner do
       it 'creates and drops tables and foreign keys in appropriate order' do
         subject.run!
 
-        tables = DbSchema::Reader.read_schema
+        tables = DbSchema::Reader.read_schema.tables
         expect(tables.count).to eq(6)
       end
     end

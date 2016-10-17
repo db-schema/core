@@ -5,23 +5,25 @@ RSpec.describe DbSchema::Validator do
     let(:result) { DbSchema::Validator.validate(schema) }
 
     let(:schema) do
-      [
-        DbSchema::Definitions::Table.new(
-          :users,
-          fields:  users_fields,
-          indices: users_indices
-        ),
-        DbSchema::Definitions::Table.new(
-          :posts,
-          fields:       posts_fields,
-          foreign_keys: posts_fkeys
-        ),
-        DbSchema::Definitions::Table.new(
-          :cities,
-          fields: [DbSchema::Definitions::Field::Varchar.new(:name)]
-        ),
-        enum
-      ]
+      DbSchema::Definitions::Schema.new(
+        tables: [
+          DbSchema::Definitions::Table.new(
+            :users,
+            fields:  users_fields,
+            indices: users_indices
+          ),
+          DbSchema::Definitions::Table.new(
+            :posts,
+            fields:       posts_fields,
+            foreign_keys: posts_fkeys
+          ),
+          DbSchema::Definitions::Table.new(
+            :cities,
+            fields: [DbSchema::Definitions::Field::Varchar.new(:name)]
+          )
+        ],
+        enums: [enum]
+      )
     end
 
     let(:users_fields) do

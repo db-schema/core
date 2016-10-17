@@ -2,6 +2,30 @@ require 'dry/equalizer'
 
 module DbSchema
   module Definitions
+    class Schema
+      include Dry::Equalizer(:tables, :enums, :extensions)
+      attr_reader :tables, :enums, :extensions
+
+      def initialize(tables: [], enums: [], extensions: [])
+        @tables     = tables
+        @enums      = enums
+        @extensions = extensions
+      end
+    end
+
+    class Table
+      include Dry::Equalizer(:name, :fields, :indices, :checks, :foreign_keys)
+      attr_reader :name, :fields, :indices, :checks, :foreign_keys
+
+      def initialize(name, fields: [], indices: [], checks: [], foreign_keys: [])
+        @name         = name.to_sym
+        @fields       = fields
+        @indices      = indices
+        @checks       = checks
+        @foreign_keys = foreign_keys
+      end
+    end
+
     class Index
       include Dry::Equalizer(:name, :columns, :unique?, :type, :condition)
       attr_reader :name, :columns, :type, :condition
@@ -127,19 +151,6 @@ module DbSchema
       def initialize(name:, condition:)
         @name      = name
         @condition = condition
-      end
-    end
-
-    class Table
-      include Dry::Equalizer(:name, :fields, :indices, :checks, :foreign_keys)
-      attr_reader :name, :fields, :indices, :checks, :foreign_keys
-
-      def initialize(name, fields: [], indices: [], checks: [], foreign_keys: [])
-        @name         = name.to_sym
-        @fields       = fields
-        @indices      = indices
-        @checks       = checks
-        @foreign_keys = foreign_keys
       end
     end
 

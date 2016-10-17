@@ -4,7 +4,7 @@ module DbSchema
 
     def initialize(block)
       @block  = block
-      @schema = []
+      @schema = Definitions::Schema.new
     end
 
     def schema
@@ -16,7 +16,7 @@ module DbSchema
     def table(name, &block)
       table_yielder = TableYielder.new(name, block)
 
-      @schema << Definitions::Table.new(
+      @schema.tables << Definitions::Table.new(
         name,
         fields:       table_yielder.fields,
         indices:      table_yielder.indices,
@@ -26,11 +26,11 @@ module DbSchema
     end
 
     def enum(name, values)
-      @schema << Definitions::Enum.new(name.to_sym, values.map(&:to_sym))
+      @schema.enums << Definitions::Enum.new(name.to_sym, values.map(&:to_sym))
     end
 
     def extension(name)
-      @schema << Definitions::Extension.new(name.to_sym)
+      @schema.extensions << Definitions::Extension.new(name.to_sym)
     end
 
     class TableYielder
