@@ -190,22 +190,28 @@ SELECT extname
 
       private
         def index_expressions_data(indices_data)
-          expressions_stats = indices_data.each_with_object(ids: [], max: 0) do |index_data, stats|
-            expressions_count = index_data[:column_positions].split(' ').count('0')
+          all_positions, max_position = {}, 0
 
-            if expressions_count > 0
-              stats[:ids] << index_data[:index_oid]
-              stats[:max] = [stats[:max], expressions_count].max
+          indices_data.each do |index_data|
+            positions = index_data[:column_positions].split(' ').map(&:to_i)
+            expression_positions = positions.each_index.select { |i| positions[i].zero? }
+
+            if expression_positions.any?
+              all_positions[index_data[:index_oid]] = expression_positions
+              max_position = [max_position, expression_positions.max].max
             end
           end
 
-          if expressions_stats[:max] > 0
+          if all_positions.any?
             DbSchema.connection[
               EXPRESSION_INDICES_QUERY,
-              Sequel.pg_array(expressions_stats[:ids]),
-              Sequel.pg_array((1..expressions_stats[:max]).to_a)
-            ].each_with_object({}) do |index_data, indices_data|
-              indices_data[index_data[:index_id]] = index_data[:definitions]
+              Sequel.pg_array(all_positions.keys),
+              Sequel.pg_array((1..max_position.succ).to_a)
+            ].each_with_object({}) do |index_data, indexes_data|
+              index_id = index_data[:index_id]
+              expressions = all_positions[index_id].map { |pos| index_data[:definitions][pos] }
+
+              indexes_data[index_id] = expressions
             end
           else
             {}

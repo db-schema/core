@@ -42,8 +42,9 @@ RSpec.describe DbSchema::Reader do
           index [:name], type: :spgist
           index [
             Sequel.asc(Sequel.lit('lower(email)')),
+            Sequel.asc(:age),
             Sequel.desc(Sequel.lit('lower(name)'))
-          ], unique: true, name: :users_expression_index
+          ], name: :users_expression_index
 
           constraint :is_adult, 'age > 18'
         end
@@ -172,9 +173,9 @@ RSpec.describe DbSchema::Reader do
 
         expect(expression_index.columns).to eq([
           DbSchema::Definitions::Index::Expression.new('lower(email::text)'),
+          DbSchema::Definitions::Index::TableField.new(:age),
           DbSchema::Definitions::Index::Expression.new('lower(name::text)', order: :desc)
         ])
-        expect(expression_index).to be_unique
 
         expect(name_index.columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:name)
