@@ -24,6 +24,12 @@ module DbSchema
         @checks       = checks
         @foreign_keys = foreign_keys
       end
+
+      def has_expressions?
+        fields.any?(&:default_is_expression?) ||
+          indices.any?(&:has_expressions?) ||
+          checks.any?
+      end
     end
 
     class Index
@@ -52,6 +58,10 @@ module DbSchema
         else
           columns.map(&:to_sequel)
         end
+      end
+
+      def has_expressions?
+        !condition.nil? || columns.any?(&:expression?)
       end
 
       class Column

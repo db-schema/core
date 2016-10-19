@@ -21,6 +21,10 @@ module DbSchema
           !primary_key? && @null
         end
 
+        def default_is_expression?
+          default.is_a?(Symbol)
+        end
+
         def options
           attributes.tap do |options|
             options[:null] = false unless null?
