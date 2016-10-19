@@ -103,7 +103,12 @@ if defined?(AwesomePrint)
       def awesome_dbschema_field(object)
         options = object.options.map do |k, v|
           key = colorize("#{k}:", :symbol)
-          "#{key} #{v.ai}"
+
+          if (k == :default) && v.is_a?(Symbol)
+            "#{key} #{colorize(v.to_s, :string)}"
+          else
+            "#{key} #{v.ai}"
+          end
         end.unshift(nil).join(', ')
 
         primary_key = if object.primary_key?
@@ -118,7 +123,12 @@ if defined?(AwesomePrint)
       def awesome_dbschema_custom_field(object)
         options = object.options.map do |k, v|
           key = colorize("#{k}:", :symbol)
-          "#{key} #{v.ai}"
+
+          if (k == :default) && v.is_a?(Symbol)
+            "#{key} #{colorize(v.to_s, :string)}"
+          else
+            "#{key} #{v.ai}"
+          end
         end.unshift(nil).join(', ')
 
         primary_key = if object.primary_key?
@@ -223,7 +233,13 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_alter_column_default(object)
-        "#<DbSchema::Changes::AlterColumnDefault #{object.name.ai}, #{object.new_default.ai}>"
+        new_default = if object.new_default.is_a?(Symbol)
+          colorize(object.new_default.to_s, :string)
+        else
+          object.new_default.ai
+        end
+
+        "#<DbSchema::Changes::AlterColumnDefault #{object.name.ai}, #{new_default}>"
       end
 
       def awesome_dbschema_create_foreign_key(object)
