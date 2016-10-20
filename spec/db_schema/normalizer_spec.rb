@@ -27,6 +27,17 @@ RSpec.describe DbSchema::Normalizer do
   subject { DbSchema::Normalizer.new(raw_table) }
 
   describe '#normalized_table' do
+    before(:each) do
+      operation = DbSchema::Changes::CreateTable.new(
+        :users,
+        fields:  raw_table.fields,
+        indices: raw_table.indices,
+        checks:  raw_table.checks
+      )
+
+      DbSchema::Runner.new([operation]).run!
+    end
+
     let!(:table) { subject.normalized_table }
 
     it 'normalizes default values' do
@@ -46,7 +57,12 @@ RSpec.describe DbSchema::Normalizer do
     end
 
     it 'drops the temporary table' do
-      expect(DbSchema::Reader.read_schema.tables).to be_empty
+      expect(DbSchema::Reader.read_schema.tables.map(&:name)).to eq([:users])
+    end
+
+    after(:each) do
+      operation = DbSchema::Changes::DropTable.new(:users)
+      DbSchema::Runner.new([operation]).run!
     end
   end
 end
