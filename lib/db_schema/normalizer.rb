@@ -10,7 +10,7 @@ module DbSchema
 
     def normalized_table
       create_temporary_table!
-      Reader.read_table(temporary_table_name)
+      read_temporary_table
     ensure
       cleanup!
     end
@@ -25,6 +25,17 @@ module DbSchema
       )
 
       Runner.new([operation]).run!
+    end
+
+    def read_temporary_table
+      temporary_table = Reader.read_table(temporary_table_name)
+
+      Definitions::Table.new(
+        remove_hash(temporary_table.name),
+        fields:  temporary_table.fields,
+        indices: rename_indices_back(temporary_table.indices),
+        checks:  temporary_table.checks
+      )
     end
 
     def cleanup!
@@ -44,12 +55,28 @@ module DbSchema
       end
     end
 
+    def rename_indices_back(indices)
+      indices.map do |index|
+        Definitions::Index.new(
+          name:      remove_hash(index.name),
+          columns:   index.columns,
+          unique:    index.unique?,
+          type:      index.type,
+          condition: index.condition
+        )
+      end
+    end
+
     def temporary_table_name
       append_hash(table.name)
     end
 
     def append_hash(name)
       "#{name}_#{hash}"
+    end
+
+    def remove_hash(name)
+      name.to_s.sub(/_#{Regexp.escape(hash)}$/, '').to_sym
     end
 
     def hash

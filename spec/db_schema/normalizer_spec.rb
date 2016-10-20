@@ -56,6 +56,11 @@ RSpec.describe DbSchema::Normalizer do
       expect(table.checks.first.condition).to eq('char_length(name::text) > 4')
     end
 
+    it 'returns the table definitions with original names' do
+      expect(table.name).to eq(:users)
+      expect(table.indices.first.name).to eq(:lower_name_index)
+    end
+
     it 'drops the temporary table' do
       expect(DbSchema::Reader.read_schema.tables.map(&:name)).to eq([:users])
     end
