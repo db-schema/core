@@ -5,6 +5,7 @@ module DbSchema
     class Schema
       include Dry::Equalizer(:tables, :enums, :extensions)
       attr_reader :tables, :enums, :extensions
+      attr_writer :tables
 
       def initialize(tables: [], enums: [], extensions: [])
         @tables     = tables

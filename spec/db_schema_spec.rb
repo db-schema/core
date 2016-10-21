@@ -31,13 +31,13 @@ RSpec.describe DbSchema do
           t.varchar :email,      null: false
 
           t.index :first_name, last_name: :desc, name: :users_name_index
-          t.index :email, name: :users_email_index, unique: true
+          t.index 'lower(email)', name: :users_email_index, unique: true
         end
 
         db.table :posts do |t|
           t.integer :id, primary_key: true
           t.varchar :title, null: false
-          t.text :text
+          t.text    :text
           t.integer :user_id, null: false
 
           t.index :user_id, name: :posts_author_index
@@ -77,7 +77,7 @@ RSpec.describe DbSchema do
         DbSchema::Definitions::Index::TableField.new(:last_name, order: :desc)
       ])
       expect(name_index[:unique]).to eq(false)
-      expect(email_index[:columns]).to eq([DbSchema::Definitions::Index::TableField.new(:email)])
+      expect(email_index[:columns]).to eq([DbSchema::Definitions::Index::Expression.new('lower(email::text)')])
       expect(email_index[:unique]).to eq(true)
 
       id, title, text, user_id = database.schema(:posts)
