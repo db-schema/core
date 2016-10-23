@@ -32,9 +32,10 @@ module DbSchema
 
       Definitions::Table.new(
         remove_hash(temporary_table.name),
-        fields:  temporary_table.fields,
-        indices: rename_indices_back(temporary_table.indices),
-        checks:  temporary_table.checks
+        fields:       temporary_table.fields,
+        indices:      rename_indices_back(temporary_table.indices),
+        checks:       temporary_table.checks,
+        foreign_keys: table.foreign_keys
       )
     end
 

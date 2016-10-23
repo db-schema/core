@@ -7,6 +7,7 @@ RSpec.describe DbSchema::Normalizer do
       fields: [
         DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
         DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+        DbSchema::Definitions::Field::Integer.new(:group_id),
         DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5')
       ],
       indices: [
@@ -20,6 +21,9 @@ RSpec.describe DbSchema::Normalizer do
       ],
       checks: [
         DbSchema::Definitions::CheckConstraint.new(name: :name_length, condition: 'char_length(name) > 4')
+      ],
+      foreign_keys: [
+        DbSchema::Definitions::ForeignKey.new(name: :users_group_id_fkey, fields: [:group_id], table: :groups)
       ]
     )
   end
@@ -54,6 +58,10 @@ RSpec.describe DbSchema::Normalizer do
 
     it 'normalizes check constraint conditions' do
       expect(table.checks.first.condition).to eq('char_length(name::text) > 4')
+    end
+
+    it 'leaves all foreign keys as is' do
+      expect(table.foreign_keys).to eq(raw_table.foreign_keys)
     end
 
     it 'returns the table definitions with original names' do
