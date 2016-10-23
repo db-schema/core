@@ -39,8 +39,7 @@ module DbSchema
     end
 
     def cleanup!
-      operation = Changes::DropTable.new(temporary_table_name)
-      Runner.new([operation]).run!
+      DbSchema.connection.drop_table(temporary_table_name, if_exists: true)
     end
 
     def rename_indices(indices)

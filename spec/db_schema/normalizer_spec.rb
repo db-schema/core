@@ -38,7 +38,7 @@ RSpec.describe DbSchema::Normalizer do
       DbSchema::Runner.new([operation]).run!
     end
 
-    let!(:table) { subject.normalized_table }
+    let(:table) { subject.normalized_table }
 
     it 'normalizes default values' do
       expect(table.fields.last.default).to eq(:'(18 + 5)')
@@ -63,6 +63,29 @@ RSpec.describe DbSchema::Normalizer do
 
     it 'drops the temporary table' do
       expect(DbSchema::Reader.read_schema.tables.map(&:name)).to eq([:users])
+    end
+
+    context 'with postgres complaining about bad schema' do
+      let(:bad_index) do
+        DbSchema::Definitions::Index.new(
+          name: :lower_name_index,
+          columns: [
+            DbSchema::Definitions::Index::Expression.new('lower(name)')
+          ],
+          condition: 'unknown_field = 1'
+        )
+      end
+
+      before(:each) do
+        raw_table.indices.pop
+        raw_table.indices << bad_index
+      end
+
+      it "doesn't intercept postgres exception" do
+        expect {
+          table
+        }.to raise_error(Sequel::DatabaseError, /column "unknown_field" does not exist/)
+      end
     end
 
     after(:each) do
