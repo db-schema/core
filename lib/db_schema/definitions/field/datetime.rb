@@ -23,7 +23,7 @@ module DbSchema
 
       class Interval < Base
         register :interval
-        attributes :fields, :precision
+        attributes :fields
       end
     end
   end

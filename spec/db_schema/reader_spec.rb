@@ -25,7 +25,7 @@ RSpec.describe DbSchema::Reader do
           column :created_at, :timestamp,   default: Time.new(2016, 4, 28, 1, 25, 0, '+03:00')
           column :updated_at, :timestamptz, default: Sequel.function(:now)
           column :period, 'interval HOUR'
-          column :other_period, :interval, size: 4
+          column :other_period, :interval
           column :some_bit, :bit
           column :several_bits, :bit, size: 5
           column :variable_bits, :varbit
@@ -123,7 +123,6 @@ RSpec.describe DbSchema::Reader do
         expect(other_period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(other_period.name).to eq(:other_period)
         expect(other_period.options[:fields]).to be_nil
-        expect(other_period.options[:precision]).to eq(4)
         expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
         expect(some_bit.name).to eq(:some_bit)
         expect(some_bit.options[:length]).to eq(1)

@@ -39,7 +39,7 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
       DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
       DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false, default: :'now()'),
-      DbSchema::Definitions::Field::Interval.new(:period, fields: :second, precision: 5),
+      DbSchema::Definitions::Field::Interval.new(:period, fields: :second),
       DbSchema::Definitions::Field::Bit.new(:some_bit),
       DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
       DbSchema::Definitions::Field::Varbit.new(:some_varbit, length: 250),
@@ -131,7 +131,6 @@ RSpec.describe DbSchema::Runner do
         expect(period.name).to eq(:period)
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.options[:fields]).to eq(:second)
-        expect(period.options[:precision]).to eq(5)
         expect(some_bit.name).to eq(:some_bit)
         expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
         expect(some_bit.options[:length]).to eq(1)
