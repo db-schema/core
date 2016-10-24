@@ -22,7 +22,7 @@ RSpec.describe DbSchema::Reader do
           column :age, :integer, default: 20
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4], default: 3.45
-          column :created_at, :timestamp
+          column :created_at, :timestamp,   default: Time.new(2016, 4, 28, 1, 25, 0, '+03:00')
           column :updated_at, :timestamptz, default: Sequel.function(:now)
           column :period, 'interval HOUR'
           column :other_period, :interval, size: 4
@@ -54,7 +54,7 @@ RSpec.describe DbSchema::Reader do
           column :title, :varchar
           column :user_id, :integer, null: false
           column :user_name, :varchar
-          column :created_on, :date
+          column :created_on, :date, default: Date.new(2016, 4, 28)
           column :created_at, :timetz
 
           index :user_id
@@ -113,6 +113,7 @@ RSpec.describe DbSchema::Reader do
         expect(lng.options[:scale]).to eq(4)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at.name).to eq(:created_at)
+        expect(created_at.default).to eq(Time.new(2016, 4, 28, 1, 25, 0, '+03:00'))
         expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
         expect(updated_at.name).to eq(:updated_at)
         expect(updated_at.default).to eq(:'now()')
@@ -155,6 +156,7 @@ RSpec.describe DbSchema::Reader do
         expect(user_id).not_to be_null
         expect(created_on).to be_a(DbSchema::Definitions::Field::Date)
         expect(created_on.name).to eq(:created_on)
+        expect(created_on.default).to eq(Date.new(2016, 4, 28))
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timetz)
         expect(created_at.name).to eq(:created_at)
 

@@ -23,7 +23,19 @@ module DbSchema
     end
 
     module Postgres
-      DEFAULT_VALUE = /\A(('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false))/
+      DEFAULT_VALUE = /\A(
+        ('(?<date>\d{4}-\d{2}-\d{2})'::date)
+          |
+        ('(?<time>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}([+-]\d{2})?)'::timestamp)
+          |
+        ('(?<string>.*)')
+          |
+        (?<float>\d+\.\d+)
+          |
+        (?<integer>\d+)
+          |
+        (?<boolean>true|false)
+      )/x
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
    SELECT c.column_name AS name,
@@ -236,7 +248,11 @@ SELECT extname
 
           unless primary_key || data[:default].nil?
             default = if match = DEFAULT_VALUE.match(data[:default])
-              if match[:string]
+              if match[:date]
+                Date.parse(match[:date])
+              elsif match[:time]
+                Time.parse(match[:time])
+              elsif match[:string]
                 match[:string]
               elsif match[:integer]
                 match[:integer].to_i
