@@ -22,8 +22,8 @@ RSpec.describe DbSchema::Reader do
           column :age, :integer, default: 20
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4], default: 3.45
-          column :created_at, :timestamp,   default: Time.new(2016, 4, 28, 1, 25, 0, '+03:00')
-          column :updated_at, :timestamptz, default: Sequel.function(:now)
+          column :created_at, :timestamptz, default: Time.new(2016, 4, 28, 1, 25, 0, '+03:00')
+          column :updated_at, :timestamp,   default: Sequel.function(:now)
           column :period, 'interval HOUR'
           column :other_period, :interval
           column :some_bit, :bit
@@ -111,10 +111,10 @@ RSpec.describe DbSchema::Reader do
         expect(lng.default).to eq(3.45)
         expect(lng.options[:precision]).to eq(7)
         expect(lng.options[:scale]).to eq(4)
-        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
         expect(created_at.name).to eq(:created_at)
-        expect(created_at.default).to eq(Time.new(2016, 4, 28, 1, 25, 0, '+03:00'))
-        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
+        expect(created_at.default).to eq(Time.new(2016, 4, 28, 1, 25, 0, '+03:00').getlocal)
+        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(updated_at.name).to eq(:updated_at)
         expect(updated_at.default).to eq(:'now()')
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
