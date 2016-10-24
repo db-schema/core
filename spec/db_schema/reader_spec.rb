@@ -67,17 +67,15 @@ RSpec.describe DbSchema::Reader do
       it 'returns the database schema' do
         schema = subject.read_schema
 
-        users, posts = schema.tables
-        rainbow      = schema.enums.first
-        hstore       = schema.extensions.first
+        users   = schema.tables.find { |table| table.name == :users }
+        posts   = schema.tables.find { |table| table.name == :posts }
+        rainbow = schema.enums.first
+        hstore  = schema.extensions.first
 
         expect(rainbow.name).to eq(:rainbow)
         expect(rainbow.values).to eq(%i(red orange yellow green blue purple))
 
         expect(hstore.name).to eq(:hstore)
-
-        expect(users.name).to eq(:users)
-        expect(posts.name).to eq(:posts)
 
         id, name, email, admin, age, lat, lng, created_at, updated_at,
         period, other_period, some_bit, several_bits, variable_bits,
