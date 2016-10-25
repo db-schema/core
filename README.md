@@ -207,9 +207,7 @@ db.table :people do |t|
 end
 ```
 
-Passing `null: false` to the field definition makes it `NOT NULL`; passing some value under the `:default` key makes it the default value.
-
-You can use `String`s as SQL strings, `Fixnum`s as integers, `Float`s as floating point numbers, `true` & `false` as their SQL counterparts, `Date`s as SQL dates and `Time`s as timestamps. A symbol passed as a default is a special case: it is interpreted as an SQL expression so `t.timestamp :created_at, default: :'now()'` defines a field with a default value of `NOW()`.
+Passing `null: false` to the field definition makes it `NOT NULL`; passing some value under the `:default` key makes it the default value. You can use `String`s as SQL strings, `Fixnum`s as integers, `Float`s as floating point numbers, `true` & `false` as their SQL counterparts, `Date`s as SQL dates and `Time`s as timestamps. A symbol passed as a default is a special case: it is interpreted as an SQL expression so `t.timestamp :created_at, default: :'now()'` defines a field with a default value of `NOW()`.
 
 Other attributes are type specific, like `:length` for varchars; the following table lists them all (values in parentheses are default attribute values).
 
