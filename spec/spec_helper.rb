@@ -11,7 +11,7 @@ RSpec.configure do |config|
 
   config.profile_examples = 10
 
-  config.before(:each) do
+  config.before(:all) do
     DbSchema.configure(database: 'db_schema_test')
   end
 end

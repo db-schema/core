@@ -11,8 +11,6 @@ module DbSchema
     def normalized_table
       create_temporary_table!
       read_temporary_table
-    ensure
-      cleanup!
     end
 
   private
@@ -37,10 +35,6 @@ module DbSchema
         checks:       temporary_table.checks,
         foreign_keys: table.foreign_keys
       )
-    end
-
-    def cleanup!
-      DbSchema.connection.drop_table(temporary_table_name, if_exists: true)
     end
 
     def rename_indices(indices)

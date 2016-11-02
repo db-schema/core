@@ -1,6 +1,13 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Normalizer do
+  around(:each) do |example|
+    DbSchema.connection.transaction do
+      example.run
+      raise Sequel::Rollback
+    end
+  end
+
   let(:raw_table) do
     DbSchema::Definitions::Table.new(
       :users,
@@ -94,11 +101,6 @@ RSpec.describe DbSchema::Normalizer do
           table
         }.to raise_error(Sequel::DatabaseError, /column "unknown_field" does not exist/)
       end
-    end
-
-    after(:each) do
-      operation = DbSchema::Changes::DropTable.new(:users)
-      DbSchema::Runner.new([operation]).run!
     end
   end
 end

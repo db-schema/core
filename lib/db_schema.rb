@@ -91,15 +91,17 @@ module DbSchema
     end
 
     def normalize(schema)
-      normalized_tables = schema.tables.map do |table|
-        if table.has_expressions?
-          Normalizer.new(table).normalized_table
-        else
-          table
+      connection.transaction do
+        schema.tables = schema.tables.map do |table|
+          if table.has_expressions?
+            Normalizer.new(table).normalized_table
+          else
+            table
+          end
         end
-      end
 
-      schema.tables = normalized_tables
+        raise Sequel::Rollback
+      end
     end
 
     def log_changes(changes)
