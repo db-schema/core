@@ -9,7 +9,7 @@ module DbSchema
           @name        = name
           @primary_key = primary_key
           @null        = null
-          @default     = process_default(default)
+          @default     = default
           @attributes  = attributes
         end
 
@@ -19,6 +19,10 @@ module DbSchema
 
         def null?
           !primary_key? && @null
+        end
+
+        def default_is_expression?
+          default.is_a?(Symbol)
         end
 
         def options
@@ -46,14 +50,6 @@ module DbSchema
 
         def type
           self.class.type
-        end
-
-        def process_default(default)
-          if default.is_a?(Symbol)
-            Sequel.function(default)
-          else
-            default
-          end
         end
 
         class << self

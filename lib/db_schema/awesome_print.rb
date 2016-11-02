@@ -13,6 +13,8 @@ if defined?(AwesomePrint)
 
       def cast_with_dbschema(object, type)
         case object
+        when ::DbSchema::Definitions::Schema
+          :dbschema_schema
         when ::DbSchema::Definitions::Table
           :dbschema_table
         when ::DbSchema::Definitions::Field::Custom
@@ -79,6 +81,15 @@ if defined?(AwesomePrint)
       end
 
     private
+      def awesome_dbschema_schema(object)
+        data = ["tables: #{object.tables.ai}"]
+        data << "enums: #{object.enums.ai}" if object.enums.any?
+        data << "extensions: #{object.extensions.ai}" if object.extensions.any?
+
+        data_string = data.join(', ')
+        "#<DbSchema::Definitions::Schema #{data_string}>"
+      end
+
       def awesome_dbschema_table(object)
         data = ["fields: #{object.fields.ai}"]
         data << "indices: #{object.indices.ai}" if object.indices.any?
@@ -92,7 +103,12 @@ if defined?(AwesomePrint)
       def awesome_dbschema_field(object)
         options = object.options.map do |k, v|
           key = colorize("#{k}:", :symbol)
-          "#{key} #{v.ai}"
+
+          if (k == :default) && v.is_a?(Symbol)
+            "#{key} #{colorize(v.to_s, :string)}"
+          else
+            "#{key} #{v.ai}"
+          end
         end.unshift(nil).join(', ')
 
         primary_key = if object.primary_key?
@@ -107,7 +123,12 @@ if defined?(AwesomePrint)
       def awesome_dbschema_custom_field(object)
         options = object.options.map do |k, v|
           key = colorize("#{k}:", :symbol)
-          "#{key} #{v.ai}"
+
+          if (k == :default) && v.is_a?(Symbol)
+            "#{key} #{colorize(v.to_s, :string)}"
+          else
+            "#{key} #{v.ai}"
+          end
         end.unshift(nil).join(', ')
 
         primary_key = if object.primary_key?
@@ -212,7 +233,13 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_alter_column_default(object)
-        "#<DbSchema::Changes::AlterColumnDefault #{object.name.ai}, #{object.new_default.ai}>"
+        new_default = if object.new_default.is_a?(Symbol)
+          colorize(object.new_default.to_s, :string)
+        else
+          object.new_default.ai
+        end
+
+        "#<DbSchema::Changes::AlterColumnDefault #{object.name.ai}, #{new_default}>"
       end
 
       def awesome_dbschema_create_foreign_key(object)

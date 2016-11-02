@@ -57,26 +57,30 @@ RSpec.describe DbSchema::Changes do
       end
 
       let(:desired_schema) do
-        [
-          DbSchema::Definitions::Table.new(
-            :users,
-            fields:       users_fields,
-            checks:       users_checks,
-            foreign_keys: users_foreign_keys
-          ),
-          DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
-        ]
+        DbSchema::Definitions::Schema.new(
+          tables: [
+            DbSchema::Definitions::Table.new(
+              :users,
+              fields:       users_fields,
+              checks:       users_checks,
+              foreign_keys: users_foreign_keys
+            ),
+            DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
+          ]
+        )
       end
 
       let(:actual_schema) do
-        [
-          DbSchema::Definitions::Table.new(
-            :posts,
-            fields:       posts_fields,
-            foreign_keys: posts_foreign_keys
-          ),
-          DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
-        ]
+        DbSchema::Definitions::Schema.new(
+          tables: [
+            DbSchema::Definitions::Table.new(
+              :posts,
+              fields:       posts_fields,
+              foreign_keys: posts_foreign_keys
+            ),
+            DbSchema::Definitions::Table.new(:cities, fields: cities_fields)
+          ]
+        )
       end
 
       it 'returns changes between two schemas' do
@@ -154,15 +158,17 @@ RSpec.describe DbSchema::Changes do
           )
         ]
 
-        [
-          DbSchema::Definitions::Table.new(
-            :users,
-            fields:       fields,
-            indices:      indices,
-            checks:       checks,
-            foreign_keys: foreign_keys
-          )
-        ]
+        DbSchema::Definitions::Schema.new(
+          tables: [
+            DbSchema::Definitions::Table.new(
+              :users,
+              fields:       fields,
+              indices:      indices,
+              checks:       checks,
+              foreign_keys: foreign_keys
+            )
+          ]
+        )
       end
 
       let(:actual_schema) do
@@ -209,15 +215,17 @@ RSpec.describe DbSchema::Changes do
           )
         ]
 
-        [
-          DbSchema::Definitions::Table.new(
-            :users,
-            fields:       fields,
-            indices:      indices,
-            checks:       checks,
-            foreign_keys: foreign_keys
-          )
-        ]
+        DbSchema::Definitions::Schema.new(
+          tables: [
+            DbSchema::Definitions::Table.new(
+              :users,
+              fields:       fields,
+              indices:      indices,
+              checks:       checks,
+              foreign_keys: foreign_keys
+            )
+          ]
+        )
       end
 
       it 'returns changes between two schemas' do
@@ -296,35 +304,39 @@ RSpec.describe DbSchema::Changes do
         end
 
         let(:desired_schema) do
-          [
-            DbSchema::Definitions::Table.new(
-              :posts,
-              fields: posts_fields,
-              foreign_keys: [
-                DbSchema::Definitions::ForeignKey.new(
-                  name:   :posts_user_id_fkey,
-                  fields: [:user_id],
-                  table:  :users
-                )
-              ]
-            )
-          ]
+          DbSchema::Definitions::Schema.new(
+            tables: [
+              DbSchema::Definitions::Table.new(
+                :posts,
+                fields: posts_fields,
+                foreign_keys: [
+                  DbSchema::Definitions::ForeignKey.new(
+                    name:   :posts_user_id_fkey,
+                    fields: [:user_id],
+                    table:  :users
+                  )
+                ]
+              )
+            ]
+          )
         end
 
         let(:actual_schema) do
-          [
-            DbSchema::Definitions::Table.new(
-              :posts,
-              fields: posts_fields,
-              foreign_keys: [
-                DbSchema::Definitions::ForeignKey.new(
-                  name:   :posts_category_id_fkey,
-                  fields: [:category_id],
-                  table:  :categories
-                )
-              ]
-            )
-          ]
+          DbSchema::Definitions::Schema.new(
+            tables: [
+              DbSchema::Definitions::Table.new(
+                :posts,
+                fields: posts_fields,
+                foreign_keys: [
+                  DbSchema::Definitions::ForeignKey.new(
+                    name:   :posts_category_id_fkey,
+                    fields: [:category_id],
+                    table:  :categories
+                  )
+                ]
+              )
+            ]
+          )
         end
 
         it 'returns only foreign key operations' do
@@ -341,15 +353,19 @@ RSpec.describe DbSchema::Changes do
 
     context 'with enums added and removed' do
       let(:desired_schema) do
-        [
-          DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad))
-        ]
+        DbSchema::Definitions::Schema.new(
+          enums: [
+            DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad))
+          ]
+        )
       end
 
       let(:actual_schema) do
-        [
-          DbSchema::Definitions::Enum.new(:skill, %i(beginner advanced expert))
-        ]
+        DbSchema::Definitions::Schema.new(
+          enums: [
+            DbSchema::Definitions::Enum.new(:skill, %i(beginner advanced expert))
+          ]
+        )
       end
 
       it 'returns changes between schemas' do
@@ -367,15 +383,19 @@ RSpec.describe DbSchema::Changes do
 
     context 'with enums changed' do
       let(:desired_schema) do
-        [
-          DbSchema::Definitions::Enum.new(:happiness, desired_values)
-        ]
+        DbSchema::Definitions::Schema.new(
+          enums: [
+            DbSchema::Definitions::Enum.new(:happiness, desired_values)
+          ]
+        )
       end
 
       let(:actual_schema) do
-        [
-          DbSchema::Definitions::Enum.new(:happiness, actual_values)
-        ]
+        DbSchema::Definitions::Schema.new(
+          enums: [
+            DbSchema::Definitions::Enum.new(:happiness, actual_values)
+          ]
+        )
       end
 
       context 'by adding new values' do
@@ -460,15 +480,19 @@ RSpec.describe DbSchema::Changes do
 
     context 'with extensions added and removed' do
       let(:desired_schema) do
-        [
-          DbSchema::Definitions::Extension.new(:ltree)
-        ]
+        DbSchema::Definitions::Schema.new(
+          extensions: [
+            DbSchema::Definitions::Extension.new(:ltree)
+          ]
+        )
       end
 
       let(:actual_schema) do
-        [
-          DbSchema::Definitions::Extension.new(:hstore)
-        ]
+        DbSchema::Definitions::Schema.new(
+          extensions: [
+            DbSchema::Definitions::Extension.new(:hstore)
+          ]
+        )
       end
 
       it 'returns changes between schemas' do

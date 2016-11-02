@@ -133,7 +133,7 @@ module DbSchema
             when Changes::DisallowNull
               set_column_not_null(element.name)
             when Changes::AlterColumnDefault
-              set_column_default(element.name, element.new_default)
+              set_column_default(element.name, Runner.default_to_sequel(element.new_default))
             when Changes::CreateIndex
               add_index(
                 element.columns_to_sequel,
@@ -215,6 +215,20 @@ module DbSchema
           end
         else
           options
+        end
+
+        if mapping.key?(:default)
+          mapping.merge(default: default_to_sequel(mapping[:default]))
+        else
+          mapping
+        end
+      end
+
+      def default_to_sequel(default)
+        if default.is_a?(Symbol)
+          Sequel.lit(default.to_s)
+        else
+          default
         end
       end
     end

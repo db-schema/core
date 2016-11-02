@@ -16,7 +16,7 @@ RSpec.describe DbSchema::DSL do
           t.array       :strings, of: :varchar
           t.user_status :status, null: false
           t.happiness   :mood
-          t.timestamptz :created_at, default: :now
+          t.timestamptz :created_at, default: :'now()'
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
           t.index :strings, using: :gin
@@ -50,7 +50,11 @@ RSpec.describe DbSchema::DSL do
     subject { DbSchema::DSL.new(schema_block) }
 
     it 'returns a schema definition' do
-      user_status, hstore, users, happiness, posts = subject.schema
+      schema = subject.schema
+
+      users, posts           = schema.tables
+      user_status, happiness = schema.enums
+      hstore                 = schema.extensions.first
 
       expect(user_status.name).to eq(:user_status)
       expect(user_status.values).to eq(%i(user moderator admin))
@@ -95,7 +99,7 @@ RSpec.describe DbSchema::DSL do
 
       expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
       expect(created_at.name).to eq(:created_at)
-      expect(created_at.default).to eq(Sequel.function(:now))
+      expect(created_at.default).to eq(:'now()')
 
       expect(users.indices.count).to eq(3)
       email_index, strings_index, lower_email_index = users.indices

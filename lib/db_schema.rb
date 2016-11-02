@@ -7,6 +7,7 @@ require 'db_schema/definitions'
 require 'db_schema/awesome_print'
 require 'db_schema/dsl'
 require 'db_schema/validator'
+require 'db_schema/normalizer'
 require 'db_schema/reader'
 require 'db_schema/changes'
 require 'db_schema/runner'
@@ -17,6 +18,7 @@ module DbSchema
     def describe(&block)
       desired_schema = DSL.new(block).schema
       validate(desired_schema)
+      normalize(desired_schema)
 
       actual_schema = Reader.read_schema
       changes = Changes.between(desired_schema, actual_schema)
@@ -86,6 +88,18 @@ module DbSchema
 
         raise InvalidSchemaError, message
       end
+    end
+
+    def normalize(schema)
+      normalized_tables = schema.tables.map do |table|
+        if table.has_expressions?
+          Normalizer.new(table).normalized_table
+        else
+          table
+        end
+      end
+
+      schema.tables = normalized_tables
     end
 
     def log_changes(changes)

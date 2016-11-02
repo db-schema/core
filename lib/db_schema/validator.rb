@@ -2,10 +2,7 @@ module DbSchema
   module Validator
     class << self
       def validate(schema)
-        tables = Utils.filter_by_class(schema, Definitions::Table)
-        enums  = Utils.filter_by_class(schema, Definitions::Enum)
-
-        table_errors = tables.each_with_object([]) do |table, errors|
+        table_errors = schema.tables.each_with_object([]) do |table, errors|
           primary_keys_count = table.fields.select(&:primary_key?).count
           if primary_keys_count > 1
             error_message = %(Table "#{table.name}" has #{primary_keys_count} primary keys)
@@ -14,7 +11,7 @@ module DbSchema
 
           table.fields.each do |field|
             if field.is_a?(Definitions::Field::Custom)
-              unless enums.map(&:name).include?(field.type_name)
+              unless schema.enums.map(&:name).include?(field.type_name)
                 error_message = %(Field "#{table.name}.#{field.name}" has unknown type "#{field.type_name}")
                 errors << error_message
               end
@@ -40,7 +37,7 @@ module DbSchema
               end
             end
 
-            if referenced_table = schema.find { |table| table.name == fkey.table }
+            if referenced_table = schema.tables.find { |table| table.name == fkey.table }
               if fkey.references_primary_key?
                 unless referenced_table.fields.any?(&:primary_key?)
                   error_message = %(Foreign key "#{fkey.name}" refers to primary key of table "#{fkey.table}" which does not have a primary key)
@@ -63,7 +60,7 @@ module DbSchema
           end
         end
 
-        enum_errors = enums.each_with_object([]) do |enum, errors|
+        enum_errors = schema.enums.each_with_object([]) do |enum, errors|
           if enum.values.empty?
             error_message = %(Enum "#{enum.name}" contains no values)
             errors << error_message

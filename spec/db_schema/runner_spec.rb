@@ -4,17 +4,11 @@ RSpec.describe DbSchema::Runner do
   let(:database) { DbSchema.connection }
 
   let(:enums) do
-    DbSchema::Utils.filter_by_class(
-      DbSchema::Reader.read_schema,
-      DbSchema::Definitions::Enum
-    )
+    DbSchema::Reader.read_schema.enums
   end
 
   let(:extensions) do
-    DbSchema::Utils.filter_by_class(
-      DbSchema::Reader.read_schema,
-      DbSchema::Definitions::Extension
-    )
+    DbSchema::Reader.read_schema.extensions
   end
 
   before(:each) do
@@ -44,8 +38,8 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
       DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
       DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
-      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false),
-      DbSchema::Definitions::Field::Interval.new(:period, fields: :second, precision: 5),
+      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false, default: :'now()'),
+      DbSchema::Definitions::Field::Interval.new(:period, fields: :second),
       DbSchema::Definitions::Field::Bit.new(:some_bit),
       DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
       DbSchema::Definitions::Field::Varbit.new(:some_varbit, length: 250),
@@ -118,7 +112,7 @@ RSpec.describe DbSchema::Runner do
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
-        users = DbSchema::Reader.read_schema.find { |table| table.name == :users }
+        users = DbSchema::Reader.read_schema.tables.find { |table| table.name == :users }
         id, name, email, country_id, created_at, period, some_bit, some_bits, some_varbit, names = users.fields
         expect(id.name).to eq(:id)
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
@@ -133,10 +127,10 @@ RSpec.describe DbSchema::Runner do
         expect(created_at.name).to eq(:created_at)
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(created_at).not_to be_null
+        expect(created_at.default).to eq(:'now()')
         expect(period.name).to eq(:period)
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.options[:fields]).to eq(:second)
-        expect(period.options[:precision]).to eq(5)
         expect(some_bit.name).to eq(:some_bit)
         expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
         expect(some_bit.options[:length]).to eq(1)
@@ -202,7 +196,7 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
             ),
             DbSchema::Changes::CreateColumn.new(
-              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false)
+              DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, default: :'now()')
             )
           ]
         end
@@ -213,7 +207,7 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
           address, country_name, created_at, first_name, last_name, age, uid, updated_at = people.fields
           expect(address.name).to eq(:address)
           expect(created_at.name).to eq(:created_at)
@@ -230,6 +224,7 @@ RSpec.describe DbSchema::Runner do
           expect(uid.name).to eq(:uid)
           expect(updated_at.name).to eq(:updated_at)
           expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+          expect(updated_at.default).to eq(:'now()')
         end
       end
 
@@ -277,7 +272,7 @@ RSpec.describe DbSchema::Runner do
             subject.run!
 
             schema = DbSchema::Reader.read_schema
-            people = schema.find { |table| table.name == :people }
+            people = schema.tables.find { |table| table.name == :people }
             address, country_name, created_at = people.fields.last(3)
 
             expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
@@ -347,6 +342,21 @@ RSpec.describe DbSchema::Runner do
           name = database.schema(:people)[1]
           expect(name.last[:default]).to eq("'John Smith'::character varying")
         end
+
+        context 'with an expression' do
+          let(:field_changes) do
+            [
+              DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()')
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            created_at = database.schema(:people).last
+            expect(created_at.last[:default]).to eq('now()')
+          end
+        end
       end
 
       context 'containing CreateIndex & DropIndex' do
@@ -408,7 +418,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
           expect(people.checks.count).to eq(1)
           address_check = people.checks.first
           expect(address_check.name).to eq(:min_address_length)
@@ -439,7 +449,7 @@ RSpec.describe DbSchema::Runner do
         it 'creates the field before creating the index' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -471,7 +481,7 @@ RSpec.describe DbSchema::Runner do
         it 'drops the index before dropping the field' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -501,7 +511,7 @@ RSpec.describe DbSchema::Runner do
         it 'creates the field before creating the check' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -531,7 +541,7 @@ RSpec.describe DbSchema::Runner do
         it 'drops the check before dropping the field' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.find do |table|
+          people = DbSchema::Reader.read_schema.tables.find do |table|
             table.name == :people
           end
 
@@ -683,7 +693,7 @@ RSpec.describe DbSchema::Runner do
       it 'creates and drops tables and foreign keys in appropriate order' do
         subject.run!
 
-        tables = DbSchema::Reader.read_schema
+        tables = DbSchema::Reader.read_schema.tables
         expect(tables.count).to eq(6)
       end
     end

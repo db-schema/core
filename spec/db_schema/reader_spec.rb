@@ -4,7 +4,7 @@ RSpec.describe DbSchema::Reader do
   describe '.read_schema' do
     context 'on an empty database' do
       it 'returns an empty array' do
-        expect(subject.read_schema).to eq([])
+        expect(subject.read_schema).to eq(DbSchema::Definitions::Schema.new)
       end
     end
 
@@ -22,10 +22,10 @@ RSpec.describe DbSchema::Reader do
           column :age, :integer, default: 20
           column :lat, :numeric, size: [6, 3]
           column :lng, :decimal, size: [7, 4], default: 3.45
-          column :created_at, :timestamp
-          column :updated_at, :timestamptz, default: Sequel.function(:now)
+          column :created_at, :timestamptz, default: Time.new(2016, 4, 28, 1, 25, 0, '+03:00')
+          column :updated_at, :timestamp,   default: Sequel.function(:now)
           column :period, 'interval HOUR'
-          column :other_period, :interval, size: 4
+          column :other_period, :interval
           column :some_bit, :bit
           column :several_bits, :bit, size: 5
           column :variable_bits, :varbit
@@ -54,7 +54,7 @@ RSpec.describe DbSchema::Reader do
           column :title, :varchar
           column :user_id, :integer, null: false
           column :user_name, :varchar
-          column :created_on, :date
+          column :created_on, :date, default: Date.new(2016, 4, 28)
           column :created_at, :timetz
 
           index :user_id
@@ -65,15 +65,17 @@ RSpec.describe DbSchema::Reader do
       end
 
       it 'returns the database schema' do
-        rainbow, hstore, users, posts = subject.read_schema
+        schema = subject.read_schema
+
+        users   = schema.tables.find { |table| table.name == :users }
+        posts   = schema.tables.find { |table| table.name == :posts }
+        rainbow = schema.enums.first
+        hstore  = schema.extensions.first
 
         expect(rainbow.name).to eq(:rainbow)
         expect(rainbow.values).to eq(%i(red orange yellow green blue purple))
 
         expect(hstore.name).to eq(:hstore)
-
-        expect(users.name).to eq(:users)
-        expect(posts.name).to eq(:posts)
 
         id, name, email, admin, age, lat, lng, created_at, updated_at,
         period, other_period, some_bit, several_bits, variable_bits,
@@ -107,18 +109,18 @@ RSpec.describe DbSchema::Reader do
         expect(lng.default).to eq(3.45)
         expect(lng.options[:precision]).to eq(7)
         expect(lng.options[:scale]).to eq(4)
-        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
         expect(created_at.name).to eq(:created_at)
-        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
+        expect(created_at.default).to eq(Time.new(2016, 4, 28, 1, 25, 0, '+03:00').getlocal)
+        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
         expect(updated_at.name).to eq(:updated_at)
-        expect(updated_at.default).to eq(Sequel.function(:now))
+        expect(updated_at.default).to eq(:'now()')
         expect(period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(period.name).to eq(:period)
         expect(period.options[:fields]).to eq(:hour)
         expect(other_period).to be_a(DbSchema::Definitions::Field::Interval)
         expect(other_period.name).to eq(:other_period)
         expect(other_period.options[:fields]).to be_nil
-        expect(other_period.options[:precision]).to eq(4)
         expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
         expect(some_bit.name).to eq(:some_bit)
         expect(some_bit.options[:length]).to eq(1)
@@ -151,6 +153,7 @@ RSpec.describe DbSchema::Reader do
         expect(user_id).not_to be_null
         expect(created_on).to be_a(DbSchema::Definitions::Field::Date)
         expect(created_on.name).to eq(:created_on)
+        expect(created_on.default).to eq(Date.new(2016, 4, 28))
         expect(created_at).to be_a(DbSchema::Definitions::Field::Timetz)
         expect(created_at.name).to eq(:created_at)
 

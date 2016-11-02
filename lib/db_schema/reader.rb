@@ -5,6 +5,10 @@ module DbSchema
         adapter.read_schema
       end
 
+      def read_table(table_name)
+        adapter.read_table(table_name)
+      end
+
       def adapter
         adapter_name = DbSchema.configuration.adapter
         registry.fetch(adapter_name) do |adapter_name|
@@ -19,7 +23,19 @@ module DbSchema
     end
 
     module Postgres
-      DEFAULT_VALUE = /\A(('(?<string>.*)')|(?<float>\d+\.\d+)|(?<integer>\d+)|(?<boolean>true|false)|((?<function>[A-Za-z_]+)\(\)))/
+      DEFAULT_VALUE = /\A(
+        ('(?<date>\d{4}-\d{2}-\d{2})'::date)
+          |
+        ('(?<time>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}([+-]\d{2})?)'::timestamp)
+          |
+        ('(?<string>.*)')
+          |
+        (?<float>\d+\.\d+)
+          |
+        (?<integer>\d+)
+          |
+        (?<boolean>true|false)
+      )/x
 
       COLUMN_NAMES_QUERY = <<-SQL.freeze
    SELECT c.column_name AS name,
@@ -104,6 +120,10 @@ SELECT extname
 
       class << self
         def read_schema
+          tables = DbSchema.connection.tables.map do |table_name|
+            read_table(table_name)
+          end
+
           enums = DbSchema.connection[ENUMS_QUERY].map do |enum_data|
             Definitions::Enum.new(enum_data[:name].to_sym, enum_data[:values].map(&:to_sym))
           end
@@ -112,38 +132,38 @@ SELECT extname
             Definitions::Extension.new(extension_data[:extname].to_sym)
           end
 
-          tables = DbSchema.connection.tables.map do |table_name|
-            primary_key_name = DbSchema.connection.primary_key(table_name)
+          Definitions::Schema.new(tables: tables, enums: enums, extensions: extensions)
+        end
 
-            fields = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].map do |column_data|
-              build_field(column_data, primary_key: column_data[:name] == primary_key_name)
-            end
+        def read_table(table_name)
+          primary_key_name = DbSchema.connection.primary_key(table_name)
 
-            indices = indices_data_for(table_name).map do |index_data|
-              Definitions::Index.new(index_data)
-            end.sort_by(&:name)
+          fields = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].map do |column_data|
+            build_field(column_data, primary_key: column_data[:name] == primary_key_name)
+          end
 
-            foreign_keys = DbSchema.connection.foreign_key_list(table_name).map do |foreign_key_data|
-              build_foreign_key(foreign_key_data)
-            end
+          indices = indices_data_for(table_name).map do |index_data|
+            Definitions::Index.new(index_data)
+          end.sort_by(&:name)
 
-            checks = DbSchema.connection[CONSTRAINTS_QUERY, table_name.to_s].map do |check_data|
-              Definitions::CheckConstraint.new(
-                name:      check_data[:name].to_sym,
-                condition: check_data[:condition]
-              )
-            end
+          foreign_keys = DbSchema.connection.foreign_key_list(table_name).map do |foreign_key_data|
+            build_foreign_key(foreign_key_data)
+          end
 
-            Definitions::Table.new(
-              table_name,
-              fields:       fields,
-              indices:      indices,
-              checks:       checks,
-              foreign_keys: foreign_keys
+          checks = DbSchema.connection[CONSTRAINTS_QUERY, table_name.to_s].map do |check_data|
+            Definitions::CheckConstraint.new(
+              name:      check_data[:name].to_sym,
+              condition: check_data[:condition]
             )
           end
 
-          enums + extensions + tables
+          Definitions::Table.new(
+            table_name,
+            fields:       fields,
+            indices:      indices,
+            checks:       checks,
+            foreign_keys: foreign_keys
+          )
         end
 
         def indices_data_for(table_name)
@@ -227,8 +247,12 @@ SELECT extname
           nullable = (data[:null] != 'NO')
 
           unless primary_key || data[:default].nil?
-            if match = DEFAULT_VALUE.match(data[:default])
-              default = if match[:string]
+            default = if match = DEFAULT_VALUE.match(data[:default])
+              if match[:date]
+                Date.parse(match[:date])
+              elsif match[:time]
+                Time.parse(match[:time])
+              elsif match[:string]
                 match[:string]
               elsif match[:integer]
                 match[:integer].to_i
@@ -236,9 +260,9 @@ SELECT extname
                 match[:float].to_f
               elsif match[:boolean]
                 match[:boolean] == 'true'
-              elsif match[:function]
-                match[:function].to_sym
               end
+            else
+              data[:default].to_sym
             end
           end
 
