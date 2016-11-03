@@ -18,7 +18,7 @@ module DbSchema
     def describe(&block)
       desired_schema = DSL.new(block).schema
       validate(desired_schema)
-      normalize(desired_schema)
+      Normalizer.normalize_tables(desired_schema)
 
       actual_schema = Reader.read_schema
       changes = Changes.between(desired_schema, actual_schema)
@@ -87,20 +87,6 @@ module DbSchema
         end
 
         raise InvalidSchemaError, message
-      end
-    end
-
-    def normalize(schema)
-      connection.transaction do
-        schema.tables = schema.tables.map do |table|
-          if table.has_expressions?
-            Normalizer.new(table).normalized_table
-          else
-            table
-          end
-        end
-
-        raise Sequel::Rollback
       end
     end
 

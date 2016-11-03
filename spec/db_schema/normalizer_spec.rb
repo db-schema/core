@@ -1,13 +1,6 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Normalizer do
-  around(:each) do |example|
-    DbSchema.connection.transaction do
-      example.run
-      raise Sequel::Rollback
-    end
-  end
-
   let(:raw_table) do
     DbSchema::Definitions::Table.new(
       :users,
@@ -35,9 +28,9 @@ RSpec.describe DbSchema::Normalizer do
     )
   end
 
-  subject { DbSchema::Normalizer.new(raw_table) }
+  describe '.normalized_tables' do
+    let(:schema) { DbSchema::Definitions::Schema.new(tables: [raw_table]) }
 
-  describe '#normalized_table' do
     before(:each) do
       operation = DbSchema::Changes::CreateTable.new(
         :users,
@@ -49,58 +42,29 @@ RSpec.describe DbSchema::Normalizer do
       DbSchema::Runner.new([operation]).run!
     end
 
-    let(:table) { subject.normalized_table }
+    it 'normalizes all tables in the schema passed in' do
+      DbSchema::Normalizer.normalize_tables(schema)
 
-    it 'normalizes default values' do
-      expect(table.fields.last.default).to eq(:'(18 + 5)')
+      expect(schema.tables.count).to eq(1)
+      users = schema.tables.first
+      expect(users.name).to eq(:users)
+      expect(users.fields.last.default).to eq(:'(18 + 5)')
+      expect(users.indices.first.name).to eq(:lower_name_index)
+      expect(users.indices.first.columns.first.name).to eq('lower(name::text)')
+      expect(users.indices.first.condition).to eq('age <> 18')
+      expect(users.checks.first.condition).to eq('char_length(name::text) > 4')
+      expect(users.foreign_keys).to eq(raw_table.foreign_keys)
     end
 
-    it 'normalizes index conditions' do
-      expect(table.indices.first.columns.first.name).to eq('lower(name::text)')
+    it 'rolls back all temporary tables' do
+      expect {
+        DbSchema::Normalizer.normalize_tables(schema)
+      }.not_to change { DbSchema::Reader.read_schema.tables.count }
     end
 
-    it 'normalizes index expressions' do
-      expect(table.indices.first.condition).to eq('age <> 18')
-    end
-
-    it 'normalizes check constraint conditions' do
-      expect(table.checks.first.condition).to eq('char_length(name::text) > 4')
-    end
-
-    it 'leaves all foreign keys as is' do
-      expect(table.foreign_keys).to eq(raw_table.foreign_keys)
-    end
-
-    it 'returns the table definitions with original names' do
-      expect(table.name).to eq(:users)
-      expect(table.indices.first.name).to eq(:lower_name_index)
-    end
-
-    it 'drops the temporary table' do
-      expect(DbSchema::Reader.read_schema.tables.map(&:name)).to eq([:users])
-    end
-
-    context 'with postgres complaining about bad schema' do
-      let(:bad_index) do
-        DbSchema::Definitions::Index.new(
-          name: :lower_name_index,
-          columns: [
-            DbSchema::Definitions::Index::Expression.new('lower(name)')
-          ],
-          condition: 'unknown_field = 1'
-        )
-      end
-
-      before(:each) do
-        raw_table.indices.pop
-        raw_table.indices << bad_index
-      end
-
-      it "doesn't intercept postgres exception" do
-        expect {
-          table
-        }.to raise_error(Sequel::DatabaseError, /column "unknown_field" does not exist/)
-      end
+    after(:each) do
+      operation = DbSchema::Changes::DropTable.new(:users)
+      DbSchema::Runner.new([operation]).run!
     end
   end
 end

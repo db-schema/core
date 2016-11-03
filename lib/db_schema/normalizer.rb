@@ -4,6 +4,22 @@ module DbSchema
   class Normalizer
     attr_reader :table
 
+    class << self
+      def normalize_tables(schema)
+        DbSchema.connection.transaction do
+          schema.tables = schema.tables.map do |table|
+            if table.has_expressions?
+              new(table).normalized_table
+            else
+              table
+            end
+          end
+
+          raise Sequel::Rollback
+        end
+      end
+    end
+
     def initialize(table)
       @table = table
     end
