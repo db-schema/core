@@ -1,6 +1,20 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Normalizer do
+  let(:enums) do
+    [
+      DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad)),
+      DbSchema::Definitions::Enum.new(:user_status, %i(guest registered))
+    ]
+  end
+
+  let(:extensions) do
+    [
+      DbSchema::Definitions::Extension.new(:ltree),
+      DbSchema::Definitions::Extension.new(:hstore)
+    ]
+  end
+
   let(:raw_table) do
     DbSchema::Definitions::Table.new(
       :users,
@@ -8,7 +22,11 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
         DbSchema::Definitions::Field::Varchar.new(:name, null: false),
         DbSchema::Definitions::Field::Integer.new(:group_id),
-        DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5')
+        DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5'),
+        DbSchema::Definitions::Field::Hstore.new(:data),
+        DbSchema::Definitions::Field::Custom.new(:happiness, type_name: :happiness),
+        DbSchema::Definitions::Field::Ltree.new(:path),
+        DbSchema::Definitions::Field::Custom.new(:user_status, type_name: :user_status)
       ],
       indices: [
         DbSchema::Definitions::Index.new(
@@ -29,17 +47,26 @@ RSpec.describe DbSchema::Normalizer do
   end
 
   describe '.normalized_tables' do
-    let(:schema) { DbSchema::Definitions::Schema.new(tables: [raw_table]) }
+    let(:schema) do
+      DbSchema::Definitions::Schema.new(
+        tables:     [raw_table],
+        enums:      enums,
+        extensions: extensions
+      )
+    end
 
     before(:each) do
-      operation = DbSchema::Changes::CreateTable.new(
+      add_hstore = DbSchema::Changes::CreateExtension.new(:hstore)
+      add_happiness = DbSchema::Changes::CreateEnum.new(:happiness, %i(good bad))
+
+      create_table = DbSchema::Changes::CreateTable.new(
         :users,
-        fields:  raw_table.fields,
+        fields:  raw_table.fields.take(6),
         indices: raw_table.indices,
         checks:  raw_table.checks
       )
 
-      DbSchema::Runner.new([operation]).run!
+      DbSchema::Runner.new([add_hstore, add_happiness, create_table]).run!
     end
 
     it 'normalizes all tables in the schema passed in' do
@@ -48,7 +75,7 @@ RSpec.describe DbSchema::Normalizer do
       expect(schema.tables.count).to eq(1)
       users = schema.tables.first
       expect(users.name).to eq(:users)
-      expect(users.fields.last.default).to eq(:'(18 + 5)')
+      expect(users.fields[3].default).to eq(:'(18 + 5)')
       expect(users.indices.first.name).to eq(:lower_name_index)
       expect(users.indices.first.columns.first.name).to eq('lower(name::text)')
       expect(users.indices.first.condition).to eq('age <> 18')
@@ -63,8 +90,11 @@ RSpec.describe DbSchema::Normalizer do
     end
 
     after(:each) do
-      operation = DbSchema::Changes::DropTable.new(:users)
-      DbSchema::Runner.new([operation]).run!
+      drop_table     = DbSchema::Changes::DropTable.new(:users)
+      drop_happiness = DbSchema::Changes::DropEnum.new(:happiness)
+      drop_hstore    = DbSchema::Changes::DropExtension.new(:hstore)
+
+      DbSchema::Runner.new([drop_table, drop_happiness, drop_hstore]).run!
     end
   end
 end

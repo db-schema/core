@@ -7,6 +7,9 @@ module DbSchema
     class << self
       def normalize_tables(schema)
         DbSchema.connection.transaction do
+          create_extensions!(schema.extensions)
+          create_enums!(schema.enums)
+
           schema.tables = schema.tables.map do |table|
             if table.has_expressions?
               new(table).normalized_table
@@ -16,6 +19,24 @@ module DbSchema
           end
 
           raise Sequel::Rollback
+        end
+      end
+
+    private
+      def create_extensions!(extensions)
+        (extensions - DbSchema::Reader.read_extensions).each do |extension|
+          operation = DbSchema::Changes::CreateExtension.new(extension.name)
+          DbSchema::Runner.new([operation]).run!
+        end
+      end
+
+      def create_enums!(enums)
+        existing_enums_names = DbSchema::Reader.read_enums.map(&:name)
+        enums.each do |enum|
+          next if existing_enums_names.include?(enum.name)
+
+          operation = DbSchema::Changes::CreateEnum.new(enum.name, enum.values)
+          DbSchema::Runner.new([operation]).run!
         end
       end
     end

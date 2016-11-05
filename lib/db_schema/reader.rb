@@ -1,13 +1,9 @@
 module DbSchema
   module Reader
     class << self
-      def read_schema
-        adapter.read_schema
-      end
+      extend Forwardable
 
-      def read_table(table_name)
-        adapter.read_table(table_name)
-      end
+      def_delegators :adapter, :read_schema, :read_table, :read_enums, :read_extensions
 
       def adapter
         adapter_name = DbSchema.configuration.adapter
@@ -120,19 +116,11 @@ SELECT extname
 
       class << self
         def read_schema
-          tables = DbSchema.connection.tables.map do |table_name|
-            read_table(table_name)
-          end
-
-          enums = DbSchema.connection[ENUMS_QUERY].map do |enum_data|
-            Definitions::Enum.new(enum_data[:name].to_sym, enum_data[:values].map(&:to_sym))
-          end
-
-          extensions = DbSchema.connection[EXTENSIONS_QUERY].map do |extension_data|
-            Definitions::Extension.new(extension_data[:extname].to_sym)
-          end
-
-          Definitions::Schema.new(tables: tables, enums: enums, extensions: extensions)
+          Definitions::Schema.new(
+            tables:     read_tables,
+            enums:      read_enums,
+            extensions: read_extensions
+          )
         end
 
         def read_table(table_name)
@@ -205,6 +193,24 @@ SELECT extname
               type:      index[:index_type].to_sym,
               condition: index[:condition]
             }
+          end
+        end
+
+        def read_tables
+          DbSchema.connection.tables.map do |table_name|
+            read_table(table_name)
+          end
+        end
+
+        def read_enums
+          DbSchema.connection[ENUMS_QUERY].map do |enum_data|
+            Definitions::Enum.new(enum_data[:name].to_sym, enum_data[:values].map(&:to_sym))
+          end
+        end
+
+        def read_extensions
+          DbSchema.connection[EXTENSIONS_QUERY].map do |extension_data|
+            Definitions::Extension.new(extension_data[:extname].to_sym)
           end
         end
 
