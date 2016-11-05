@@ -47,12 +47,12 @@ module DbSchema
         end
       end
 
-      def primary_key(name)
-        fields << Definitions::Field::Integer.new(name, primary_key: true)
+      def method_missing(method_name, name, *args, &block)
+        field(name, method_name, args.first || {})
       end
 
-      def field(name, type, **options)
-        fields << Definitions::Field.build(name, type, options)
+      def primary_key(name)
+        field(name, :integer, primary_key: true)
       end
 
       def index(*columns, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
@@ -132,14 +132,14 @@ module DbSchema
         end
       end
 
-      def method_missing(method_name, name, *args, &block)
-        options = args.first || {}
+      def field(name, type, custom: false, unique: false, index: false, **options)
+        fields << Definitions::Field.build(name, type, options)
 
-        fields << Definitions::Field::Custom.new(
-          name,
-          type_name: method_name,
-          **options
-        )
+        if unique
+          index(name, unique: true)
+        elsif index
+          index(name)
+        end
       end
 
       def fields

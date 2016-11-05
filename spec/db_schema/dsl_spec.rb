@@ -10,12 +10,12 @@ RSpec.describe DbSchema::DSL do
 
         db.table :users do |t|
           t.primary_key :id
-          t.varchar     :name, null: false
+          t.varchar     :name, null: false, unique: true
           t.varchar     :email, default: 'mail@example.com'
-          t.char        :sex
+          t.char        :sex, index: true
           t.array       :strings, of: :varchar
           t.user_status :status, null: false
-          t.happiness   :mood
+          t.happiness   :mood, index: true
           t.timestamptz :created_at, default: :'now()'
 
           t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
@@ -101,8 +101,23 @@ RSpec.describe DbSchema::DSL do
       expect(created_at.name).to eq(:created_at)
       expect(created_at.default).to eq(:'now()')
 
-      expect(users.indices.count).to eq(3)
-      email_index, strings_index, lower_email_index = users.indices
+      expect(users.indices.count).to eq(6)
+      name_index, sex_index, mood_index, email_index, strings_index, lower_email_index = users.indices
+      expect(name_index.name).to eq(:users_name_index)
+      expect(name_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:name)
+      ])
+      expect(name_index).to be_unique
+      expect(sex_index.name).to eq(:users_sex_index)
+      expect(sex_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:sex)
+      ])
+      expect(sex_index).not_to be_unique
+      expect(mood_index.name).to eq(:users_mood_index)
+      expect(mood_index.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:mood)
+      ])
+      expect(mood_index).not_to be_unique
       expect(email_index.name).to eq(:users_email_idx)
       expect(email_index.columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:email)
