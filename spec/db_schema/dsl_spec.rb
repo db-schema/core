@@ -13,6 +13,7 @@ RSpec.describe DbSchema::DSL do
           t.varchar     :name, null: false, unique: true
           t.varchar     :email, default: 'mail@example.com'
           t.char        :sex, index: true
+          t.integer     :city_id, references: :cities
           t.array       :strings, of: :varchar
           t.user_status :status, null: false
           t.happiness   :mood, index: true
@@ -26,6 +27,11 @@ RSpec.describe DbSchema::DSL do
         end
 
         db.enum :happiness, [:sad, :ok, :good, :happy]
+
+        db.table :cities do |t|
+          t.primary_key :id
+          t.varchar :name, null: false
+        end
 
         db.table :posts do |t|
           t.primary_key :id
@@ -52,7 +58,7 @@ RSpec.describe DbSchema::DSL do
     it 'returns a schema definition' do
       schema = subject.schema
 
-      users, posts           = schema.tables
+      users, cities, posts   = schema.tables
       user_status, happiness = schema.enums
       hstore                 = schema.extensions.first
 
@@ -62,11 +68,13 @@ RSpec.describe DbSchema::DSL do
       expect(hstore).to eq(DbSchema::Definitions::Extension.new(:hstore))
 
       expect(users.name).to eq(:users)
-      expect(users.fields.count).to eq(8)
+      expect(users.fields.count).to eq(9)
+      expect(cities.name).to eq(:cities)
+      expect(cities.fields.count).to eq(2)
       expect(posts.name).to eq(:posts)
       expect(posts.fields.count).to eq(8)
 
-      id, name, email, sex, strings, status, mood, created_at = users.fields
+      id, name, email, sex, city_id, strings, status, mood, created_at = users.fields
 
       expect(id).to be_a(DbSchema::Definitions::Field::Integer)
       expect(id.name).to eq(:id)
@@ -83,6 +91,9 @@ RSpec.describe DbSchema::DSL do
       expect(sex).to be_a(DbSchema::Definitions::Field::Char)
       expect(sex.name).to eq(:sex)
       expect(sex.options[:length]).to eq(1)
+
+      expect(city_id).to be_a(DbSchema::Definitions::Field::Integer)
+      expect(city_id.name).to eq(:city_id)
 
       expect(strings).to be_a(DbSchema::Definitions::Field::Array)
       expect(strings.name).to eq(:strings)
@@ -154,6 +165,13 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::Expression.new('col2 - col1', order: :desc),
         DbSchema::Definitions::Index::Expression.new('col3 + col4', nulls: :first)
       ])
+
+      expect(users.foreign_keys.count).to eq(1)
+      city_id_fkey = users.foreign_keys.first
+      expect(city_id_fkey.name).to eq(:users_city_id_fkey)
+      expect(city_id_fkey.fields).to eq([:city_id])
+      expect(city_id_fkey.table).to eq(:cities)
+      expect(city_id_fkey.references_primary_key?).to eq(true)
 
       expect(users.checks.count).to eq(1)
       sex_check = users.checks.first

@@ -132,13 +132,17 @@ module DbSchema
         end
       end
 
-      def field(name, type, custom: false, unique: false, index: false, **options)
+      def field(name, type, custom: false, unique: false, index: false, references: nil, **options)
         fields << Definitions::Field.build(name, type, options)
 
         if unique
           index(name, unique: true)
         elsif index
           index(name)
+        end
+
+        if references
+          foreign_key(name, references: references)
         end
       end
 
