@@ -10,7 +10,7 @@ RSpec.describe DbSchema::DSL do
 
         db.table :users do |t|
           t.primary_key :id
-          t.varchar     :name, null: false, unique: true
+          t.varchar     :name, null: false, unique: true, check: 'char_length(name) > 0'
           t.varchar     :email, default: 'mail@example.com'
           t.char        :sex, index: true
           t.integer     :city_id, references: :cities
@@ -173,8 +173,10 @@ RSpec.describe DbSchema::DSL do
       expect(city_id_fkey.table).to eq(:cities)
       expect(city_id_fkey.references_primary_key?).to eq(true)
 
-      expect(users.checks.count).to eq(1)
-      sex_check = users.checks.first
+      expect(users.checks.count).to eq(2)
+      name_check, sex_check = users.checks
+      expect(name_check.name).to eq(:name_check)
+      expect(name_check.condition).to eq('char_length(name) > 0')
       expect(sex_check.name).to eq(:valid_sex)
       expect(sex_check.condition).to eq("sex IN ('M', 'F')")
 

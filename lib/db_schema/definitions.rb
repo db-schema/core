@@ -160,7 +160,7 @@ module DbSchema
       attr_reader :name, :condition
 
       def initialize(name:, condition:)
-        @name      = name
+        @name      = name.to_sym
         @condition = condition
       end
     end
