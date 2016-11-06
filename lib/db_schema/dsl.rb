@@ -146,7 +146,7 @@ module DbSchema
         end
 
         if check
-          check("#{name}_check", check)
+          check("#{table_name}_#{name}_check", check)
         end
       end
 

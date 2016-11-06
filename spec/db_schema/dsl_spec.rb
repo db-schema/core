@@ -175,7 +175,7 @@ RSpec.describe DbSchema::DSL do
 
       expect(users.checks.count).to eq(2)
       name_check, sex_check = users.checks
-      expect(name_check.name).to eq(:name_check)
+      expect(name_check.name).to eq(:users_name_check)
       expect(name_check.condition).to eq('char_length(name) > 0')
       expect(sex_check.name).to eq(:valid_sex)
       expect(sex_check.condition).to eq("sex IN ('M', 'F')")
