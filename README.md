@@ -78,12 +78,10 @@ DbSchema DSL looks like this:
 DbSchema.describe do |db|
   db.table :users do |t|
     t.primary_key :id
-    t.varchar     :email,           null: false
+    t.varchar     :email,           null: false, unique: true
     t.varchar     :password_digest, length: 40
     t.timestamptz :created_at
     t.timestamptz :updated_at
-
-    t.index :email, unique: true
   end
 end
 ```
@@ -91,9 +89,18 @@ end
 Before DbSchema connects to the database you need to configure it:
 
 ``` ruby
-DbSchema.configure(adapter: 'postgresql', database: 'my_database', user: 'bob', password: 'secret')
+DbSchema.configure(
+  adapter:  'postgresql',
+  database: 'my_database',
+  user:     'bob',
+  password: 'secret'
+)
+
 # or in Rails
-DbSchema.configure_from_yaml(Rails.root.join('config', 'database.yml'), Rails.env)
+DbSchema.configure_from_yaml(
+  Rails.root.join('config', 'database.yml'),
+  Rails.env
+)
 ```
 
 Then you can load your schema definition (it is executable - it instantly applies itself to your database):
@@ -110,7 +117,10 @@ Here's an initializer example for a Rails app:
 
 ``` ruby
 # config/initializers/db_schema.rb
-DbSchema.configure_from_yaml(Rails.root.join('config', 'database.yml'), Rails.env)
+DbSchema.configure_from_yaml(
+  Rails.root.join('config', 'database.yml'),
+  Rails.env
+)
 
 if Rails.env.development? || Rails.env.test?
   load Rails.root.join('db', 'schema.rb')
@@ -133,6 +143,8 @@ end
 
 Then you just call `rake db:schema:apply` from your deploy script before restarting the app.
 
+If your production setup doesn't include multiple workers starting simultaneously (for example if you run one Puma worker per docker container and restart containers one by one on deploy) you can go the simple way and just `load Rails.root.join('db', 'schema.rb')` in any environment without a separate rake task. The first DbSchema run will apply the schema while the subsequent ones will see there's nothing left to do.
+
 ## DSL
 
 Database schema is defined with a block passed to `DbSchema.describe` method.
@@ -146,27 +158,22 @@ DbSchema.describe do |db|
 
   db.table :users do |t|
     t.primary_key :id
-    t.varchar     :email,    null: false
+    t.varchar     :email,    null: false, unique: true
     t.varchar     :password, null: false
     t.varchar     :name,     null: false
     t.integer     :age
     t.user_status :status,   null: false, default: 'registered'
     t.hstore      :tracking, null: false, default: ''
-
-    t.index :email, unique: true
   end
 
   db.enum :user_status, [:registered, :confirmed_email, :subscriber]
 
   db.table :posts do |t|
     t.primary_key :id
-    t.integer     :user_id, null: false
+    t.integer     :user_id, null: false, index: true, references: :users
     t.varchar     :title,   null: false, length: 50
     t.text        :content
     t.array       :tags,    of: :varchar
-
-    t.index       :user_id
-    t.foreign_key :user_id, references: :users
   end
 end
 ```
@@ -304,7 +311,28 @@ Unique indexes are created with `unique: true`:
 t.index :email, unique: true
 ```
 
-Passing several field names makes a multiple index:
+Simple one-field indexes can be created with `index: true` and `unique: true` options passed to the field definition method so
+
+``` ruby
+db.table :users do |t|
+  t.varchar :name,  index: true
+  t.varchar :email, unique: true
+end
+```
+
+is essentially the same as
+
+``` ruby
+db.table :users do |t|
+  t.varchar :name
+  t.varchar :email
+
+  t.index :name
+  t.index :email, unique: true
+end
+```
+
+Passing several field names to `#index` makes a multiple index:
 
 ``` ruby
 db.table :users do |t|
@@ -397,6 +425,15 @@ db.table :posts do |t|
 end
 ```
 
+DbSchema also provides a short syntax for simple one-column foreign keys - just pass the `:references` option to the field definition:
+
+``` ruby
+db.table :posts do |t|
+  t.integer :user_id,  references: :users
+  t.varchar :username, references: [:users, :name]
+end
+```
+
 As with indexes, you can pass your custom name in the `:name` option; default foreign key name looks like `"#{table_name}_#{fkey_fields.first}_fkey"`.
 
 You can also define a composite foreign key consisting of (and referencing) multiple columns; just list them all:
@@ -432,6 +469,16 @@ db.table :users do |t|
   t.integer :age, null: false
 
   t.check :valid_age, 'age >= 18'
+end
+```
+
+As with indexes and foreign keys, DbSchema has a short syntax for simple check constraints - a `:check` option in the method definition:
+
+``` ruby
+db.table :products do |t|
+  t.primary_key :id
+  t.text :name,     null: false
+  t.numeric :price, check: 'price > 0'
 end
 ```
 
