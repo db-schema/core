@@ -101,7 +101,7 @@ RSpec.describe DbSchema::DSL do
 
       expect(status).to be_a(DbSchema::Definitions::Field::Custom)
       expect(status.name).to eq(:status)
-      expect(status.type_name).to eq(:user_status)
+      expect(status.type).to eq(:user_status)
       expect(status).not_to be_null
 
       expect(mood).to be_a(DbSchema::Definitions::Field::Custom)

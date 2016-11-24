@@ -138,7 +138,7 @@ RSpec.describe DbSchema::Reader do
         expect(numbers.options[:element_type]).to eq(:integer)
         expect(color).to be_a(DbSchema::Definitions::Field::Custom)
         expect(color.name).to eq(:color)
-        expect(color.type_name).to eq(:rainbow)
+        expect(color.type).to eq(:rainbow)
         expect(color.default).to eq('red')
 
         id, title, user_id, user_name, created_on, created_at = posts.fields

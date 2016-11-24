@@ -137,7 +137,7 @@ if defined?(AwesomePrint)
           ''
         end
 
-        "#<#{object.class} (#{object.type.ai}) #{object.name.ai}#{options}#{primary_key}>"
+        "#<DbSchema::Definitions::Field::Custom (#{object.type.ai}) #{object.name.ai}#{options}#{primary_key}>"
       end
 
       def awesome_dbschema_index(object)

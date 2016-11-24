@@ -24,9 +24,9 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Field::Integer.new(:group_id),
         DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5'),
         DbSchema::Definitions::Field::Hstore.new(:data),
-        DbSchema::Definitions::Field::Custom.new(:happiness, type_name: :happiness),
+        DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness),
         DbSchema::Definitions::Field::Ltree.new(:path),
-        DbSchema::Definitions::Field::Custom.new(:user_status, type_name: :user_status)
+        DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:user_status)
       ],
       indices: [
         DbSchema::Definitions::Index.new(

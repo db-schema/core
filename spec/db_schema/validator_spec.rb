@@ -32,7 +32,7 @@ RSpec.describe DbSchema::Validator do
         DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
         DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
         DbSchema::Definitions::Field::Integer.new(:age),
-        DbSchema::Definitions::Field::Custom.new(:happiness, type_name: :user_happiness)
+        DbSchema::Definitions::Field::Custom.class_for(:user_happiness).new(:happiness)
       ]
     end
 
@@ -234,7 +234,7 @@ RSpec.describe DbSchema::Validator do
           DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
           DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
           DbSchema::Definitions::Field::Integer.new(:age),
-          DbSchema::Definitions::Field::Custom.new(:sorrow, type_name: :user_sorrow)
+          DbSchema::Definitions::Field::Custom.class_for(:user_sorrow).new(:sorrow)
         ]
       end
 

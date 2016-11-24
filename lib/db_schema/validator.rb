@@ -11,8 +11,8 @@ module DbSchema
 
           table.fields.each do |field|
             if field.is_a?(Definitions::Field::Custom)
-              unless schema.enums.map(&:name).include?(field.type_name)
-                error_message = %(Field "#{table.name}.#{field.name}" has unknown type "#{field.type_name}")
+              unless schema.enums.map(&:name).include?(field.type)
+                error_message = %(Field "#{table.name}.#{field.name}" has unknown type "#{field.type}")
                 errors << error_message
               end
             end

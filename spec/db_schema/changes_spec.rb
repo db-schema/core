@@ -119,7 +119,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field::Integer.new(:city_id),
           DbSchema::Definitions::Field::Integer.new(:country_id),
           DbSchema::Definitions::Field::Integer.new(:group_id),
-          DbSchema::Definitions::Field::Custom.new(:status, type_name: :user_status)
+          DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:status)
         ]
 
         indices = [

@@ -6,7 +6,7 @@ module DbSchema
           if registry.key?(type)
             type_class_for(type).new(name, **options)
           else
-            Custom.new(name, type_name: type, **options)
+            Custom.class_for(type).new(name, **options)
           end
         end
 

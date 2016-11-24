@@ -2,19 +2,20 @@ module DbSchema
   module Definitions
     module Field
       class Custom < Base
-        attr_reader :type_name
+        class << self
+          def class_for(type_name)
+            raise ArgumentError if type_name.nil?
 
-        def initialize(name, type_name:, **options)
-          super(name, **options)
-          @type_name = type_name
-        end
+            Class.new(self) do
+              define_method :type do
+                type_name
+              end
 
-        def custom_type?
-          true
-        end
-
-        def type
-          type_name
+              define_singleton_method :type do
+                type_name
+              end
+            end
+          end
         end
       end
     end

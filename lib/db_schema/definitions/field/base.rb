@@ -44,10 +44,6 @@ module DbSchema
           end
         end
 
-        def custom_type?
-          false
-        end
-
         def type
           self.class.type
         end
