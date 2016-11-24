@@ -45,7 +45,8 @@ module DbSchema
           c.numeric_scale AS num_scale,
           c.datetime_precision AS dt_precision,
           c.interval_type,
-          e.data_type AS element_type
+          e.data_type AS element_type,
+          e.udt_name AS element_custom_type_name
      FROM information_schema.columns AS c
 LEFT JOIN information_schema.element_types AS e
        ON e.object_catalog = c.table_catalog
@@ -294,8 +295,14 @@ SELECT extname
               end
             end
           when :array
-            Utils.rename_keys(Utils.filter_by_keys(data, :element_type)) do |attributes|
-              attributes[:of] = attributes[:element_type].to_sym
+            Utils.rename_keys(
+              Utils.filter_by_keys(data, :element_type, :element_custom_type_name)
+            ) do |attributes|
+              attributes[:of] = if attributes[:element_type] == 'USER-DEFINED'
+                attributes[:element_custom_type_name]
+              else
+                attributes[:element_type]
+              end.to_sym
             end
           else
             {}
