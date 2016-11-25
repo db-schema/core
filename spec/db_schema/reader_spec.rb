@@ -32,6 +32,7 @@ RSpec.describe DbSchema::Reader do
           column :limited_variable_bits, :varbit, size: 150
           column :numbers, 'integer[]'
           column :color, :rainbow, default: 'red'
+          column :previous_colors, 'rainbow[]', default: []
 
           index [
             :email,
@@ -79,7 +80,7 @@ RSpec.describe DbSchema::Reader do
 
         id, name, email, admin, age, lat, lng, created_at, updated_at,
         period, other_period, some_bit, several_bits, variable_bits,
-        limited_variable_bits, numbers, color = users.fields
+        limited_variable_bits, numbers, color, previous_colors = users.fields
 
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
         expect(id.name).to eq(:id)
@@ -140,6 +141,10 @@ RSpec.describe DbSchema::Reader do
         expect(color.name).to eq(:color)
         expect(color.type).to eq(:rainbow)
         expect(color.default).to eq('red')
+        expect(previous_colors).to be_a(DbSchema::Definitions::Field::Array)
+        expect(previous_colors.name).to eq(:previous_colors)
+        expect(previous_colors.options[:element_type]).to eq(:rainbow)
+        expect(previous_colors.default).to eq(:'ARRAY[]::rainbow[]')
 
         id, title, user_id, user_name, created_on, created_at = posts.fields
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)

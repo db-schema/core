@@ -16,6 +16,7 @@ RSpec.describe DbSchema::DSL do
           t.integer     :city_id, references: :cities
           t.array       :strings, of: :varchar
           t.user_status :status, null: false
+          t.array       :previous_statuses, of: :user_status
           t.happiness   :mood, index: true
           t.timestamptz :created_at, default: :'now()'
 
@@ -68,13 +69,13 @@ RSpec.describe DbSchema::DSL do
       expect(hstore).to eq(DbSchema::Definitions::Extension.new(:hstore))
 
       expect(users.name).to eq(:users)
-      expect(users.fields.count).to eq(9)
+      expect(users.fields.count).to eq(10)
       expect(cities.name).to eq(:cities)
       expect(cities.fields.count).to eq(2)
       expect(posts.name).to eq(:posts)
       expect(posts.fields.count).to eq(8)
 
-      id, name, email, sex, city_id, strings, status, mood, created_at = users.fields
+      id, name, email, sex, city_id, strings, status, previous_statuses, mood, created_at = users.fields
 
       expect(id).to be_a(DbSchema::Definitions::Field::Integer)
       expect(id.name).to eq(:id)
@@ -103,6 +104,10 @@ RSpec.describe DbSchema::DSL do
       expect(status.name).to eq(:status)
       expect(status.type).to eq(:user_status)
       expect(status).not_to be_null
+
+      expect(previous_statuses).to be_a(DbSchema::Definitions::Field::Array)
+      expect(previous_statuses.name).to eq(:previous_statuses)
+      expect(previous_statuses.options[:element_type]).to eq(:user_status)
 
       expect(mood).to be_a(DbSchema::Definitions::Field::Custom)
       expect(mood.name).to eq(:mood)

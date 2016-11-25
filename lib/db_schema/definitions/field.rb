@@ -3,16 +3,12 @@ module DbSchema
     module Field
       class << self
         def build(name, type, **options)
-          if registry.key?(type)
-            type_class_for(type).new(name, **options)
-          else
-            Custom.class_for(type).new(name, **options)
-          end
+          type_class_for(type).new(name, **options)
         end
 
         def type_class_for(type)
           registry.fetch(type) do |type|
-            raise ArgumentError, "#{type.inspect} type is not supported."
+            Custom.class_for(type)
           end
         end
 
