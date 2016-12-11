@@ -337,14 +337,8 @@ SELECT extname
         end
 
         def primary_key_for(table_name)
-          if pkey = primary_keys[table_name]
+          if pkey = DbSchema.connection.primary_key(table_name)
             pkey.to_sym
-          end
-        end
-
-        def primary_keys
-          @primary_keys ||= DbSchema.connection.tables.reduce({}) do |primary_keys, table_name|
-            primary_keys.merge(table_name => DbSchema.connection.primary_key(table_name))
           end
         end
       end

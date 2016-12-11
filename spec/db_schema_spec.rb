@@ -16,9 +16,12 @@ RSpec.describe DbSchema do
       end
 
       database.create_table :posts do
-        column :id,    :Integer, primary_key: true
-        column :title, :Varchar
-        column :text,  :Varchar
+        column :id,      :Integer, primary_key: true
+        column :title,   :Varchar
+        column :text,    :Varchar
+        column :user_id, :Integer, null: false
+
+        foreign_key [:user_id], :users
       end
     end
 
@@ -44,9 +47,15 @@ RSpec.describe DbSchema do
           t.foreign_key :user_id, references: :users
         end
 
+        db.table :countries do |t|
+          t.primary_key :id
+          t.varchar :name, null: false
+        end
+
         db.table :cities do |t|
           t.integer :id, primary_key: true
           t.varchar :name, null: false
+          t.integer :country_id, references: :countries
           t.numeric :lat, precision: 6, scale: 3
           t.decimal :lng, precision: 6, scale: 3
         end
@@ -102,19 +111,27 @@ RSpec.describe DbSchema do
       expect(user_id_fkey[:table]).to eq(:users)
       expect(user_id_fkey[:key]).to eq([:id])
 
-      id, name, lat, lng = database.schema(:cities)
+      id, name, country_id, lat, lng = database.schema(:cities)
       expect(id.first).to eq(:id)
       expect(id.last[:db_type]).to eq('integer')
       expect(id.last[:primary_key]).to eq(true)
       expect(name.first).to eq(:name)
       expect(name.last[:db_type]).to eq('character varying')
       expect(name.last[:allow_null]).to eq(false)
+      expect(country_id.first).to eq(:country_id)
+      expect(country_id.last[:db_type]).to eq('integer')
       expect(lat.first).to eq(:lat)
       expect(lat.last[:db_type]).to eq('numeric(6,3)')
       expect(lng.first).to eq(:lng)
       expect(lng.last[:db_type]).to eq('numeric(6,3)')
 
       expect(database.indexes(:cities)).to be_empty
+
+      country_id_fkey = database.foreign_key_list(:cities).first
+      expect(country_id_fkey[:name]).to eq(:cities_country_id_fkey)
+      expect(country_id_fkey[:columns]).to eq([:country_id])
+      expect(country_id_fkey[:table]).to eq(:countries)
+      expect(country_id_fkey[:key]).to eq([:id])
     end
 
     context 'with an invalid schema' do
