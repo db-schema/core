@@ -59,27 +59,11 @@ module DbSchema
           elsif actual && !desired
             changes << DropEnum.new(enum_name)
           elsif actual != desired
-            new_values     = desired.values - actual.values
-            dropped_values = actual.values - desired.values
-
-            if dropped_values.any?
-              raise UnsupportedOperation, "Enum #{enum_name.inspect} doesn't describe values #{dropped_values.inspect} that are present in the database; dropping values from enums is not supported."
+            fields = actual_schema.tables.flat_map do |table|
+              table.fields.select { |field| field.type == enum_name }
             end
 
-            if desired.values - new_values != actual.values
-              raise UnsupportedOperation, "Enum #{enum_name.inspect} describes values #{(desired.values - new_values).inspect} that are present in the database in a different order (#{actual.values.inspect}); reordering values in enums is not supported."
-            end
-
-            new_values.reverse.each do |value|
-              value_index = desired.values.index(value)
-
-              if value_index == desired.values.count - 1
-                changes << AddValueToEnum.new(enum_name, value)
-              else
-                next_value = desired.values[value_index + 1]
-                changes << AddValueToEnum.new(enum_name, value, before: next_value)
-              end
-            end
+            changes << AlterEnumValues.new(enum_name, desired.values, fields)
           end
         end
 
@@ -370,6 +354,7 @@ module DbSchema
     class DropEnum < ColumnOperation
     end
 
+    # TODO: remove this class after refactoring Runner
     class AddValueToEnum
       include Dry::Equalizer(:enum_name, :new_value, :before)
       attr_reader :enum_name, :new_value, :before
@@ -382,6 +367,17 @@ module DbSchema
 
       def add_to_the_end?
         before.nil?
+      end
+    end
+
+    class AlterEnumValues
+      include Dry::Equalizer(:enum_name, :new_values, :enum_fields)
+      attr_reader :enum_name, :new_values, :enum_fields
+
+      def initialize(enum_name, new_values, enum_fields)
+        @enum_name   = enum_name
+        @new_values  = new_values
+        @enum_fields = enum_fields
       end
     end
 

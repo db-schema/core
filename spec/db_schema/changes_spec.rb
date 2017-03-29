@@ -385,7 +385,7 @@ RSpec.describe DbSchema::Changes do
       let(:desired_schema) do
         DbSchema::Definitions::Schema.new(
           enums: [
-            DbSchema::Definitions::Enum.new(:happiness, desired_values)
+            DbSchema::Definitions::Enum.new(:happiness, %(happy good ok moderate bad))
           ]
         )
       end
@@ -393,88 +393,17 @@ RSpec.describe DbSchema::Changes do
       let(:actual_schema) do
         DbSchema::Definitions::Schema.new(
           enums: [
-            DbSchema::Definitions::Enum.new(:happiness, actual_values)
+            DbSchema::Definitions::Enum.new(:happiness, %(good moderate ok bad unhappy))
           ]
         )
       end
 
-      context 'by adding new values' do
-        context 'to the end' do
-          let(:desired_values) { %i(good ok bad unhappy) }
-          let(:actual_values)  { %i(good ok bad) }
+      it 'returns a Changes::AlterEnumValues' do
+        changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
-          it 'returns a Changes::AddValueToEnum' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes.count).to eq(1)
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy)
-            ])
-          end
-        end
-
-        context 'to the beginning' do
-          let(:desired_values) { %i(happy good ok bad) }
-          let(:actual_values)  { %i(good ok bad) }
-
-          it 'returns a Changes::AddValueToEnum with before: :good' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
-            ])
-          end
-        end
-
-        context 'into the middle' do
-          let(:desired_values) { %i(good ok worried bad) }
-          let(:actual_values)  { %i(good ok bad) }
-
-          it 'returns a Changes::AddValueToEnum with before: :bad' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :worried, before: :bad)
-            ])
-          end
-        end
-
-        context 'with multiple values' do
-          let(:desired_values) { %i(happy good ok worried bad unhappy) }
-          let(:actual_values)  { %i(good ok bad) }
-
-          it 'returns appropriate AddValueToEnum objects in reverse order' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy),
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :worried, before: :bad),
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
-            ])
-          end
-        end
-      end
-
-      context 'by removing values' do
-        let(:desired_values) { %i(happy ok unhappy) }
-        let(:actual_values)  { %i(happy good ok bad unhappy) }
-
-        it 'raises a DbSchema::UnsupportedOperation' do
-          expect {
-            DbSchema::Changes.between(desired_schema, actual_schema)
-          }.to raise_error(DbSchema::UnsupportedOperation)
-        end
-      end
-
-      context 'by reordering values' do
-        let(:desired_values) { %i(happy ok moderate sad) }
-        let(:actual_values)  { %i(moderate ok sad) }
-
-        it 'raises a DbSchema::UnsupportedOperation' do
-          expect {
-            DbSchema::Changes.between(desired_schema, actual_schema)
-          }.to raise_error(DbSchema::UnsupportedOperation)
-        end
+        expect(changes).to eq([
+          DbSchema::Changes::AlterEnumValues.new(:happiness, desired_schema.enums.first.values, [])
+        ])
       end
     end
 
