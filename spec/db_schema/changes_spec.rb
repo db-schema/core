@@ -382,10 +382,13 @@ RSpec.describe DbSchema::Changes do
     end
 
     context 'with enums changed' do
+      let(:desired_values) { %i(happy good ok moderate bad) }
+      let(:actual_values)  { %i(good moderate ok bad unhappy) }
+
       let(:desired_schema) do
         DbSchema::Definitions::Schema.new(
           enums: [
-            DbSchema::Definitions::Enum.new(:happiness, %(happy good ok moderate bad))
+            DbSchema::Definitions::Enum.new(:happiness, desired_values)
           ]
         )
       end
@@ -393,7 +396,7 @@ RSpec.describe DbSchema::Changes do
       let(:actual_schema) do
         DbSchema::Definitions::Schema.new(
           enums: [
-            DbSchema::Definitions::Enum.new(:happiness, %(good moderate ok bad unhappy))
+            DbSchema::Definitions::Enum.new(:happiness, actual_values)
           ]
         )
       end
@@ -402,8 +405,52 @@ RSpec.describe DbSchema::Changes do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         expect(changes).to eq([
-          DbSchema::Changes::AlterEnumValues.new(:happiness, desired_schema.enums.first.values, [])
+          DbSchema::Changes::AlterEnumValues.new(:happiness, desired_values, [])
         ])
+      end
+
+      context 'when the enum is used in a column' do
+        let(:desired_schema) do
+          DbSchema::Definitions::Schema.new(
+            tables: [
+              DbSchema::Definitions::Table.new(:people,
+                fields: [
+                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)
+                ]
+              )
+            ],
+            enums: [
+              DbSchema::Definitions::Enum.new(:happiness, desired_values)
+            ]
+          )
+        end
+
+        let(:actual_schema) do
+          DbSchema::Definitions::Schema.new(
+            tables: [
+              DbSchema::Definitions::Table.new(:people,
+                fields: [
+                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)
+                ]
+              )
+            ],
+            enums: [
+              DbSchema::Definitions::Enum.new(:happiness, actual_values)
+            ]
+          )
+        end
+
+        it 'returns a Changes::AlterEnumValues with existing enum fields' do
+          changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+          expect(changes).to eq([
+            DbSchema::Changes::AlterEnumValues.new(
+              :happiness,
+              desired_values,
+              [DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)]
+            )
+          ])
+        end
       end
     end
 
