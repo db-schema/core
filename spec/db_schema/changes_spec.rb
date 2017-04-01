@@ -415,7 +415,7 @@ RSpec.describe DbSchema::Changes do
             tables: [
               DbSchema::Definitions::Table.new(:people,
                 fields: [
-                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)
+                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: 'ok')
                 ]
               )
             ],
@@ -430,7 +430,7 @@ RSpec.describe DbSchema::Changes do
             tables: [
               DbSchema::Definitions::Table.new(:people,
                 fields: [
-                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)
+                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: 'ok')
                 ]
               )
             ],
@@ -447,7 +447,7 @@ RSpec.describe DbSchema::Changes do
             DbSchema::Changes::AlterEnumValues.new(
               :happiness,
               desired_values,
-              [DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)]
+              [[:people, :happiness, 'ok']]
             )
           ])
         end

@@ -60,7 +60,11 @@ module DbSchema
             changes << DropEnum.new(enum_name)
           elsif actual != desired
             fields = actual_schema.tables.flat_map do |table|
-              table.fields.select { |field| field.type == enum_name }
+              table.fields.select do |field|
+                field.type == enum_name
+              end.map do |field|
+                [table.name, field.name, field.default]
+              end
             end
 
             changes << AlterEnumValues.new(enum_name, desired.values, fields)
