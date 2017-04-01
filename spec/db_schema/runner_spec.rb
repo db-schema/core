@@ -719,55 +719,48 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
-    context 'with AddValueToEnum' do
+    context 'with AlterEnumValues' do
       before(:each) do
         database.create_enum :happiness, %i(good ok bad)
       end
 
-      context 'without a :before option' do
-        let(:changes) do
-          [
-            DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy)
-          ]
-        end
-
-        it 'adds the new value to the end of enum values list' do
-          subject.run!
-
-          expect(enums.count).to eq(1)
-          expect(enums.first.values).to eq(%i(good ok bad unhappy))
-        end
+      let(:changes) do
+        [
+          DbSchema::Changes::AlterEnumValues.new(
+            :happiness,
+            %i(happy ok sad),
+            fields
+          )
+        ]
       end
 
-      context 'with a :before option' do
-        let(:changes) do
-          [
-            DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
-          ]
-        end
+      let(:fields) { [] }
 
-        it 'adds the new value before the specified existing value' do
-          subject.run!
+      it 'replaces the enum with a new one' do
+        subject.run!
 
-          expect(enums.count).to eq(1)
-          expect(enums.first.values).to eq(%i(happy good ok bad))
-        end
+        expect(enums.count).to eq(1)
+        expect(enums.first.values).to eq(%i(happy ok sad))
       end
 
-      context 'adding several consecutive values' do
-        let(:changes) do
-          [
-            DbSchema::Changes::AddValueToEnum.new(:happiness, :depressed),
-            DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy, before: :depressed),
-            DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
-          ]
+      context 'with existing fields of this enum type' do
+        before(:each) do
+          database.create_table :users do
+            primary_key :id
+            column :happiness, :happiness, default: 'ok'
+          end
         end
 
-        it 'adds the new values correctly' do
+        let(:fields) do
+          [[:users, :happiness, 'ok']]
+        end
+
+        it 'converts existing fields to the new type' do
           subject.run!
 
-          expect(enums.count).to eq(1)
-          expect(enums.first.values).to eq(%i(happy good ok bad unhappy depressed))
+          field = DbSchema::Reader.read_table(:users).fields.last
+          expect(field.type).to eq(:happiness)
+          expect(field.default).to eq('ok')
         end
       end
     end
@@ -874,7 +867,7 @@ RSpec.describe DbSchema::Runner do
     end
 
     enums.each do |enum|
-      database.drop_enum(enum.name)
+      database.drop_enum(enum.name, cascade: true)
     end
 
     database.tables.each do |table_name|

@@ -24,17 +24,14 @@ module DbSchema
             self.class.create_enum(change)
           when Changes::DropEnum
             self.class.drop_enum(change)
+          when Changes::AlterEnumValues
+            self.class.alter_enum_values(change)
           when Changes::CreateExtension
             self.class.create_extension(change)
           when Changes::DropExtension
             self.class.drop_extension(change)
           end
         end
-      end
-
-      # Postgres doesn't allow modifying enums inside a transaction
-      Utils.filter_by_class(changes, Changes::AddValueToEnum).each do |change|
-        self.class.add_value_to_enum(change)
       end
     end
 
@@ -174,11 +171,26 @@ module DbSchema
         DbSchema.connection.drop_enum(change.name)
       end
 
-      def add_value_to_enum(change)
-        if change.add_to_the_end?
-          DbSchema.connection.add_enum_value(change.enum_name, change.new_value)
-        else
-          DbSchema.connection.add_enum_value(change.enum_name, change.new_value, before: change.before)
+      def alter_enum_values(change)
+        change.enum_fields.each do |table_name, field_name, default_value|
+          DbSchema.connection.alter_table(table_name) do
+            set_column_type(field_name, :VARCHAR)
+            set_column_default(field_name, nil) unless default_value.nil?
+          end
+        end
+
+        DbSchema.connection.drop_enum(change.enum_name)
+        DbSchema.connection.create_enum(change.enum_name, change.new_values)
+
+        change.enum_fields.each do |table_name, field_name, default_value|
+          DbSchema.connection.alter_table(table_name) do
+            set_column_type(
+              field_name,
+              change.enum_name,
+              using: "#{field_name}::#{change.enum_name}"
+            )
+            set_column_default(field_name, default_value)
+          end
         end
       end
 
