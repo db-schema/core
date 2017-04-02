@@ -189,7 +189,7 @@ module DbSchema
               change.enum_name,
               using: "#{field_name}::#{change.enum_name}"
             )
-            set_column_default(field_name, default_value)
+            set_column_default(field_name, default_value) unless default_value.nil?
           end
         end
       end
