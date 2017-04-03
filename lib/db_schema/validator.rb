@@ -11,9 +11,15 @@ module DbSchema
 
           table.fields.each do |field|
             if field.is_a?(Definitions::Field::Custom)
-              unless schema.enums.map(&:name).include?(field.type)
+              type = schema.enums.find { |enum| enum.name == field.type }
+
+              if type.nil?
                 error_message = %(Field "#{table.name}.#{field.name}" has unknown type "#{field.type}")
                 errors << error_message
+              end
+
+              if !field.default.nil? && !type.values.include?(field.default.to_sym)
+                errors << %(Field "#{table.name}.#{field.name}" has invalid default value "#{field.default}")
               end
             end
           end

@@ -245,5 +245,24 @@ RSpec.describe DbSchema::Validator do
         ])
       end
     end
+
+    context 'on a schema with a enum field with invalid default value' do
+      let(:users_fields) do
+        [
+          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+          DbSchema::Definitions::Field::Custom.class_for(:user_happiness).new(:happiness, default: 'crazy')
+        ]
+      end
+
+      let(:users_indices) { [] }
+
+      it 'returns an invalid result with errors' do
+        expect(result).not_to be_valid
+        expect(result.errors).to eq([
+          'Field "users.happiness" has invalid default value "crazy"'
+        ])
+      end
+    end
   end
 end
