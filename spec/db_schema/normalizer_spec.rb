@@ -24,7 +24,7 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Field::Integer.new(:group_id),
         DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5'),
         DbSchema::Definitions::Field::Hstore.new(:data),
-        DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness),
+        DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: 'ok'),
         DbSchema::Definitions::Field::Ltree.new(:path),
         DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:user_status)
       ],
@@ -59,9 +59,12 @@ RSpec.describe DbSchema::Normalizer do
       add_hstore = DbSchema::Changes::CreateExtension.new(:hstore)
       add_happiness = DbSchema::Changes::CreateEnum.new(:happiness, %i(good bad))
 
+      fields = raw_table.fields.take(5)
+      fields << DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)
+
       create_table = DbSchema::Changes::CreateTable.new(
         :users,
-        fields:  raw_table.fields.take(6),
+        fields:  fields,
         indices: raw_table.indices,
         checks:  raw_table.checks
       )
@@ -70,12 +73,15 @@ RSpec.describe DbSchema::Normalizer do
     end
 
     it 'normalizes all tables in the schema passed in' do
-      DbSchema::Normalizer.normalize_tables(schema)
+      DbSchema::Normalizer.new(schema).normalize_tables
 
       expect(schema.tables.count).to eq(1)
       users = schema.tables.first
       expect(users.name).to eq(:users)
+
+      expect(users.fields.first).to be_primary_key
       expect(users.fields[3].default).to eq(:'(18 + 5)')
+      expect(users.fields[5].type).to eq(:happiness)
       expect(users.indices.first.name).to eq(:lower_name_index)
       expect(users.indices.first.columns.first.name).to eq('lower(name::text)')
       expect(users.indices.first.condition).to eq('age <> 18')
@@ -85,7 +91,7 @@ RSpec.describe DbSchema::Normalizer do
 
     it 'rolls back all temporary tables' do
       expect {
-        DbSchema::Normalizer.normalize_tables(schema)
+        DbSchema::Normalizer.new(schema).normalize_tables
       }.not_to change { DbSchema::Reader.read_schema.tables.count }
     end
 

@@ -37,7 +37,7 @@ RSpec.describe DbSchema do
           t.varchar :first_name,  null: false, length: 30
           t.varchar :last_name,   null: false, length: 30
           t.varchar :email,       null: false
-          t.happiness :happiness, default: 'ok'
+          t.happiness :happiness, default: 'happy'
 
           t.index :first_name, last_name: :desc, name: :users_name_index
           t.index 'lower(email)', name: :users_email_index, unique: true
@@ -77,7 +77,7 @@ RSpec.describe DbSchema do
       expect(email.last[:db_type]).to eq('character varying')
       expect(email.last[:allow_null]).to eq(false)
       expect(happiness.first).to eq(:happiness)
-      expect(happiness.last[:default]).to eq("'ok'::happiness")
+      expect(happiness.last[:default]).to eq("'happy'::happiness")
       expect(first_name.first).to eq(:first_name)
       expect(first_name.last[:db_type]).to eq('character varying(30)')
       expect(first_name.last[:allow_null]).to eq(false)
