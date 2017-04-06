@@ -43,7 +43,7 @@ RSpec.describe DbSchema::Runner do
       DbSchema::Definitions::Field::Bit.new(:some_bit),
       DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
       DbSchema::Definitions::Field::Varbit.new(:some_varbit, length: 250),
-      DbSchema::Definitions::Field::Array.new(:names, of: :varchar)
+      DbSchema::Definitions::Field::Array.new(:names, element_type: :varchar)
     ]
   end
 
@@ -362,7 +362,9 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreateIndex & DropIndex' do
         let(:field_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Array.new(:interests, of: :varchar))
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Array.new(:interests, element_type: :varchar)
+            )
           ]
         end
 

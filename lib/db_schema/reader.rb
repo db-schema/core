@@ -298,7 +298,7 @@ SELECT extname
             Utils.rename_keys(
               Utils.filter_by_keys(data, :element_type, :element_custom_type_name)
             ) do |attributes|
-              attributes[:of] = if attributes[:element_type] == 'USER-DEFINED'
+              attributes[:element_type] = if attributes[:element_type] == 'USER-DEFINED'
                 attributes[:element_custom_type_name]
               else
                 attributes[:element_type]

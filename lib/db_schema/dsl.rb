@@ -42,9 +42,15 @@ module DbSchema
       end
 
       DbSchema::Definitions::Field.registry.keys.each do |type|
+        next if type == :array
+
         define_method(type) do |name, **options|
           field(name, type, options)
         end
+      end
+
+      def array(name, of:, **options)
+        field(name, :array, element_type: of, **options)
       end
 
       def method_missing(method_name, name, *args, &block)
