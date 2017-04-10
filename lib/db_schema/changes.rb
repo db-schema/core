@@ -358,22 +358,6 @@ module DbSchema
     class DropEnum < ColumnOperation
     end
 
-    # TODO: remove this class after refactoring Runner
-    class AddValueToEnum
-      include Dry::Equalizer(:enum_name, :new_value, :before)
-      attr_reader :enum_name, :new_value, :before
-
-      def initialize(enum_name, new_value, before: nil)
-        @enum_name = enum_name
-        @new_value = new_value
-        @before    = before
-      end
-
-      def add_to_the_end?
-        before.nil?
-      end
-    end
-
     class AlterEnumValues
       include Dry::Equalizer(:enum_name, :new_values, :enum_fields)
       attr_reader :enum_name, :new_values, :enum_fields

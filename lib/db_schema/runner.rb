@@ -41,7 +41,6 @@ module DbSchema
         changes,
         [
           Changes::CreateExtension,
-          Changes::AddValueToEnum,
           Changes::DropForeignKey,
           Changes::AlterEnumValues,
           Changes::CreateEnum,

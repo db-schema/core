@@ -70,8 +70,6 @@ if defined?(AwesomePrint)
           :dbschema_enum
         when ::DbSchema::Changes::DropEnum
           :dbschema_column_operation
-        when ::DbSchema::Changes::AddValueToEnum
-          :dbschema_add_value_to_enum
         when ::DbSchema::Changes::AlterEnumValues
           :dbschema_alter_enum_values
         when ::DbSchema::Changes::CreateExtension,
@@ -254,12 +252,6 @@ if defined?(AwesomePrint)
 
       def awesome_dbschema_column_operation(object)
         "#<#{object.class} #{object.name.ai}>"
-      end
-
-      def awesome_dbschema_add_value_to_enum(object)
-        before = " before #{object.before.ai}" unless object.add_to_the_end?
-
-        "#<DbSchema::Changes::AddValueToEnum #{object.new_value.ai} to #{object.enum_name.ai}#{before}>"
       end
 
       def awesome_dbschema_alter_enum_values(object)
