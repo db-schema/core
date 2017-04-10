@@ -16,10 +16,8 @@ module DbSchema
               if type.nil?
                 error_message = %(Field "#{table.name}.#{field.name}" has unknown type "#{field.type}")
                 errors << error_message
-              end
-
-              if !field.default.nil? && !type.values.include?(field.default.to_sym)
-                errors << %(Field "#{table.name}.#{field.name}" has invalid default value "#{field.default}")
+              elsif !field.default.nil? && !type.values.include?(field.default.to_sym)
+                errors << %(Field "#{table.name}.#{field.name}" has invalid default value "#{field.default}" (valid values are #{type.values.map(&:to_s)}))
               end
             end
           end

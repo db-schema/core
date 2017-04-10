@@ -234,7 +234,7 @@ RSpec.describe DbSchema::Validator do
           DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
           DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
           DbSchema::Definitions::Field::Integer.new(:age),
-          DbSchema::Definitions::Field::Custom.class_for(:user_sorrow).new(:sorrow)
+          DbSchema::Definitions::Field::Custom.class_for(:user_sorrow).new(:sorrow, default: 'depressed')
         ]
       end
 
@@ -260,7 +260,7 @@ RSpec.describe DbSchema::Validator do
       it 'returns an invalid result with errors' do
         expect(result).not_to be_valid
         expect(result.errors).to eq([
-          'Field "users.happiness" has invalid default value "crazy"'
+          'Field "users.happiness" has invalid default value "crazy" (valid values are ["happy", "ok", "sad"])'
         ])
       end
     end
