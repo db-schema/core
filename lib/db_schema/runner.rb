@@ -171,10 +171,10 @@ module DbSchema
       end
 
       def alter_enum_values(change)
-        change.enum_fields.each do |table_name, field_name, default_value|
+        change.enum_fields.each do |table_name, field_name|
           DbSchema.connection.alter_table(table_name) do
             set_column_type(field_name, :VARCHAR)
-            set_column_default(field_name, nil) unless default_value.nil?
+            set_column_default(field_name, nil)
           end
         end
 

@@ -63,7 +63,14 @@ module DbSchema
               table.fields.select do |field|
                 field.type == enum_name
               end.map do |field|
-                [table.name, field.name, field.default]
+                # TODO: fix this mess
+                new_default = if (new_table = desired_schema.tables.find { |new_table| new_table.name == table.name }) && (new_field = new_table.fields.find { |new_field| new_field.name == field.name })
+                  new_field.default
+                else
+                  field.default
+                end
+
+                [table.name, field.name, new_default]
               end
             end
 
