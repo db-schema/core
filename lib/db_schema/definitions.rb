@@ -12,6 +12,10 @@ module DbSchema
         @enums      = enums
         @extensions = extensions
       end
+
+      def [](table_name)
+        tables.find { |table| table.name == table_name } || NullTable.new
+      end
     end
 
     class Table
@@ -31,6 +35,14 @@ module DbSchema
           indices.any?(&:has_expressions?) ||
           checks.any?
       end
+
+      def [](field_name)
+        fields.find { |field| field.name == field_name }
+      end
+    end
+
+    class NullTable < Table
+      def initialize; end
     end
 
     class Index

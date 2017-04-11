@@ -15,6 +15,8 @@ if defined?(AwesomePrint)
         case object
         when ::DbSchema::Definitions::Schema
           :dbschema_schema
+        when ::DbSchema::Definitions::NullTable
+          :dbschema_null_table
         when ::DbSchema::Definitions::Table
           :dbschema_table
         when ::DbSchema::Definitions::Field::Custom
@@ -98,6 +100,10 @@ if defined?(AwesomePrint)
 
         data_string = indent_lines(data.join(', '))
         "#<DbSchema::Definitions::Table #{object.name.ai} #{data_string}>"
+      end
+
+      def awesome_dbschema_null_table(object)
+        '#<DbSchema::Definitions::NullTable>'
       end
 
       def awesome_dbschema_field(object)
