@@ -171,24 +171,31 @@ module DbSchema
       end
 
       def alter_enum_values(change)
-        change.enum_fields.each do |table_name, field_name|
-          DbSchema.connection.alter_table(table_name) do
-            set_column_type(field_name, :VARCHAR)
-            set_column_default(field_name, nil)
+        change.enum_fields.each do |field_data|
+          DbSchema.connection.alter_table(field_data[:table_name]) do
+            set_column_type(field_data[:field_name], :VARCHAR)
+            set_column_default(field_data[:field_name], nil)
           end
         end
 
         DbSchema.connection.drop_enum(change.enum_name)
         DbSchema.connection.create_enum(change.enum_name, change.new_values)
 
-        change.enum_fields.each do |table_name, field_name, default_value|
-          DbSchema.connection.alter_table(table_name) do
+        change.enum_fields.each do |field_data|
+          DbSchema.connection.alter_table(field_data[:table_name]) do
+            field_type = if field_data[:array]
+              "#{change.enum_name}[]"
+            else
+              change.enum_name
+            end
+
             set_column_type(
-              field_name,
-              change.enum_name,
-              using: "#{field_name}::#{change.enum_name}"
+              field_data[:field_name],
+              field_type,
+              using: "#{field_data[:field_name]}::#{field_type}"
             )
-            set_column_default(field_name, default_value) unless default_value.nil?
+
+            set_column_default(field_data[:field_name], field_data[:new_default]) unless field_data[:new_default].nil?
           end
         end
       end

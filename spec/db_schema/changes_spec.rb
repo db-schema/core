@@ -471,7 +471,7 @@ RSpec.describe DbSchema::Changes do
               tables: [
                 DbSchema::Definitions::Table.new(:users,
                   fields: [
-                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '[]')
+                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{}')
                   ]
                 )
               ],
@@ -486,7 +486,7 @@ RSpec.describe DbSchema::Changes do
               tables: [
                 DbSchema::Definitions::Table.new(:users,
                   fields: [
-                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '[]')
+                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{}')
                   ]
                 )
               ],
@@ -507,7 +507,7 @@ RSpec.describe DbSchema::Changes do
                   {
                     table_name:  :users,
                     field_name:  :roles,
-                    new_default: '[]',
+                    new_default: '{}',
                     array:       true
                   }
                 ]

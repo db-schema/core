@@ -754,7 +754,9 @@ RSpec.describe DbSchema::Runner do
         end
 
         let(:fields) do
-          [[:users, :happiness, 'ok']]
+          [
+            { table_name: :users, field_name: :happiness, new_default: 'ok', array: false }
+          ]
         end
 
         it 'converts existing fields to the new type' do
@@ -763,6 +765,38 @@ RSpec.describe DbSchema::Runner do
           field = DbSchema::Reader.read_table(:users).fields.last
           expect(field.type).to eq(:happiness)
           expect(field.default).to eq('ok')
+        end
+      end
+
+      context 'with existing fields as arrays of this enum type' do
+        let(:changes) do
+          [
+            DbSchema::Changes::AlterEnumValues.new(
+              :user_role,
+              [:user, :admin],
+              [
+                { table_name: :users, field_name: :roles, new_default: '{"user"}', array: true }
+              ]
+            )
+          ]
+        end
+
+        before(:each) do
+          database.create_enum(:user_role, [:guest, :user, :admin])
+
+          database.create_table :users do
+            primary_key :id
+            column :roles, 'user_role[]'
+          end
+        end
+
+        it 'converts existing fields to the new type' do
+          subject.run!
+
+          field = DbSchema::Reader.read_table(:users)[:roles]
+          expect(field.type).to eq(:array)
+          expect(field.attributes[:element_type]).to eq(:user_role)
+          expect(field.default).to eq('{user}')
         end
       end
     end
