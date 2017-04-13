@@ -19,6 +19,17 @@ module DbSchema
               elsif !field.default.nil? && !type.values.include?(field.default.to_sym)
                 errors << %(Field "#{table.name}.#{field.name}" has invalid default value "#{field.default}" (valid values are #{type.values.map(&:to_s)}))
               end
+            elsif field.is_a?(Definitions::Field::Array)
+              element_type = Definitions::Field.type_class_for(field.attributes[:element_type])
+
+              if element_type.superclass == Definitions::Field::Custom
+                type = schema.enums.find { |enum| enum.name == element_type.type }
+
+                if type.nil?
+                  error_message = %(Array field "#{table.name}.#{field.name}" has unknown element type "#{element_type.type}")
+                  errors << error_message
+                end
+              end
             end
           end
 

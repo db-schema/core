@@ -244,6 +244,25 @@ RSpec.describe DbSchema::Validator do
           'Field "users.sorrow" has unknown type "user_sorrow"'
         ])
       end
+
+      context 'within an array' do
+        let(:users_fields) do
+          [
+            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
+            DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
+            DbSchema::Definitions::Field::Integer.new(:age),
+            DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role)
+          ]
+        end
+
+        it 'returns an invalid result with errors' do
+          expect(result).not_to be_valid
+          expect(result.errors).to eq([
+            'Array field "users.roles" has unknown element type "user_role"'
+          ])
+        end
+      end
     end
 
     context 'on a schema with a enum field with invalid default value' do
