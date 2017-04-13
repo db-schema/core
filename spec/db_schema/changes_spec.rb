@@ -453,9 +453,67 @@ RSpec.describe DbSchema::Changes do
             DbSchema::Changes::AlterEnumValues.new(
               :happiness,
               desired_values,
-              [[:people, :happiness, 'good']]
+              [
+                {
+                  table_name:  :people,
+                  field_name:  :happiness,
+                  new_default: 'good',
+                  array:       false
+                }
+              ]
             )
           ])
+        end
+
+        context 'in an enum array' do
+          let(:desired_schema) do
+            DbSchema::Definitions::Schema.new(
+              tables: [
+                DbSchema::Definitions::Table.new(:users,
+                  fields: [
+                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '[]')
+                  ]
+                )
+              ],
+              enums: [
+                DbSchema::Definitions::Enum.new(:user_role, [:user, :admin])
+              ]
+            )
+          end
+
+          let(:actual_schema) do
+            DbSchema::Definitions::Schema.new(
+              tables: [
+                DbSchema::Definitions::Table.new(:users,
+                  fields: [
+                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '[]')
+                  ]
+                )
+              ],
+              enums: [
+                DbSchema::Definitions::Enum.new(:user_role, [:guest, :user, :admin])
+              ]
+            )
+          end
+
+          it 'returns a Changes::AlterEnumValues with existing enum array fields' do
+            changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+            expect(changes).to eq([
+              DbSchema::Changes::AlterEnumValues.new(
+                :user_role,
+                [:user, :admin],
+                [
+                  {
+                    table_name:  :users,
+                    field_name:  :roles,
+                    new_default: '[]',
+                    array:       true
+                  }
+                ]
+              )
+            ])
+          end
         end
       end
     end
