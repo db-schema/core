@@ -1,3 +1,5 @@
+require 'sequel/extensions/pg_array'
+
 module DbSchema
   module Validator
     class << self
@@ -28,6 +30,14 @@ module DbSchema
                 if type.nil?
                   error_message = %(Array field "#{table.name}.#{field.name}" has unknown element type "#{element_type.type}")
                   errors << error_message
+                elsif !field.default.nil?
+                  default_array  = Sequel::Postgres::PGArray::Parser.new(field.default).parse.map(&:to_sym)
+                  invalid_values = default_array - type.values
+
+                  if invalid_values.any?
+                    error_message = %(Array field "#{table.name}.#{field.name}" has invalid default value #{default_array.map(&:to_s)} (valid values are #{type.values.map(&:to_s)}))
+                    errors << error_message
+                  end
                 end
               end
             end
