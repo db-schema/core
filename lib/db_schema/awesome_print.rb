@@ -57,11 +57,11 @@ if defined?(AwesomePrint)
         when ::DbSchema::Changes::AlterColumnDefault
           :dbschema_alter_column_default
         when ::DbSchema::Changes::CreateIndex
-          :dbschema_index
+          :dbschema_create_index
         when ::DbSchema::Changes::DropIndex
           :dbschema_column_operation
         when ::DbSchema::Changes::CreateCheckConstraint
-          :dbschema_check_constraint
+          :dbschema_create_check_constraint
         when ::DbSchema::Changes::DropCheckConstraint
           :dbschema_column_operation
         when ::DbSchema::Changes::CreateForeignKey
@@ -241,6 +241,21 @@ if defined?(AwesomePrint)
         end
 
         "#<DbSchema::Changes::AlterColumnDefault #{object.name.ai}, #{new_default}>"
+      end
+
+      def awesome_dbschema_create_index(object)
+        columns = format_dbschema_fields(object.index.columns)
+        using = ' using ' + colorize(object.index.type.to_s, :symbol) unless object.index.btree?
+
+        data = [nil]
+        data << colorize('unique', :nilclass) if object.index.unique?
+        data << colorize('condition: ', :symbol) + object.index.condition.ai unless object.index.condition.nil?
+
+        "#<#{object.class} #{object.index.name.ai} on #{columns}#{using}#{data.join(', ')}>"
+      end
+
+      def awesome_dbschema_create_check_constraint(object)
+        "#<#{object.class} #{object.check.name.ai} #{object.check.condition.ai}>"
       end
 
       def awesome_dbschema_create_foreign_key(object)

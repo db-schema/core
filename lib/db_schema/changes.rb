@@ -138,24 +138,12 @@ module DbSchema
           actual  = actual_indices.find  { |index| index.name == index_name }
 
           if desired && !actual
-            table_changes << CreateIndex.new(
-              name:      index_name,
-              columns:   desired.columns,
-              unique:    desired.unique?,
-              type:      desired.type,
-              condition: desired.condition
-            )
+            table_changes << CreateIndex.new(desired)
           elsif actual && !desired
             table_changes << DropIndex.new(index_name)
           elsif actual != desired
             table_changes << DropIndex.new(index_name)
-            table_changes << CreateIndex.new(
-              name:      index_name,
-              columns:   desired.columns,
-              unique:    desired.unique?,
-              type:      desired.type,
-              condition: desired.condition
-            )
+            table_changes << CreateIndex.new(desired)
           end
         end
       end
@@ -168,18 +156,12 @@ module DbSchema
           actual  = actual_checks.find  { |check| check.name == check_name }
 
           if desired && !actual
-            table_changes << CreateCheckConstraint.new(
-              name:      check_name,
-              condition: desired.condition
-            )
+            table_changes << CreateCheckConstraint.new(desired)
           elsif actual && !desired
             table_changes << DropCheckConstraint.new(check_name)
           elsif actual != desired
             table_changes << DropCheckConstraint.new(check_name)
-            table_changes << CreateCheckConstraint.new(
-              name:      check_name,
-              condition: desired.condition
-            )
+            table_changes << CreateCheckConstraint.new(desired)
           end
         end
       end
@@ -321,13 +303,25 @@ module DbSchema
       end
     end
 
-    class CreateIndex < Definitions::Index
+    class CreateIndex
+      include Dry::Equalizer(:index)
+      attr_reader :index
+
+      def initialize(index)
+        @index = index
+      end
     end
 
     class DropIndex < ColumnOperation
     end
 
-    class CreateCheckConstraint < Definitions::CheckConstraint
+    class CreateCheckConstraint
+      include Dry::Equalizer(:check)
+      attr_reader :check
+
+      def initialize(check)
+        @check = check
+      end
     end
 
     class DropCheckConstraint < ColumnOperation

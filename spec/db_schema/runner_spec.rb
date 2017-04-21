@@ -357,15 +357,19 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Array.new(:interests, element_type: :varchar)
             ),
             DbSchema::Changes::CreateIndex.new(
-              name:      :people_name_index,
-              columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)', order: :desc)],
-              condition: 'name IS NOT NULL'
+              DbSchema::Definitions::Index.new(
+                name:      :people_name_index,
+                columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)', order: :desc)],
+                condition: 'name IS NOT NULL'
+              )
             ),
             DbSchema::Changes::DropIndex.new(:people_address_index),
             DbSchema::Changes::CreateIndex.new(
-              name:    :people_interests_index,
-              columns: [DbSchema::Definitions::Index::TableField.new(:interests)],
-              type:    :gin
+              DbSchema::Definitions::Index.new(
+                name:    :people_interests_index,
+                columns: [DbSchema::Definitions::Index::TableField.new(:interests)],
+                type:    :gin
+              )
             )
           ]
         end
@@ -397,8 +401,10 @@ RSpec.describe DbSchema::Runner do
           [
             DbSchema::Changes::DropCheckConstraint.new(:address_length),
             DbSchema::Changes::CreateCheckConstraint.new(
-              name:      :min_address_length,
-              condition: 'character_length(address) >= 10'
+              DbSchema::Definitions::CheckConstraint.new(
+                name:      :min_address_length,
+                condition: 'character_length(address) >= 10'
+              )
             )
           ]
         end
@@ -421,10 +427,12 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Varchar.new(:email)
             ),
             DbSchema::Changes::CreateIndex.new(
-              name: :people_email_index,
-              columns: [
-                DbSchema::Definitions::Index::TableField.new(:email)
-              ]
+              DbSchema::Definitions::Index.new(
+                name: :people_email_index,
+                columns: [
+                  DbSchema::Definitions::Index::TableField.new(:email)
+                ]
+              )
             )
           ]
         end
@@ -475,8 +483,10 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Varchar.new(:email)
             ),
             DbSchema::Changes::CreateCheckConstraint.new(
-              name:      :email_length,
-              condition: 'char_length(email) > 5'
+              DbSchema::Definitions::CheckConstraint.new(
+                name:      :email_length,
+                condition: 'char_length(email) > 5'
+              )
             )
           ]
         end
@@ -797,9 +807,11 @@ RSpec.describe DbSchema::Runner do
               DbSchema::Definitions::Field::Varchar.new(:city_name)
             ),
             DbSchema::Changes::CreateIndex.new(
-              name:    :people_city_name_index,
-              columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],
-              type:    :gist
+              DbSchema::Definitions::Index.new(
+                name:    :people_city_name_index,
+                columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],
+                type:    :gist
+              )
             )
           ]
         )

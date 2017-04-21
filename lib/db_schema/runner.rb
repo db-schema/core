@@ -133,16 +133,16 @@ module DbSchema
               set_column_default(element.name, Runner.default_to_sequel(element.new_default))
             when Changes::CreateIndex
               add_index(
-                element.columns_to_sequel,
-                name:   element.name,
-                unique: element.unique?,
-                type:   element.type,
-                where:  element.condition
+                element.index.columns_to_sequel,
+                name:   element.index.name,
+                unique: element.index.unique?,
+                type:   element.index.type,
+                where:  element.index.condition
               )
             when Changes::DropIndex
               drop_index([], name: element.name)
             when Changes::CreateCheckConstraint
-              add_constraint(element.name, element.condition)
+              add_constraint(element.check.name, element.check.condition)
             when Changes::DropCheckConstraint
               drop_constraint(element.name)
             end

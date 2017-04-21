@@ -248,22 +248,28 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DropColumn.new(:age),
           DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(
-            name:      :users_name_index,
-            columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
-            unique:    true,
-            condition: 'email IS NOT NULL'
+            DbSchema::Definitions::Index.new(
+              name:      :users_name_index,
+              columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
+              unique:    true,
+              condition: 'email IS NOT NULL'
+            )
           ),
           DbSchema::Changes::CreateIndex.new(
-            name:    :users_email_index,
-            columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
-            type:    :hash,
-            unique:  true
+            DbSchema::Definitions::Index.new(
+              name:    :users_email_index,
+              columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
+              type:    :hash,
+              unique:  true
+            )
           ),
           DbSchema::Changes::DropIndex.new(:users_type_index),
           DbSchema::Changes::DropCheckConstraint.new(:location_check),
           DbSchema::Changes::CreateCheckConstraint.new(
-            name:      :location_check,
-            condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
+            DbSchema::Definitions::CheckConstraint.new(
+              name:      :location_check,
+              condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
+            )
           )
         ])
 
