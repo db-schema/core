@@ -77,6 +77,16 @@ module DbSchema
         !condition.nil? || columns.any?(&:expression?)
       end
 
+      def with_name(new_name)
+        Index.new(
+          name:      new_name,
+          columns:   columns,
+          unique:    unique?,
+          type:      type,
+          condition: condition
+        )
+      end
+
       class Column
         include Dry::Equalizer(:name, :order, :nulls)
         attr_reader :name, :order, :nulls

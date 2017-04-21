@@ -119,25 +119,13 @@ module DbSchema
 
       def rename_indices(indices)
         indices.map do |index|
-          Definitions::Index.new(
-            name:      append_hash(index.name),
-            columns:   index.columns,
-            unique:    index.unique?,
-            type:      index.type,
-            condition: index.condition
-          )
+          index.with_name(append_hash(index.name))
         end
       end
 
       def rename_indices_back(indices)
         indices.map do |index|
-          Definitions::Index.new(
-            name:      remove_hash(index.name),
-            columns:   index.columns,
-            unique:    index.unique?,
-            type:      index.type,
-            condition: index.condition
-          )
+          index.with_name(remove_hash(index.name))
         end
       end
 
