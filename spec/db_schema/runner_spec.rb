@@ -94,10 +94,12 @@ RSpec.describe DbSchema::Runner do
       let(:changes) do
         [
           DbSchema::Changes::CreateTable.new(
-            :users,
-            fields:  users_fields,
-            indices: users_indices,
-            checks:  users_checks
+            DbSchema::Definitions::Table.new(
+              :users,
+              fields:  users_fields,
+              indices: users_indices,
+              checks:  users_checks
+            )
           ),
           DbSchema::Changes::DropTable.new(:people)
         ]
@@ -667,12 +669,14 @@ RSpec.describe DbSchema::Runner do
             )
           ),
           DbSchema::Changes::CreateTable.new(
-            :new_table,
-            fields: [
-              DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-              DbSchema::Definitions::Field::Integer.new(:other_new_id)
-            ],
-            indices: []
+            DbSchema::Definitions::Table.new(
+              :new_table,
+              fields: [
+                DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+                DbSchema::Definitions::Field::Integer.new(:other_new_id)
+              ],
+              indices: []
+            )
           ),
           DbSchema::Changes::CreateForeignKey.new(
             :new_table,
@@ -683,11 +687,12 @@ RSpec.describe DbSchema::Runner do
             )
           ),
           DbSchema::Changes::CreateTable.new(
-            :other_new_table,
-            fields: [
-              DbSchema::Definitions::Field::Integer.new(:id, primary_key: true)
-            ],
-            indices: []
+            DbSchema::Definitions::Table.new(
+              :other_new_table,
+              fields: [
+                DbSchema::Definitions::Field::Integer.new(:id, primary_key: true)
+              ]
+            )
           )
         ]
       end

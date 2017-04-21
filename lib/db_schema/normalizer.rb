@@ -72,10 +72,12 @@ module DbSchema
     private
       def create_temporary_table!
         operation = Changes::CreateTable.new(
-          temporary_table_name,
-          fields:  rename_types(table.fields),
-          indices: rename_indices(table.indices),
-          checks:  table.checks
+          Definitions::Table.new(
+            temporary_table_name,
+            fields:  rename_types(table.fields),
+            indices: rename_indices(table.indices),
+            checks:  table.checks
+          )
         )
 
         Runner.new([operation]).run!

@@ -12,12 +12,7 @@ module DbSchema
           actual  = actual_schema.tables.find  { |table| table.name == table_name }
 
           if desired && !actual
-            changes << CreateTable.new(
-              table_name,
-              fields:  desired.fields,
-              indices: desired.indices,
-              checks:  desired.checks
-            )
+            changes << CreateTable.new(desired)
 
             fkey_operations = desired.foreign_keys.map do |fkey|
               CreateForeignKey.new(table_name, fkey)
@@ -221,14 +216,11 @@ module DbSchema
     end
 
     class CreateTable
-      include Dry::Equalizer(:name, :fields, :indices, :checks)
-      attr_reader :name, :fields, :indices, :checks
+      include Dry::Equalizer(:table)
+      attr_reader :table
 
-      def initialize(name, fields: [], indices: [], checks: [])
-        @name    = name
-        @fields  = fields
-        @indices = indices
-        @checks  = checks
+      def initialize(table)
+        @table = table
       end
     end
 

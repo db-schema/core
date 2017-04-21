@@ -56,8 +56,8 @@ module DbSchema
 
     class << self
       def create_table(change)
-        DbSchema.connection.create_table(change.name) do
-          change.fields.each do |field|
+        DbSchema.connection.create_table(change.table.name) do
+          change.table.fields.each do |field|
             if field.primary_key?
               primary_key(field.name)
             else
@@ -66,7 +66,7 @@ module DbSchema
             end
           end
 
-          change.indices.each do |index|
+          change.table.indices.each do |index|
             index(
               index.columns_to_sequel,
               name:   index.name,
@@ -76,7 +76,7 @@ module DbSchema
             )
           end
 
-          change.checks.each do |check|
+          change.table.checks.each do |check|
             constraint(check.name, check.condition)
           end
         end

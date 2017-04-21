@@ -196,12 +196,12 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_create_table(object)
-        data = ["fields: #{object.fields.ai}"]
-        data << "indices: #{object.indices.ai}" if object.indices.any?
-        data << "checks: #{object.checks.ai}" if object.checks.any?
+        data = ["fields: #{object.table.fields.ai}"]
+        data << "indices: #{object.table.indices.ai}" if object.table.indices.any?
+        data << "checks: #{object.table.checks.ai}" if object.table.checks.any?
 
         data_string = indent_lines(data.join(', '))
-        "#<DbSchema::Changes::CreateTable #{object.name.ai} #{data_string}>"
+        "#<DbSchema::Changes::CreateTable #{object.table.name.ai} #{data_string}>"
       end
 
       def awesome_dbschema_drop_table(object)

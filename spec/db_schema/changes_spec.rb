@@ -88,9 +88,12 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes).to include(
           DbSchema::Changes::CreateTable.new(
-            :users,
-            fields: users_fields,
-            checks: users_checks
+            DbSchema::Definitions::Table.new(
+              :users,
+              fields:       users_fields,
+              checks:       users_checks,
+              foreign_keys: users_foreign_keys
+            )
           )
         )
         expect(changes).to include(DbSchema::Changes::DropTable.new(:posts))

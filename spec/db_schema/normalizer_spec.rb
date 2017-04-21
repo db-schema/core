@@ -67,10 +67,12 @@ RSpec.describe DbSchema::Normalizer do
       fields << DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{admin}')
 
       create_table = DbSchema::Changes::CreateTable.new(
-        :users,
-        fields:  fields,
-        indices: raw_table.indices,
-        checks:  raw_table.checks
+        DbSchema::Definitions::Table.new(
+          :users,
+          fields:  fields,
+          indices: raw_table.indices,
+          checks:  raw_table.checks
+        )
       )
 
       DbSchema::Runner.new([add_hstore, add_happiness, add_role, create_table]).run!
