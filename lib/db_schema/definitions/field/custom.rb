@@ -14,6 +14,10 @@ module DbSchema
               define_singleton_method :type do
                 type_name
               end
+
+              define_method :custom? do
+                true
+              end
             end
           end
 

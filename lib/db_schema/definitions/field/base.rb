@@ -25,6 +25,14 @@ module DbSchema
           default.is_a?(Symbol)
         end
 
+        def array?
+          false
+        end
+
+        def custom?
+          false
+        end
+
         def options
           attributes.tap do |options|
             options[:null] = false unless null?
@@ -46,6 +54,14 @@ module DbSchema
 
         def type
           self.class.type
+        end
+
+        def with_type(new_type)
+          Field.build(name, new_type, **options, primary_key: primary_key?)
+        end
+
+        def with_attribute(attr_name, attr_value)
+          Field.build(name, type, **options, primary_key: primary_key?, attr_name => attr_value)
         end
 
         class << self

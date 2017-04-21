@@ -12,6 +12,18 @@ module DbSchema
         def attributes
           super.merge(element_type: @attributes[:element_type].type)
         end
+
+        def array?
+          true
+        end
+
+        def element_type
+          @attributes[:element_type]
+        end
+
+        def custom_element_type?
+          element_type.superclass == Custom
+        end
       end
     end
   end

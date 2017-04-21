@@ -95,64 +95,24 @@ module DbSchema
 
       def rename_types(fields)
         fields.map do |field|
-          if field.is_a?(Definitions::Field::Array)
-            element_type = Definitions::Field.type_class_for(field.attributes[:element_type])
-
-            if element_type.superclass == Definitions::Field::Custom
-              Definitions::Field::Array.new(
-                field.name,
-                **field.options,
-                element_type: append_hash(field.attributes[:element_type]).to_sym,
-                primary_key: field.primary_key?
-              )
-            else
-              field
-            end
+          if field.custom?
+            field.with_type(append_hash(field.type))
+          elsif field.array? && field.custom_element_type?
+            field.with_attribute(:element_type, append_hash(field.element_type.type).to_sym)
           else
-            type = if field.is_a?(Definitions::Field::Custom)
-              append_hash(field.type)
-            else
-              field.type
-            end
-
-            Definitions::Field.build(
-              field.name,
-              type,
-              primary_key: field.primary_key?,
-              **field.options
-            )
+            field
           end
         end
       end
 
       def rename_types_back(fields)
         fields.map do |field|
-          if field.is_a?(Definitions::Field::Array)
-            element_type = Definitions::Field.type_class_for(field.attributes[:element_type])
-
-            if element_type.superclass == Definitions::Field::Custom
-              Definitions::Field::Array.new(
-                field.name,
-                **field.options,
-                element_type: remove_hash(field.attributes[:element_type]).to_sym,
-                primary_key: field.primary_key?
-              )
-            else
-              field
-            end
+          if field.custom?
+            field.with_type(remove_hash(field.type))
+          elsif field.array? && field.custom_element_type?
+            field.with_attribute(:element_type, remove_hash(field.element_type.type).to_sym)
           else
-            type = if field.is_a?(Definitions::Field::Custom)
-              remove_hash(field.type)
-            else
-              field.type
-            end
-
-            Definitions::Field.build(
-              field.name,
-              type,
-              primary_key: field.primary_key?,
-              **field.options
-            )
+            field
           end
         end
       end
