@@ -170,22 +170,11 @@ RSpec.describe DbSchema::Runner do
 
     context 'with AlterTable' do
       let(:changes) do
-        [
-          DbSchema::Changes::AlterTable.new(
-            :people,
-            fields:  field_changes,
-            indices: index_changes,
-            checks:  check_changes
-          )
-        ]
+        [DbSchema::Changes::AlterTable.new(:people, table_changes)]
       end
 
-      let(:field_changes) { [] }
-      let(:index_changes) { [] }
-      let(:check_changes) { [] }
-
       context 'containing CreateColumn & DropColumn' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
             DbSchema::Changes::CreateColumn.new(
@@ -231,7 +220,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing RenameColumn' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
           ]
@@ -248,7 +237,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing AlterColumnType' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::AlterColumnType.new(:name, new_type: :text)
           ]
@@ -262,7 +251,7 @@ RSpec.describe DbSchema::Runner do
         end
 
         context 'that changes field attributes' do
-          let(:field_changes) do
+          let(:table_changes) do
             [
               DbSchema::Changes::AlterColumnType.new(:address, new_type: :varchar),
               DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
@@ -287,7 +276,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing CreatePrimaryKey' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::CreatePrimaryKey.new(name: :name)
           ]
@@ -301,7 +290,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing DropPrimaryKey' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::DropPrimaryKey.new(name: :id)
           ]
@@ -315,7 +304,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing AllowNull & DisallowNull' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::AllowNull.new(:address),
             DbSchema::Changes::DisallowNull.new(:name)
@@ -332,7 +321,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing AlterColumnDefault' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::AlterColumnDefault.new(:name, new_default: 'John Smith')
           ]
@@ -346,7 +335,7 @@ RSpec.describe DbSchema::Runner do
         end
 
         context 'with an expression' do
-          let(:field_changes) do
+          let(:table_changes) do
             [
               DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()')
             ]
@@ -362,16 +351,11 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing CreateIndex & DropIndex' do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::CreateColumn.new(
               DbSchema::Definitions::Field::Array.new(:interests, element_type: :varchar)
-            )
-          ]
-        end
-
-        let(:index_changes) do
-          [
+            ),
             DbSchema::Changes::CreateIndex.new(
               name:      :people_name_index,
               columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)', order: :desc)],
@@ -409,7 +393,7 @@ RSpec.describe DbSchema::Runner do
       end
 
       context 'containing CreateCheckConstraint & DropCheckConstraint' do
-        let(:check_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::DropCheckConstraint.new(:address_length),
             DbSchema::Changes::CreateCheckConstraint.new(
@@ -431,16 +415,11 @@ RSpec.describe DbSchema::Runner do
       end
 
       context "creating a field along with it's index" do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:email)
-            )
-          ]
-        end
-
-        let(:index_changes) do
-          [
+            ),
             DbSchema::Changes::CreateIndex.new(
               name: :people_email_index,
               columns: [
@@ -470,14 +449,9 @@ RSpec.describe DbSchema::Runner do
       end
 
       context "dropping a field along with it's index" do
-        let(:field_changes) do
+        let(:table_changes) do
           [
-            DbSchema::Changes::DropColumn.new(:address)
-          ]
-        end
-
-        let(:index_changes) do
-          [
+            DbSchema::Changes::DropColumn.new(:address),
             DbSchema::Changes::DropIndex.new(:people_address_index)
           ]
         end
@@ -495,16 +469,11 @@ RSpec.describe DbSchema::Runner do
       end
 
       context "creating a field along with it's check constraint" do
-        let(:field_changes) do
+        let(:table_changes) do
           [
             DbSchema::Changes::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:email)
-            )
-          ]
-        end
-
-        let(:check_changes) do
-          [
+            ),
             DbSchema::Changes::CreateCheckConstraint.new(
               name:      :email_length,
               condition: 'char_length(email) > 5'
@@ -530,14 +499,9 @@ RSpec.describe DbSchema::Runner do
       end
 
       context "dropping a field along with it's check constraint" do
-        let(:field_changes) do
+        let(:table_changes) do
           [
-            DbSchema::Changes::DropColumn.new(:address)
-          ]
-        end
-
-        let(:check_changes) do
-          [
+            DbSchema::Changes::DropColumn.new(:address),
             DbSchema::Changes::DropCheckConstraint.new(:address_length)
           ]
         end
@@ -646,17 +610,7 @@ RSpec.describe DbSchema::Runner do
           DbSchema::Changes::DropForeignKey.new(:other_old_table, :other_old_table_old_id_fkey),
           DbSchema::Changes::AlterTable.new(
             :referenced_table,
-            fields: [
-              DbSchema::Changes::DropColumn.new(:referenced_field)
-            ],
-            indices: [],
-            checks:  []
-          ),
-          DbSchema::Changes::AlterTable.new(
-            :referring_table,
-            fields:  [],
-            indices: [],
-            checks:  []
+            [DbSchema::Changes::DropColumn.new(:referenced_field)]
           ),
           DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_old_id_fkey),
           DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_referenced_field_fkey),
@@ -838,19 +792,16 @@ RSpec.describe DbSchema::Runner do
       changes = [
         DbSchema::Changes::AlterTable.new(
           :people,
-          fields: [
+          [
             DbSchema::Changes::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:city_name)
-            )
-          ],
-          indices: [
+            ),
             DbSchema::Changes::CreateIndex.new(
               name:    :people_city_name_index,
               columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],
               type:    :gist
             )
-          ],
-          checks: []
+          ]
         )
       ]
 

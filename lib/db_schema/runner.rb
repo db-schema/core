@@ -87,9 +87,9 @@ module DbSchema
       end
 
       def alter_table(change)
-        DbSchema.connection.alter_table(change.name) do
+        DbSchema.connection.alter_table(change.table_name) do
           Utils.sort_by_class(
-            change.fields + change.indices + change.checks,
+            change.changes,
             [
               DbSchema::Changes::DropPrimaryKey,
               DbSchema::Changes::DropCheckConstraint,

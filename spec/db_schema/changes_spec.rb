@@ -237,7 +237,7 @@ RSpec.describe DbSchema::Changes do
         alter_table = changes.first
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
-        expect(alter_table.fields).to eq([
+        expect(alter_table.changes).to eq([
           DbSchema::Changes::CreatePrimaryKey.new(:id),
           DbSchema::Changes::AlterColumnType.new(:name, new_type: :varchar, length: 60),
           DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
@@ -245,10 +245,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DisallowNull.new(:type),
           DbSchema::Changes::AlterColumnDefault.new(:type, new_default: 'guest'),
           DbSchema::Changes::AlterColumnType.new(:status, new_type: :user_status),
-          DbSchema::Changes::DropColumn.new(:age)
-        ])
-
-        expect(alter_table.indices).to eq([
+          DbSchema::Changes::DropColumn.new(:age),
           DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(
             name:      :users_name_index,
@@ -262,10 +259,7 @@ RSpec.describe DbSchema::Changes do
             type:    :hash,
             unique:  true
           ),
-          DbSchema::Changes::DropIndex.new(:users_type_index)
-        ])
-
-        expect(alter_table.checks).to eq([
+          DbSchema::Changes::DropIndex.new(:users_type_index),
           DbSchema::Changes::DropCheckConstraint.new(:location_check),
           DbSchema::Changes::CreateCheckConstraint.new(
             name:      :location_check,
@@ -449,7 +443,7 @@ RSpec.describe DbSchema::Changes do
           expect(changes).to eq([
             DbSchema::Changes::AlterTable.new(
               :people,
-              fields: [
+              [
                 DbSchema::Changes::AlterColumnDefault.new(:happiness, new_default: 'good')
               ]
             ),

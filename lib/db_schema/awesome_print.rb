@@ -209,12 +209,7 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_alter_table(object)
-        data = ["fields: #{object.fields.ai}"]
-        data << "indices: #{object.indices.ai}" if object.indices.any?
-        data << "checks: #{object.checks.ai}" if object.checks.any?
-
-        data_string = indent_lines(data.join(', '))
-        "#<DbSchema::Changes::AlterTable #{object.name.ai} #{data_string}>"
+        "#<DbSchema::Changes::AlterTable #{object.table_name.ai} #{indent_lines(object.changes.ai)}>"
       end
 
       def awesome_dbschema_create_column(object)

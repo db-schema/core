@@ -33,9 +33,7 @@ module DbSchema
             if field_operations.any? || index_operations.any? || check_operations.any?
               changes << AlterTable.new(
                 table_name,
-                fields:  field_operations,
-                indices: index_operations,
-                checks:  check_operations
+                field_operations + index_operations + check_operations
               )
             end
 
@@ -234,14 +232,12 @@ module DbSchema
     end
 
     class AlterTable
-      include Dry::Equalizer(:name, :fields, :indices, :checks)
-      attr_reader :name, :fields, :indices, :checks
+      include Dry::Equalizer(:table_name, :changes)
+      attr_reader :table_name, :changes
 
-      def initialize(name, fields: [], indices: [], checks: [])
-        @name    = name
-        @fields  = fields
-        @indices = indices
-        @checks  = checks
+      def initialize(table_name, changes)
+        @table_name = table_name
+        @changes    = changes
       end
     end
 
