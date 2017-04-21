@@ -173,23 +173,13 @@ module DbSchema
           desired = desired_foreign_keys.find { |key| key.name == key_name }
           actual  = actual_foreign_keys.find  { |key| key.name == key_name }
 
-          foreign_key = Definitions::ForeignKey.new(
-            name:       key_name,
-            fields:     desired.fields,
-            table:      desired.table,
-            keys:       desired.keys,
-            on_delete:  desired.on_delete,
-            on_update:  desired.on_update,
-            deferrable: desired.deferrable?
-          ) if desired
-
           if desired && !actual
-            table_changes << CreateForeignKey.new(table_name, foreign_key)
+            table_changes << CreateForeignKey.new(table_name, desired)
           elsif actual && !desired
             table_changes << DropForeignKey.new(table_name, key_name)
           elsif actual != desired
             table_changes << DropForeignKey.new(table_name, key_name)
-            table_changes << CreateForeignKey.new(table_name, foreign_key)
+            table_changes << CreateForeignKey.new(table_name, desired)
           end
         end
       end
