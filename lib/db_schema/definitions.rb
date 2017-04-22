@@ -39,6 +39,46 @@ module DbSchema
       def [](field_name)
         fields.find { |field| field.name == field_name }
       end
+
+      def with_name(new_name)
+        Table.new(
+          new_name,
+          fields:       fields,
+          indices:      indices,
+          checks:       checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
+      def with_fields(new_fields)
+        Table.new(
+          name,
+          fields:       new_fields,
+          indices:      indices,
+          checks:       checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
+      def with_indices(new_indices)
+        Table.new(
+          name,
+          fields:       fields,
+          indices:      new_indices,
+          checks:       checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
+      def with_foreign_keys(new_foreign_keys)
+        Table.new(
+          name,
+          fields:       fields,
+          indices:      indices,
+          checks:       checks,
+          foreign_keys: new_foreign_keys
+        )
+      end
     end
 
     class NullTable < Table

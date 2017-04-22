@@ -72,12 +72,9 @@ module DbSchema
     private
       def create_temporary_table!
         operation = Changes::CreateTable.new(
-          Definitions::Table.new(
-            temporary_table_name,
-            fields:  rename_types(table.fields),
-            indices: rename_indices(table.indices),
-            checks:  table.checks
-          )
+          table.with_name(temporary_table_name)
+            .with_fields(rename_types(table.fields))
+            .with_indices(rename_indices(table.indices))
         )
 
         Runner.new([operation]).run!
@@ -86,13 +83,10 @@ module DbSchema
       def read_temporary_table
         temporary_table = Reader.read_table(temporary_table_name)
 
-        Definitions::Table.new(
-          remove_hash(temporary_table.name),
-          fields:       rename_types_back(temporary_table.fields),
-          indices:      rename_indices_back(temporary_table.indices),
-          checks:       temporary_table.checks,
-          foreign_keys: table.foreign_keys
-        )
+        temporary_table.with_name(table.name)
+          .with_fields(rename_types_back(temporary_table.fields))
+          .with_indices(rename_indices_back(temporary_table.indices))
+          .with_foreign_keys(table.foreign_keys)
       end
 
       def rename_types(fields)
