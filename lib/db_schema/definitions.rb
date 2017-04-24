@@ -235,6 +235,10 @@ module DbSchema
         @name   = name
         @values = values
       end
+
+      def with_name(new_name)
+        Enum.new(new_name, values)
+      end
     end
 
     class Extension

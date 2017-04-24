@@ -48,7 +48,7 @@ module DbSchema
           actual  = actual_schema.enums.find  { |enum| enum.name == enum_name }
 
           if desired && !actual
-            changes << CreateEnum.new(enum_name, desired.values)
+            changes << CreateEnum.new(desired)
           elsif actual && !desired
             changes << DropEnum.new(enum_name)
           elsif actual != desired
@@ -78,7 +78,7 @@ module DbSchema
         end
 
         extension_changes = (desired_schema.extensions - actual_schema.extensions).map do |extension|
-          CreateExtension.new(extension.name)
+          CreateExtension.new(extension)
         end + (actual_schema.extensions - desired_schema.extensions).map do |extension|
           DropExtension.new(extension.name)
         end
@@ -337,7 +337,13 @@ module DbSchema
       end
     end
 
-    class CreateEnum < Definitions::Enum
+    class CreateEnum
+      include Dry::Equalizer(:enum)
+      attr_reader :enum
+
+      def initialize(enum)
+        @enum = enum
+      end
     end
 
     class DropEnum < ColumnOperation
@@ -354,7 +360,13 @@ module DbSchema
       end
     end
 
-    class CreateExtension < Definitions::Extension
+    class CreateExtension
+      include Dry::Equalizer(:extension)
+      attr_reader :extension
+
+      def initialize(extension)
+        @extension = extension
+      end
     end
 
     class DropExtension < ColumnOperation

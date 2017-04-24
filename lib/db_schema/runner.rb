@@ -163,7 +163,7 @@ module DbSchema
       end
 
       def create_enum(change)
-        DbSchema.connection.create_enum(change.name, change.values)
+        DbSchema.connection.create_enum(change.enum.name, change.enum.values)
       end
 
       def drop_enum(change)
@@ -201,7 +201,7 @@ module DbSchema
       end
 
       def create_extension(change)
-        DbSchema.connection.run(%Q(CREATE EXTENSION "#{change.name}"))
+        DbSchema.connection.run(%Q(CREATE EXTENSION "#{change.extension.name}"))
       end
 
       def drop_extension(change)

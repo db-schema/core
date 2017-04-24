@@ -58,9 +58,15 @@ RSpec.describe DbSchema::Normalizer do
     end
 
     before(:each) do
-      add_hstore = DbSchema::Changes::CreateExtension.new(:hstore)
-      add_happiness = DbSchema::Changes::CreateEnum.new(:happiness, %i(good bad))
-      add_role = DbSchema::Changes::CreateEnum.new(:user_role, %i(admin))
+      add_hstore = DbSchema::Changes::CreateExtension.new(
+        DbSchema::Definitions::Extension.new(:hstore)
+      )
+      add_happiness = DbSchema::Changes::CreateEnum.new(
+        DbSchema::Definitions::Enum.new(:happiness, %i(good bad))
+      )
+      add_role = DbSchema::Changes::CreateEnum.new(
+        DbSchema::Definitions::Enum.new(:user_role, %i(admin))
+      )
 
       fields = raw_table.fields.take(5)
       fields << DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)

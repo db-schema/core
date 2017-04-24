@@ -376,7 +376,9 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes.count).to eq(2)
         expect(changes).to include(
-          DbSchema::Changes::CreateEnum.new(:happiness, %i(good ok bad))
+          DbSchema::Changes::CreateEnum.new(
+            DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad))
+          )
         )
         expect(changes).to include(
           DbSchema::Changes::DropEnum.new(:skill)
@@ -543,7 +545,9 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes.count).to eq(2)
         expect(changes).to include(
-          DbSchema::Changes::CreateExtension.new(:ltree)
+          DbSchema::Changes::CreateExtension.new(
+            DbSchema::Definitions::Extension.new(:ltree)
+          )
         )
         expect(changes).to include(
           DbSchema::Changes::DropExtension.new(:hstore)

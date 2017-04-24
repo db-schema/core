@@ -28,7 +28,7 @@ module DbSchema
   private
     def create_extensions!
       operations = (schema.extensions - Reader.read_extensions).map do |extension|
-        Changes::CreateExtension.new(extension.name)
+        Changes::CreateExtension.new(extension)
       end
 
       Runner.new(operations).run!
@@ -36,7 +36,7 @@ module DbSchema
 
     def create_enums!
       operations = schema.enums.map do |enum|
-        Changes::CreateEnum.new(append_hash(enum.name), enum.values)
+        Changes::CreateEnum.new(enum.with_name(append_hash(enum.name)))
       end
 
       Runner.new(operations).run!

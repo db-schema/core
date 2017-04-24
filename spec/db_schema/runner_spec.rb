@@ -676,7 +676,9 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::CreateEnum.new(:happiness, %i(happy ok sad)),
+          DbSchema::Changes::CreateEnum.new(
+            DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
+          ),
           DbSchema::Changes::DropEnum.new(:status)
         ]
       end
@@ -777,8 +779,12 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::CreateExtension.new(:ltree),
-          DbSchema::Changes::CreateExtension.new(:'uuid-ossp'),
+          DbSchema::Changes::CreateExtension.new(
+            DbSchema::Definitions::Extension.new(:ltree)
+          ),
+          DbSchema::Changes::CreateExtension.new(
+            DbSchema::Definitions::Extension.new(:'uuid-ossp')
+          ),
           DbSchema::Changes::DropExtension.new(:hstore)
         ]
       end
