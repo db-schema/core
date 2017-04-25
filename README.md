@@ -148,9 +148,9 @@ If your production setup doesn't include multiple workers starting simultaneousl
 ## DSL
 
 Database schema is defined with a block passed to `DbSchema.describe` method.
-This block receives a `db` object on which you can call `#table` to define a table
-and `#enum` to define a custom enum type. Everything that belongs to a specific table
-is described in a block passed to `#table`.
+This block receives a `db` object on which you can call `#table` to define a table,
+`#enum` to define a custom enum type and `#extension` to plug a Postgres extension into your database.
+Everything that belongs to a specific table is described in a block passed to `#table`.
 
 ``` ruby
 DbSchema.describe do |db|
@@ -500,13 +500,15 @@ db.table :users do |t|
 end
 ```
 
-After the enum type is created, you can add more values to it. They don't have to appear in the end of the values list - you can add new values to the middle or even to the beginning of the list:
+Arrays of enums are also supported - they are described just like arrays of any other element type:
 
 ``` ruby
-db.enum :user_status, [:guest, :registered, :sent_confirmation_email, :confirmed_email, :subscriber]
-```
+db.enum :user_role, [:user, :manager, :admin]
 
-Reordering and deleting values from enum types is not supported.
+db.table :users do |t|
+  t.array :roles, of: :user_role, default: '{user}'
+end
+```
 
 ### Extensions
 
