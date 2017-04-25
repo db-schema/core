@@ -69,13 +69,14 @@ if defined?(AwesomePrint)
         when ::DbSchema::Changes::DropForeignKey
           :dbschema_drop_foreign_key
         when ::DbSchema::Changes::CreateEnum
-          :dbschema_enum
+          :dbschema_create_enum
         when ::DbSchema::Changes::DropEnum
           :dbschema_column_operation
         when ::DbSchema::Changes::AlterEnumValues
           :dbschema_alter_enum_values
-        when ::DbSchema::Changes::CreateExtension,
-             ::DbSchema::Changes::DropExtension
+        when ::DbSchema::Changes::CreateExtension
+          :dbschema_create_extension
+        when ::DbSchema::Changes::DropExtension
           :dbschema_column_operation
         else
           cast_without_dbschema(object, type)
@@ -266,6 +267,14 @@ if defined?(AwesomePrint)
         "#<DbSchema::Changes::DropForeignKey #{object.fkey_name.ai} on #{object.table_name.ai}>"
       end
 
+      def awesome_dbschema_create_enum(object)
+        values = object.enum.values.map do |value|
+          colorize(value.to_s, :string)
+        end.join(', ')
+
+        "#<#{object.class} #{object.enum.name.ai} (#{values})>"
+      end
+
       def awesome_dbschema_column_operation(object)
         "#<#{object.class} #{object.name.ai}>"
       end
@@ -276,6 +285,10 @@ if defined?(AwesomePrint)
         end.join(', ')
 
         "#<DbSchema::Changes::AlterEnumValues #{object.enum_name.ai} to (#{values})>"
+      end
+
+      def awesome_dbschema_create_extension(object)
+        "#<#{object.class} #{object.extension.name.ai}>"
       end
 
       def format_dbschema_fields(fields)
