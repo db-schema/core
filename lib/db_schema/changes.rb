@@ -54,7 +54,7 @@ module DbSchema
           elsif actual != desired
             fields = actual_schema.tables.flat_map do |table|
               table.fields.select do |field|
-                if field.type == :array
+                if field.array?
                   field.attributes[:element_type] == enum_name
                 else
                   field.type == enum_name
@@ -68,7 +68,7 @@ module DbSchema
                   table_name:  table.name,
                   field_name:  field.name,
                   new_default: new_default,
-                  array:       field.type == :array
+                  array:       field.array?
                 }
               end
             end
