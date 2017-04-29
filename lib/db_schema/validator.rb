@@ -12,7 +12,7 @@ module DbSchema
           end
 
           table.fields.each do |field|
-            if field.is_a?(Definitions::Field::Custom)
+            if field.custom?
               type = schema.enums.find { |enum| enum.name == field.type }
 
               if type.nil?
@@ -21,23 +21,19 @@ module DbSchema
               elsif !field.default.nil? && !type.values.include?(field.default.to_sym)
                 errors << %(Field "#{table.name}.#{field.name}" has invalid default value "#{field.default}" (valid values are #{type.values.map(&:to_s)}))
               end
-            elsif field.is_a?(Definitions::Field::Array)
-              element_type = Definitions::Field.type_class_for(field.attributes[:element_type])
+            elsif field.array? && field.custom_element_type?
+              type = schema.enums.find { |enum| enum.name == field.element_type.type }
 
-              if element_type.superclass == Definitions::Field::Custom
-                type = schema.enums.find { |enum| enum.name == element_type.type }
+              if type.nil?
+                error_message = %(Array field "#{table.name}.#{field.name}" has unknown element type "#{field.element_type.type}")
+                errors << error_message
+              elsif !field.default.nil?
+                default_array  = Sequel::Postgres::PGArray::Parser.new(field.default).parse.map(&:to_sym)
+                invalid_values = default_array - type.values
 
-                if type.nil?
-                  error_message = %(Array field "#{table.name}.#{field.name}" has unknown element type "#{element_type.type}")
+                if invalid_values.any?
+                  error_message = %(Array field "#{table.name}.#{field.name}" has invalid default value #{default_array.map(&:to_s)} (valid values are #{type.values.map(&:to_s)}))
                   errors << error_message
-                elsif !field.default.nil?
-                  default_array  = Sequel::Postgres::PGArray::Parser.new(field.default).parse.map(&:to_sym)
-                  invalid_values = default_array - type.values
-
-                  if invalid_values.any?
-                    error_message = %(Array field "#{table.name}.#{field.name}" has invalid default value #{default_array.map(&:to_s)} (valid values are #{type.values.map(&:to_s)}))
-                    errors << error_message
-                  end
                 end
               end
             end

@@ -10,7 +10,7 @@ module DbSchema
         end
 
         def attributes
-          super.merge(element_type: @attributes[:element_type].type)
+          super.merge(element_type: element_type.type)
         end
 
         def array?
