@@ -7,10 +7,13 @@ RSpec.describe DbSchema do
     before(:each) do
       subject.configure(database: 'db_schema_test', log_changes: false)
 
+      database.create_enum :happiness, %i(good ok bad)
+
       database.create_table :users do
-        column :id,    :Integer, primary_key: true
-        column :name,  :Varchar, null: false
-        column :email, :Varchar, size: 100
+        column :id,        :Integer, primary_key: true
+        column :name,      :Varchar, null: false
+        column :email,     :Varchar, size: 100
+        column :happiness, :happiness, default: 'ok'
 
         index :email
       end
@@ -27,11 +30,14 @@ RSpec.describe DbSchema do
 
     it 'applies the schema to the database' do
       subject.describe do |db|
+        db.enum :happiness, %i(happy ok unhappy)
+
         db.table :users do |t|
-          t.integer :id, primary_key: true
-          t.varchar :first_name, null: false, length: 30
-          t.varchar :last_name,  null: false, length: 30
-          t.varchar :email,      null: false
+          t.primary_key :id
+          t.varchar :first_name,  null: false, length: 30
+          t.varchar :last_name,   null: false, length: 30
+          t.varchar :email,       null: false
+          t.happiness :happiness, default: 'happy'
 
           t.index :first_name, last_name: :desc, name: :users_name_index
           t.index 'lower(email)', name: :users_email_index, unique: true
@@ -65,11 +71,13 @@ RSpec.describe DbSchema do
       expect(database.tables).to include(:posts)
       expect(database.tables).to include(:cities)
 
-      id, email, first_name, last_name = database.schema(:users)
+      id, email, happiness, first_name, last_name = database.schema(:users)
       expect(id.first).to eq(:id)
       expect(email.first).to eq(:email)
       expect(email.last[:db_type]).to eq('character varying')
       expect(email.last[:allow_null]).to eq(false)
+      expect(happiness.first).to eq(:happiness)
+      expect(happiness.last[:default]).to eq("'happy'::happiness")
       expect(first_name.first).to eq(:first_name)
       expect(first_name.last[:db_type]).to eq('character varying(30)')
       expect(first_name.last[:allow_null]).to eq(false)
@@ -132,6 +140,13 @@ RSpec.describe DbSchema do
       expect(country_id_fkey[:columns]).to eq([:country_id])
       expect(country_id_fkey[:table]).to eq(:countries)
       expect(country_id_fkey[:key]).to eq([:id])
+
+      enums = DbSchema::Reader.read_enums
+      expect(enums.count).to eq(1)
+
+      happiness = enums.first
+      expect(happiness.name).to eq(:happiness)
+      expect(happiness.values).to eq(%i(happy ok unhappy))
     end
 
     context 'with an invalid schema' do
@@ -241,6 +256,10 @@ Requested schema is invalid:
             drop_foreign_key([], name: foreign_key[:name])
           end
         end
+      end
+
+      DbSchema::Reader.read_schema.enums.each do |enum|
+        database.drop_enum(enum.name, cascade: true)
       end
 
       database.tables.each do |table_name|

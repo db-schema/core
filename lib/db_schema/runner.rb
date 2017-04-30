@@ -24,17 +24,14 @@ module DbSchema
             self.class.create_enum(change)
           when Changes::DropEnum
             self.class.drop_enum(change)
+          when Changes::AlterEnumValues
+            self.class.alter_enum_values(change)
           when Changes::CreateExtension
             self.class.create_extension(change)
           when Changes::DropExtension
             self.class.drop_extension(change)
           end
         end
-      end
-
-      # Postgres doesn't allow modifying enums inside a transaction
-      Utils.filter_by_class(changes, Changes::AddValueToEnum).each do |change|
-        self.class.add_value_to_enum(change)
       end
     end
 
@@ -44,8 +41,8 @@ module DbSchema
         changes,
         [
           Changes::CreateExtension,
-          Changes::AddValueToEnum,
           Changes::DropForeignKey,
+          Changes::AlterEnumValues,
           Changes::CreateEnum,
           Changes::CreateTable,
           Changes::AlterTable,
@@ -59,8 +56,8 @@ module DbSchema
 
     class << self
       def create_table(change)
-        DbSchema.connection.create_table(change.name) do
-          change.fields.each do |field|
+        DbSchema.connection.create_table(change.table.name) do
+          change.table.fields.each do |field|
             if field.primary_key?
               primary_key(field.name)
             else
@@ -69,7 +66,7 @@ module DbSchema
             end
           end
 
-          change.indices.each do |index|
+          change.table.indices.each do |index|
             index(
               index.columns_to_sequel,
               name:   index.name,
@@ -79,7 +76,7 @@ module DbSchema
             )
           end
 
-          change.checks.each do |check|
+          change.table.checks.each do |check|
             constraint(check.name, check.condition)
           end
         end
@@ -90,9 +87,9 @@ module DbSchema
       end
 
       def alter_table(change)
-        DbSchema.connection.alter_table(change.name) do
+        DbSchema.connection.alter_table(change.table_name) do
           Utils.sort_by_class(
-            change.fields + change.indices + change.checks,
+            change.changes,
             [
               DbSchema::Changes::DropPrimaryKey,
               DbSchema::Changes::DropCheckConstraint,
@@ -136,16 +133,16 @@ module DbSchema
               set_column_default(element.name, Runner.default_to_sequel(element.new_default))
             when Changes::CreateIndex
               add_index(
-                element.columns_to_sequel,
-                name:   element.name,
-                unique: element.unique?,
-                type:   element.type,
-                where:  element.condition
+                element.index.columns_to_sequel,
+                name:   element.index.name,
+                unique: element.index.unique?,
+                type:   element.index.type,
+                where:  element.index.condition
               )
             when Changes::DropIndex
               drop_index([], name: element.name)
             when Changes::CreateCheckConstraint
-              add_constraint(element.name, element.condition)
+              add_constraint(element.check.name, element.check.condition)
             when Changes::DropCheckConstraint
               drop_constraint(element.name)
             end
@@ -166,23 +163,45 @@ module DbSchema
       end
 
       def create_enum(change)
-        DbSchema.connection.create_enum(change.name, change.values)
+        DbSchema.connection.create_enum(change.enum.name, change.enum.values)
       end
 
       def drop_enum(change)
         DbSchema.connection.drop_enum(change.name)
       end
 
-      def add_value_to_enum(change)
-        if change.add_to_the_end?
-          DbSchema.connection.add_enum_value(change.enum_name, change.new_value)
-        else
-          DbSchema.connection.add_enum_value(change.enum_name, change.new_value, before: change.before)
+      def alter_enum_values(change)
+        change.enum_fields.each do |field_data|
+          DbSchema.connection.alter_table(field_data[:table_name]) do
+            set_column_type(field_data[:field_name], :VARCHAR)
+            set_column_default(field_data[:field_name], nil)
+          end
+        end
+
+        DbSchema.connection.drop_enum(change.enum_name)
+        DbSchema.connection.create_enum(change.enum_name, change.new_values)
+
+        change.enum_fields.each do |field_data|
+          DbSchema.connection.alter_table(field_data[:table_name]) do
+            field_type = if field_data[:array]
+              "#{change.enum_name}[]"
+            else
+              change.enum_name
+            end
+
+            set_column_type(
+              field_data[:field_name],
+              field_type,
+              using: "#{field_data[:field_name]}::#{field_type}"
+            )
+
+            set_column_default(field_data[:field_name], field_data[:new_default]) unless field_data[:new_default].nil?
+          end
         end
       end
 
       def create_extension(change)
-        DbSchema.connection.run(%Q(CREATE EXTENSION "#{change.name}"))
+        DbSchema.connection.run(%Q(CREATE EXTENSION "#{change.extension.name}"))
       end
 
       def drop_extension(change)

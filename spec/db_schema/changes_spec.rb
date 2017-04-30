@@ -88,9 +88,12 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes).to include(
           DbSchema::Changes::CreateTable.new(
-            :users,
-            fields: users_fields,
-            checks: users_checks
+            DbSchema::Definitions::Table.new(
+              :users,
+              fields:       users_fields,
+              checks:       users_checks,
+              foreign_keys: users_foreign_keys
+            )
           )
         )
         expect(changes).to include(DbSchema::Changes::DropTable.new(:posts))
@@ -234,7 +237,7 @@ RSpec.describe DbSchema::Changes do
         alter_table = changes.first
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
-        expect(alter_table.fields).to eq([
+        expect(alter_table.changes).to eq([
           DbSchema::Changes::CreatePrimaryKey.new(:id),
           DbSchema::Changes::AlterColumnType.new(:name, new_type: :varchar, length: 60),
           DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
@@ -242,31 +245,31 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Changes::DisallowNull.new(:type),
           DbSchema::Changes::AlterColumnDefault.new(:type, new_default: 'guest'),
           DbSchema::Changes::AlterColumnType.new(:status, new_type: :user_status),
-          DbSchema::Changes::DropColumn.new(:age)
-        ])
-
-        expect(alter_table.indices).to eq([
+          DbSchema::Changes::DropColumn.new(:age),
           DbSchema::Changes::DropIndex.new(:users_name_index),
           DbSchema::Changes::CreateIndex.new(
-            name:      :users_name_index,
-            columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
-            unique:    true,
-            condition: 'email IS NOT NULL'
+            DbSchema::Definitions::Index.new(
+              name:      :users_name_index,
+              columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
+              unique:    true,
+              condition: 'email IS NOT NULL'
+            )
           ),
           DbSchema::Changes::CreateIndex.new(
-            name:    :users_email_index,
-            columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
-            type:    :hash,
-            unique:  true
+            DbSchema::Definitions::Index.new(
+              name:    :users_email_index,
+              columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
+              type:    :hash,
+              unique:  true
+            )
           ),
-          DbSchema::Changes::DropIndex.new(:users_type_index)
-        ])
-
-        expect(alter_table.checks).to eq([
+          DbSchema::Changes::DropIndex.new(:users_type_index),
           DbSchema::Changes::DropCheckConstraint.new(:location_check),
           DbSchema::Changes::CreateCheckConstraint.new(
-            name:      :location_check,
-            condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
+            DbSchema::Definitions::CheckConstraint.new(
+              name:      :location_check,
+              condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
+            )
           )
         ])
 
@@ -373,7 +376,9 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes.count).to eq(2)
         expect(changes).to include(
-          DbSchema::Changes::CreateEnum.new(:happiness, %i(good ok bad))
+          DbSchema::Changes::CreateEnum.new(
+            DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad))
+          )
         )
         expect(changes).to include(
           DbSchema::Changes::DropEnum.new(:skill)
@@ -382,6 +387,9 @@ RSpec.describe DbSchema::Changes do
     end
 
     context 'with enums changed' do
+      let(:desired_values) { %i(happy good ok moderate bad) }
+      let(:actual_values)  { %i(good moderate ok bad unhappy) }
+
       let(:desired_schema) do
         DbSchema::Definitions::Schema.new(
           enums: [
@@ -398,82 +406,119 @@ RSpec.describe DbSchema::Changes do
         )
       end
 
-      context 'by adding new values' do
-        context 'to the end' do
-          let(:desired_values) { %i(good ok bad unhappy) }
-          let(:actual_values)  { %i(good ok bad) }
+      it 'returns a Changes::AlterEnumValues' do
+        changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
-          it 'returns a Changes::AddValueToEnum' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes.count).to eq(1)
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy)
-            ])
-          end
-        end
-
-        context 'to the beginning' do
-          let(:desired_values) { %i(happy good ok bad) }
-          let(:actual_values)  { %i(good ok bad) }
-
-          it 'returns a Changes::AddValueToEnum with before: :good' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
-            ])
-          end
-        end
-
-        context 'into the middle' do
-          let(:desired_values) { %i(good ok worried bad) }
-          let(:actual_values)  { %i(good ok bad) }
-
-          it 'returns a Changes::AddValueToEnum with before: :bad' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :worried, before: :bad)
-            ])
-          end
-        end
-
-        context 'with multiple values' do
-          let(:desired_values) { %i(happy good ok worried bad unhappy) }
-          let(:actual_values)  { %i(good ok bad) }
-
-          it 'returns appropriate AddValueToEnum objects in reverse order' do
-            changes = DbSchema::Changes.between(desired_schema, actual_schema)
-
-            expect(changes).to eq([
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :unhappy),
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :worried, before: :bad),
-              DbSchema::Changes::AddValueToEnum.new(:happiness, :happy, before: :good)
-            ])
-          end
-        end
+        expect(changes).to eq([
+          DbSchema::Changes::AlterEnumValues.new(:happiness, desired_values, [])
+        ])
       end
 
-      context 'by removing values' do
-        let(:desired_values) { %i(happy ok unhappy) }
-        let(:actual_values)  { %i(happy good ok bad unhappy) }
-
-        it 'raises a DbSchema::UnsupportedOperation' do
-          expect {
-            DbSchema::Changes.between(desired_schema, actual_schema)
-          }.to raise_error(DbSchema::UnsupportedOperation)
+      context 'when the enum is used in a column' do
+        let(:desired_schema) do
+          DbSchema::Definitions::Schema.new(
+            tables: [
+              DbSchema::Definitions::Table.new(:people,
+                fields: [
+                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: 'happy')
+                ]
+              )
+            ],
+            enums: [
+              DbSchema::Definitions::Enum.new(:happiness, desired_values)
+            ]
+          )
         end
-      end
 
-      context 'by reordering values' do
-        let(:desired_values) { %i(happy ok moderate sad) }
-        let(:actual_values)  { %i(moderate ok sad) }
+        let(:actual_schema) do
+          DbSchema::Definitions::Schema.new(
+            tables: [
+              DbSchema::Definitions::Table.new(:people,
+                fields: [
+                  DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: 'unhappy')
+                ]
+              )
+            ],
+            enums: [
+              DbSchema::Definitions::Enum.new(:happiness, actual_values)
+            ]
+          )
+        end
 
-        it 'raises a DbSchema::UnsupportedOperation' do
-          expect {
-            DbSchema::Changes.between(desired_schema, actual_schema)
-          }.to raise_error(DbSchema::UnsupportedOperation)
+        it 'returns a Changes::AlterEnumValues with existing enum fields' do
+          changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+          expect(changes).to eq([
+            DbSchema::Changes::AlterTable.new(
+              :people,
+              [
+                DbSchema::Changes::AlterColumnDefault.new(:happiness, new_default: 'happy')
+              ]
+            ),
+            DbSchema::Changes::AlterEnumValues.new(
+              :happiness,
+              desired_values,
+              [
+                {
+                  table_name:  :people,
+                  field_name:  :happiness,
+                  new_default: 'happy',
+                  array:       false
+                }
+              ]
+            )
+          ])
+        end
+
+        context 'in an enum array' do
+          let(:desired_schema) do
+            DbSchema::Definitions::Schema.new(
+              tables: [
+                DbSchema::Definitions::Table.new(:users,
+                  fields: [
+                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{}')
+                  ]
+                )
+              ],
+              enums: [
+                DbSchema::Definitions::Enum.new(:user_role, [:user, :admin])
+              ]
+            )
+          end
+
+          let(:actual_schema) do
+            DbSchema::Definitions::Schema.new(
+              tables: [
+                DbSchema::Definitions::Table.new(:users,
+                  fields: [
+                    DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{}')
+                  ]
+                )
+              ],
+              enums: [
+                DbSchema::Definitions::Enum.new(:user_role, [:guest, :user, :admin])
+              ]
+            )
+          end
+
+          it 'returns a Changes::AlterEnumValues with existing enum array fields' do
+            changes = DbSchema::Changes.between(desired_schema, actual_schema)
+
+            expect(changes).to eq([
+              DbSchema::Changes::AlterEnumValues.new(
+                :user_role,
+                [:user, :admin],
+                [
+                  {
+                    table_name:  :users,
+                    field_name:  :roles,
+                    new_default: '{}',
+                    array:       true
+                  }
+                ]
+              )
+            ])
+          end
         end
       end
     end
@@ -500,7 +545,9 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes.count).to eq(2)
         expect(changes).to include(
-          DbSchema::Changes::CreateExtension.new(:ltree)
+          DbSchema::Changes::CreateExtension.new(
+            DbSchema::Definitions::Extension.new(:ltree)
+          )
         )
         expect(changes).to include(
           DbSchema::Changes::DropExtension.new(:hstore)

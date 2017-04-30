@@ -18,7 +18,7 @@ module DbSchema
     def describe(&block)
       desired_schema = DSL.new(block).schema
       validate(desired_schema)
-      Normalizer.normalize_tables(desired_schema)
+      Normalizer.new(desired_schema).normalize_tables
 
       actual_schema = Reader.read_schema
       changes = Changes.between(desired_schema, actual_schema)

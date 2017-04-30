@@ -12,12 +12,7 @@ module DbSchema
           actual  = actual_schema.tables.find  { |table| table.name == table_name }
 
           if desired && !actual
-            changes << CreateTable.new(
-              table_name,
-              fields:  desired.fields,
-              indices: desired.indices,
-              checks:  desired.checks
-            )
+            changes << CreateTable.new(desired)
 
             fkey_operations = desired.foreign_keys.map do |fkey|
               CreateForeignKey.new(table_name, fkey)
@@ -38,9 +33,7 @@ module DbSchema
             if field_operations.any? || index_operations.any? || check_operations.any?
               changes << AlterTable.new(
                 table_name,
-                fields:  field_operations,
-                indices: index_operations,
-                checks:  check_operations
+                field_operations + index_operations + check_operations
               )
             end
 
@@ -55,36 +48,37 @@ module DbSchema
           actual  = actual_schema.enums.find  { |enum| enum.name == enum_name }
 
           if desired && !actual
-            changes << CreateEnum.new(enum_name, desired.values)
+            changes << CreateEnum.new(desired)
           elsif actual && !desired
             changes << DropEnum.new(enum_name)
           elsif actual != desired
-            new_values     = desired.values - actual.values
-            dropped_values = actual.values - desired.values
+            fields = actual_schema.tables.flat_map do |table|
+              table.fields.select do |field|
+                if field.array?
+                  field.attributes[:element_type] == enum_name
+                else
+                  field.type == enum_name
+                end
+              end.map do |field|
+                if desired_field = desired_schema[table.name][field.name]
+                  new_default = desired_field.default
+                end
 
-            if dropped_values.any?
-              raise UnsupportedOperation, "Enum #{enum_name.inspect} doesn't describe values #{dropped_values.inspect} that are present in the database; dropping values from enums is not supported."
-            end
-
-            if desired.values - new_values != actual.values
-              raise UnsupportedOperation, "Enum #{enum_name.inspect} describes values #{(desired.values - new_values).inspect} that are present in the database in a different order (#{actual.values.inspect}); reordering values in enums is not supported."
-            end
-
-            new_values.reverse.each do |value|
-              value_index = desired.values.index(value)
-
-              if value_index == desired.values.count - 1
-                changes << AddValueToEnum.new(enum_name, value)
-              else
-                next_value = desired.values[value_index + 1]
-                changes << AddValueToEnum.new(enum_name, value, before: next_value)
+                {
+                  table_name:  table.name,
+                  field_name:  field.name,
+                  new_default: new_default,
+                  array:       field.array?
+                }
               end
             end
+
+            changes << AlterEnumValues.new(enum_name, desired.values, fields)
           end
         end
 
         extension_changes = (desired_schema.extensions - actual_schema.extensions).map do |extension|
-          CreateExtension.new(extension.name)
+          CreateExtension.new(extension)
         end + (actual_schema.extensions - desired_schema.extensions).map do |extension|
           DropExtension.new(extension.name)
         end
@@ -144,24 +138,12 @@ module DbSchema
           actual  = actual_indices.find  { |index| index.name == index_name }
 
           if desired && !actual
-            table_changes << CreateIndex.new(
-              name:      index_name,
-              columns:   desired.columns,
-              unique:    desired.unique?,
-              type:      desired.type,
-              condition: desired.condition
-            )
+            table_changes << CreateIndex.new(desired)
           elsif actual && !desired
             table_changes << DropIndex.new(index_name)
           elsif actual != desired
             table_changes << DropIndex.new(index_name)
-            table_changes << CreateIndex.new(
-              name:      index_name,
-              columns:   desired.columns,
-              unique:    desired.unique?,
-              type:      desired.type,
-              condition: desired.condition
-            )
+            table_changes << CreateIndex.new(desired)
           end
         end
       end
@@ -174,18 +156,12 @@ module DbSchema
           actual  = actual_checks.find  { |check| check.name == check_name }
 
           if desired && !actual
-            table_changes << CreateCheckConstraint.new(
-              name:      check_name,
-              condition: desired.condition
-            )
+            table_changes << CreateCheckConstraint.new(desired)
           elsif actual && !desired
             table_changes << DropCheckConstraint.new(check_name)
           elsif actual != desired
             table_changes << DropCheckConstraint.new(check_name)
-            table_changes << CreateCheckConstraint.new(
-              name:      check_name,
-              condition: desired.condition
-            )
+            table_changes << CreateCheckConstraint.new(desired)
           end
         end
       end
@@ -197,37 +173,24 @@ module DbSchema
           desired = desired_foreign_keys.find { |key| key.name == key_name }
           actual  = actual_foreign_keys.find  { |key| key.name == key_name }
 
-          foreign_key = Definitions::ForeignKey.new(
-            name:       key_name,
-            fields:     desired.fields,
-            table:      desired.table,
-            keys:       desired.keys,
-            on_delete:  desired.on_delete,
-            on_update:  desired.on_update,
-            deferrable: desired.deferrable?
-          ) if desired
-
           if desired && !actual
-            table_changes << CreateForeignKey.new(table_name, foreign_key)
+            table_changes << CreateForeignKey.new(table_name, desired)
           elsif actual && !desired
             table_changes << DropForeignKey.new(table_name, key_name)
           elsif actual != desired
             table_changes << DropForeignKey.new(table_name, key_name)
-            table_changes << CreateForeignKey.new(table_name, foreign_key)
+            table_changes << CreateForeignKey.new(table_name, desired)
           end
         end
       end
     end
 
     class CreateTable
-      include Dry::Equalizer(:name, :fields, :indices, :checks)
-      attr_reader :name, :fields, :indices, :checks
+      include Dry::Equalizer(:table)
+      attr_reader :table
 
-      def initialize(name, fields: [], indices: [], checks: [])
-        @name    = name
-        @fields  = fields
-        @indices = indices
-        @checks  = checks
+      def initialize(table)
+        @table = table
       end
     end
 
@@ -241,14 +204,12 @@ module DbSchema
     end
 
     class AlterTable
-      include Dry::Equalizer(:name, :fields, :indices, :checks)
-      attr_reader :name, :fields, :indices, :checks
+      include Dry::Equalizer(:table_name, :changes)
+      attr_reader :table_name, :changes
 
-      def initialize(name, fields: [], indices: [], checks: [])
-        @name    = name
-        @fields  = fields
-        @indices = indices
-        @checks  = checks
+      def initialize(table_name, changes)
+        @table_name = table_name
+        @changes    = changes
       end
     end
 
@@ -332,13 +293,25 @@ module DbSchema
       end
     end
 
-    class CreateIndex < Definitions::Index
+    class CreateIndex
+      include Dry::Equalizer(:index)
+      attr_reader :index
+
+      def initialize(index)
+        @index = index
+      end
     end
 
     class DropIndex < ColumnOperation
     end
 
-    class CreateCheckConstraint < Definitions::CheckConstraint
+    class CreateCheckConstraint
+      include Dry::Equalizer(:check)
+      attr_reader :check
+
+      def initialize(check)
+        @check = check
+      end
     end
 
     class DropCheckConstraint < ColumnOperation
@@ -364,28 +337,36 @@ module DbSchema
       end
     end
 
-    class CreateEnum < Definitions::Enum
+    class CreateEnum
+      include Dry::Equalizer(:enum)
+      attr_reader :enum
+
+      def initialize(enum)
+        @enum = enum
+      end
     end
 
     class DropEnum < ColumnOperation
     end
 
-    class AddValueToEnum
-      include Dry::Equalizer(:enum_name, :new_value, :before)
-      attr_reader :enum_name, :new_value, :before
+    class AlterEnumValues
+      include Dry::Equalizer(:enum_name, :new_values, :enum_fields)
+      attr_reader :enum_name, :new_values, :enum_fields
 
-      def initialize(enum_name, new_value, before: nil)
-        @enum_name = enum_name
-        @new_value = new_value
-        @before    = before
-      end
-
-      def add_to_the_end?
-        before.nil?
+      def initialize(enum_name, new_values, enum_fields)
+        @enum_name   = enum_name
+        @new_values  = new_values
+        @enum_fields = enum_fields
       end
     end
 
-    class CreateExtension < Definitions::Extension
+    class CreateExtension
+      include Dry::Equalizer(:extension)
+      attr_reader :extension
+
+      def initialize(extension)
+        @extension = extension
+      end
     end
 
     class DropExtension < ColumnOperation

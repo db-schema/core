@@ -234,7 +234,7 @@ RSpec.describe DbSchema::Validator do
           DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
           DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
           DbSchema::Definitions::Field::Integer.new(:age),
-          DbSchema::Definitions::Field::Custom.class_for(:user_sorrow).new(:sorrow)
+          DbSchema::Definitions::Field::Custom.class_for(:user_sorrow).new(:sorrow, default: 'depressed')
         ]
       end
 
@@ -243,6 +243,65 @@ RSpec.describe DbSchema::Validator do
         expect(result.errors).to eq([
           'Field "users.sorrow" has unknown type "user_sorrow"'
         ])
+      end
+
+      context 'within an array' do
+        let(:users_fields) do
+          [
+            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
+            DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
+            DbSchema::Definitions::Field::Integer.new(:age),
+            DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role)
+          ]
+        end
+
+        it 'returns an invalid result with errors' do
+          expect(result).not_to be_valid
+          expect(result.errors).to eq([
+            'Array field "users.roles" has unknown element type "user_role"'
+          ])
+        end
+      end
+    end
+
+    context 'on a schema with a enum field with invalid default value' do
+      let(:users_fields) do
+        [
+          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+          DbSchema::Definitions::Field::Custom.class_for(:user_happiness).new(:happiness, default: 'crazy')
+        ]
+      end
+
+      let(:users_indices) { [] }
+
+      it 'returns an invalid result with errors' do
+        expect(result).not_to be_valid
+        expect(result.errors).to eq([
+          'Field "users.happiness" has invalid default value "crazy" (valid values are ["happy", "ok", "sad"])'
+        ])
+      end
+
+      context 'within an array' do
+        let(:users_fields) do
+          [
+            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+            DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{admin}')
+          ]
+        end
+
+        let(:enum) do
+          DbSchema::Definitions::Enum.new(:user_role, %i(user))
+        end
+
+        it 'returns an invalid result with errors' do
+          expect(result).not_to be_valid
+          expect(result.errors).to eq([
+            'Array field "users.roles" has invalid default value ["admin"] (valid values are ["user"])'
+          ])
+        end
       end
     end
   end

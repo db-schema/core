@@ -3,15 +3,26 @@ module DbSchema
     module Field
       class Array < Base
         register :array
-        attr_reader :element_type
 
-        def initialize(name, of:, **options)
-          super(name, **options)
-          @element_type = Field.type_class_for(of)
+        def initialize(name, **options)
+          type_class = Field.type_class_for(options[:element_type])
+          super(name, **options.merge(element_type: type_class))
         end
 
         def attributes
           super.merge(element_type: element_type.type)
+        end
+
+        def array?
+          true
+        end
+
+        def element_type
+          @attributes[:element_type]
+        end
+
+        def custom_element_type?
+          element_type.superclass == Custom
         end
       end
     end

@@ -12,6 +12,10 @@ module DbSchema
         @enums      = enums
         @extensions = extensions
       end
+
+      def [](table_name)
+        tables.find { |table| table.name == table_name } || NullTable.new
+      end
     end
 
     class Table
@@ -31,6 +35,54 @@ module DbSchema
           indices.any?(&:has_expressions?) ||
           checks.any?
       end
+
+      def [](field_name)
+        fields.find { |field| field.name == field_name }
+      end
+
+      def with_name(new_name)
+        Table.new(
+          new_name,
+          fields:       fields,
+          indices:      indices,
+          checks:       checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
+      def with_fields(new_fields)
+        Table.new(
+          name,
+          fields:       new_fields,
+          indices:      indices,
+          checks:       checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
+      def with_indices(new_indices)
+        Table.new(
+          name,
+          fields:       fields,
+          indices:      new_indices,
+          checks:       checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
+      def with_foreign_keys(new_foreign_keys)
+        Table.new(
+          name,
+          fields:       fields,
+          indices:      indices,
+          checks:       checks,
+          foreign_keys: new_foreign_keys
+        )
+      end
+    end
+
+    class NullTable < Table
+      def initialize; end
     end
 
     class Index
@@ -63,6 +115,16 @@ module DbSchema
 
       def has_expressions?
         !condition.nil? || columns.any?(&:expression?)
+      end
+
+      def with_name(new_name)
+        Index.new(
+          name:      new_name,
+          columns:   columns,
+          unique:    unique?,
+          type:      type,
+          condition: condition
+        )
       end
 
       class Column
@@ -172,6 +234,10 @@ module DbSchema
       def initialize(name, values)
         @name   = name
         @values = values
+      end
+
+      def with_name(new_name)
+        Enum.new(new_name, values)
       end
     end
 
