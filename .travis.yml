@@ -1,10 +1,11 @@
+dist: trusty
+sudo: false
 language: ruby
 rvm:
-  - 2.3.1
-before_install: gem install bundler -v 1.12.5
+  - 2.3.3
 services:
   - postgresql
 addons:
-  postgresql: 9.4
+  postgresql: 9.6
 before_script:
   - psql -c 'CREATE DATABASE db_schema_test;' -U postgres
