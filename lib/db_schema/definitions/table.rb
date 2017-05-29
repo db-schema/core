@@ -46,6 +46,14 @@ module DbSchema
         end
       end
 
+      def check(check_name)
+        checks.find { |check| check.name == check_name } || NullCheckConstraint.new
+      end
+
+      def has_check?(check_name)
+        !check(check_name).is_a?(NullCheckConstraint)
+      end
+
       def with_name(new_name)
         Table.new(
           new_name,

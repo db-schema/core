@@ -123,7 +123,33 @@ RSpec.describe DbSchema::Definitions::Table do
     end
   end
 
-  describe '#has_check?'
+  describe '#check' do
+    context 'with a name of an existing check constraint' do
+      it 'returns a check constraint definition' do
+        expect(subject.check(:name_present)).to eq(subject.checks.first)
+      end
+    end
+
+    context 'with an unknown check constraint name' do
+      it 'returns a NullCheckConstraint' do
+        expect(subject.check(:phone_valid)).to be_a(DbSchema::Definitions::NullCheckConstraint)
+      end
+    end
+  end
+
+  describe '#has_check?' do
+    context 'with a name of an existing check constraint' do
+      it 'returns true' do
+        expect(subject).to have_check(:name_present)
+      end
+    end
+
+    context 'with an unknown check constraint name' do
+      it 'returns false' do
+        expect(subject).not_to have_check(:phone_valid)
+      end
+    end
+  end
 
   describe '#has_foreign_key?'
 end

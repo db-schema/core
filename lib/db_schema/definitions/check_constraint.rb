@@ -9,5 +9,9 @@ module DbSchema
         @condition = condition
       end
     end
+
+    class NullCheckConstraint < CheckConstraint
+      def initialize; end
+    end
   end
 end
