@@ -20,8 +20,12 @@ module DbSchema
         !table(table_name).is_a?(NullTable)
       end
 
+      def enum(enum_name)
+        enums.find { |enum| enum.name == enum_name } || NullEnum.new
+      end
+
       def has_enum?(enum_name)
-        enums.any? { |enum| enum.name == enum_name }
+        !enum(enum_name).is_a?(NullEnum)
       end
 
       def has_extension?(extension_name)

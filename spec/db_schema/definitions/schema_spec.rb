@@ -52,6 +52,20 @@ RSpec.describe DbSchema::Definitions::Schema do
     end
   end
 
+  describe '#enum' do
+    context 'with a name of an existing enum' do
+      it 'returns the enum definition' do
+        expect(subject.enum(:user_role)).to eq(user_role)
+      end
+    end
+
+    context 'with an unknown enum name' do
+      it 'returns a NullEnum' do
+        expect(subject.enum(:user_mood)).to be_a(DbSchema::Definitions::NullEnum)
+      end
+    end
+  end
+
   describe '#has_enum?' do
     context 'with a name of an existing enum' do
       it 'returns true' do

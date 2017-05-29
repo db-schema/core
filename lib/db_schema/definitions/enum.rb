@@ -13,5 +13,9 @@ module DbSchema
         Enum.new(new_name, values)
       end
     end
+
+    class NullEnum < Enum
+      def initialize; end
+    end
   end
 end
