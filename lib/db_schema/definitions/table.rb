@@ -19,7 +19,7 @@ module DbSchema
       end
 
       def [](field_name)
-        fields.find { |field| field.name == field_name }
+        fields.find { |field| field.name == field_name } || NullField.new
       end
 
       def with_name(new_name)
