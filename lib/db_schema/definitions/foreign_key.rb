@@ -33,5 +33,9 @@ module DbSchema
         end
       end
     end
+
+    class NullForeignKey < ForeignKey
+      def initialize; end
+    end
   end
 end

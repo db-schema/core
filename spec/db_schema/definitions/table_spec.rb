@@ -151,5 +151,45 @@ RSpec.describe DbSchema::Definitions::Table do
     end
   end
 
-  describe '#has_foreign_key?'
+  describe '#foreign_key' do
+    context 'with a name of an existing foreign key' do
+      it 'returns a foreign key definition' do
+        expect(subject.foreign_key(:user_city_id_fkey)).to eq(subject.foreign_keys.first)
+      end
+    end
+
+    context 'with an unknown foreign key name' do
+      it 'returns a NullForeignKey' do
+        expect(subject.foreign_key(:user_country_id_fkey)).to be_a(DbSchema::Definitions::NullForeignKey)
+      end
+    end
+  end
+
+  describe '#has_foreign_key?' do
+    context 'with a name of an existing foreign key' do
+      it 'returns true' do
+        expect(subject).to have_foreign_key(:user_city_id_fkey)
+      end
+    end
+
+    context 'with an unknown foreign key name' do
+      it 'returns false' do
+        expect(subject).not_to have_foreign_key(:user_country_id_fkey)
+      end
+    end
+  end
+
+  describe '#has_foreign_key_to?' do
+    context 'with a table name referenced by a foreign key' do
+      it 'returns true' do
+        expect(subject).to have_foreign_key_to(:cities)
+      end
+    end
+
+    context 'with a table name not referenced by a foreign key' do
+      it 'returns false' do
+        expect(subject).not_to have_foreign_key_to(:countries)
+      end
+    end
+  end
 end

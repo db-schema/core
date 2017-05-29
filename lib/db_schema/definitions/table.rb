@@ -54,6 +54,18 @@ module DbSchema
         !check(check_name).is_a?(NullCheckConstraint)
       end
 
+      def foreign_key(fkey_name)
+        foreign_keys.find { |fkey| fkey.name == fkey_name } || NullForeignKey.new
+      end
+
+      def has_foreign_key?(fkey_name)
+        !foreign_key(fkey_name).is_a?(NullForeignKey)
+      end
+
+      def has_foreign_key_to?(other_table_name)
+        foreign_keys.any? { |fkey| fkey.table == other_table_name }
+      end
+
       def with_name(new_name)
         Table.new(
           new_name,
