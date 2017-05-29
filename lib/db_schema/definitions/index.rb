@@ -42,6 +42,12 @@ module DbSchema
         )
       end
     end
+
+    class NullIndex < Index
+      def initialize
+        @columns = []
+      end
+    end
   end
 end
 
