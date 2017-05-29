@@ -24,16 +24,16 @@ RSpec.describe DbSchema::Definitions::Schema do
     )
   end
 
-  describe '#[]' do
+  describe '#table' do
     context 'with a name of an existing table' do
       it 'returns the table definition' do
-        expect(subject[:users]).to eq(users)
+        expect(subject.table(:users)).to eq(users)
       end
     end
 
     context 'with an unknown table name' do
       it 'returns a NullTable' do
-        expect(subject[:posts]).to be_a(DbSchema::Definitions::NullTable)
+        expect(subject.table(:posts)).to be_a(DbSchema::Definitions::NullTable)
       end
     end
   end

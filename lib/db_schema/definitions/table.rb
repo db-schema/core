@@ -18,12 +18,13 @@ module DbSchema
           checks.any?
       end
 
-      def [](field_name)
+      def field(field_name)
         fields.find { |field| field.name == field_name } || NullField.new
       end
+      alias_method :[], :field
 
       def has_field?(field_name)
-        !self[field_name].is_a?(NullField)
+        !field(field_name).is_a?(NullField)
       end
 
       def index(index_name)

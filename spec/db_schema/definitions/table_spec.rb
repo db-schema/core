@@ -39,16 +39,16 @@ RSpec.describe DbSchema::Definitions::Table do
     )
   end
 
-  describe '#[]' do
+  describe '#field' do
     context 'with a name of an existing field' do
       it 'returns the field definition' do
-        expect(subject[:first_name]).to be_a(DbSchema::Definitions::Field::Varchar)
+        expect(subject.field(:first_name)).to eq(subject.fields[2])
       end
     end
 
     context 'with an unknown field name' do
       it 'returns a NullField' do
-        expect(subject[:email]).to be_a(DbSchema::Definitions::NullField)
+        expect(subject.field(:email)).to be_a(DbSchema::Definitions::NullField)
       end
     end
   end

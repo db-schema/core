@@ -11,12 +11,13 @@ module DbSchema
         @extensions = extensions
       end
 
-      def [](table_name)
+      def table(table_name)
         tables.find { |table| table.name == table_name } || NullTable.new
       end
+      alias_method :[], :table
 
       def has_table?(table_name)
-        !self[table_name].is_a?(NullTable)
+        !table(table_name).is_a?(NullTable)
       end
 
       def has_enum?(enum_name)
