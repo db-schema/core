@@ -1,3 +1,5 @@
+require_relative 'dsl/migration'
+
 module DbSchema
   class DSL
     attr_reader :block
