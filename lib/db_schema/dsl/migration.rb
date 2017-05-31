@@ -43,6 +43,10 @@ module DbSchema
           )
 
           migration.changes << Changes::CreateTable.new(table)
+
+          table.foreign_keys.each do |fkey|
+            migration.changes << Changes::CreateForeignKey.new(table.name, fkey)
+          end
         end
       end
     end

@@ -27,6 +27,7 @@ RSpec.describe DbSchema::DSL::Migration do
             t.primary_key :id
             t.varchar :first_name
             t.varchar :last_name
+            t.integer :city_id, null: false, references: :cities
           end
         end
       end
@@ -49,9 +50,17 @@ RSpec.describe DbSchema::DSL::Migration do
             fields: [
               DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
               DbSchema::Definitions::Field::Varchar.new(:first_name),
-              DbSchema::Definitions::Field::Varchar.new(:last_name)
+              DbSchema::Definitions::Field::Varchar.new(:last_name),
+              DbSchema::Definitions::Field::Integer.new(:city_id, null: false)
+            ],
+            foreign_keys: [
+              DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
             ]
           )
+        ),
+        DbSchema::Changes::CreateForeignKey.new(
+          :users,
+          DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
         )
       ])
     end
