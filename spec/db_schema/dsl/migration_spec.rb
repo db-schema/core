@@ -30,7 +30,9 @@ RSpec.describe DbSchema::DSL::Migration do
             t.integer :city_id, null: false, references: :cities
           end
 
-          migrator.drop_table(:people)
+          migrator.drop_table :people
+
+          migrator.rename_table :comments, to: :messages
         end
       end
     end
@@ -64,7 +66,8 @@ RSpec.describe DbSchema::DSL::Migration do
           :users,
           DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
         ),
-        DbSchema::Changes::DropTable.new(:people)
+        DbSchema::Changes::DropTable.new(:people),
+        DbSchema::Changes::RenameTable.new(old_name: :comments, new_name: :messages)
       ])
     end
   end

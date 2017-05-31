@@ -52,6 +52,10 @@ module DbSchema
         def drop_table(name)
           migration.changes << Changes::DropTable.new(name)
         end
+
+        def rename_table(from, to:)
+          migration.changes << Changes::RenameTable.new(old_name: from, new_name: to)
+        end
       end
     end
   end
