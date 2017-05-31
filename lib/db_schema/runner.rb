@@ -14,6 +14,8 @@ module DbSchema
             self.class.create_table(change)
           when Changes::DropTable
             self.class.drop_table(change)
+          when Changes::RenameTable
+            self.class.rename_table(change)
           when Changes::AlterTable
             self.class.alter_table(change)
           when Changes::CreateForeignKey
@@ -45,6 +47,7 @@ module DbSchema
           Changes::AlterEnumValues,
           Changes::CreateEnum,
           Changes::CreateTable,
+          Changes::RenameTable,
           Changes::AlterTable,
           Changes::DropTable,
           Changes::DropEnum,
@@ -84,6 +87,10 @@ module DbSchema
 
       def drop_table(change)
         DbSchema.connection.drop_table(change.name)
+      end
+
+      def rename_table(change)
+        DbSchema.connection.rename_table(change.old_name, change.new_name)
       end
 
       def alter_table(change)

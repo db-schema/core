@@ -45,8 +45,9 @@ if defined?(AwesomePrint)
           :dbschema_create_column
         when ::DbSchema::Changes::DropColumn
           :dbschema_column_operation
-        when ::DbSchema::Changes::RenameColumn
-          :dbschema_rename_column
+        when ::DbSchema::Changes::RenameTable,
+             ::DbSchema::Changes::RenameColumn
+          :dbschema_rename
         when ::DbSchema::Changes::AlterColumnType
           :dbschema_alter_column_type
         when ::DbSchema::Changes::CreatePrimaryKey,
@@ -221,8 +222,8 @@ if defined?(AwesomePrint)
         "#<DbSchema::Changes::DropColumn #{object.name.ai}>"
       end
 
-      def awesome_dbschema_rename_column(object)
-        "#<DbSchema::Changes::RenameColumn #{object.old_name.ai} => #{object.new_name.ai}>"
+      def awesome_dbschema_rename(object)
+        "#<#{object.class} #{object.old_name.ai} => #{object.new_name.ai}>"
       end
 
       def awesome_dbschema_alter_column_type(object)

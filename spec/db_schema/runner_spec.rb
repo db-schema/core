@@ -168,6 +168,20 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
+    context 'with RenameTable' do
+      let(:changes) do
+        [DbSchema::Changes::RenameTable.new(old_name: :people, new_name: :users)]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        schema = DbSchema::Reader.read_schema
+        expect(schema).not_to have_table(:people)
+        expect(schema).to have_table(:users)
+      end
+    end
+
     context 'with AlterTable' do
       let(:changes) do
         [DbSchema::Changes::AlterTable.new(:people, table_changes)]

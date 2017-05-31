@@ -203,6 +203,16 @@ module DbSchema
       end
     end
 
+    class RenameTable
+      include Dry::Equalizer(:old_name, :new_name)
+      attr_reader :old_name, :new_name
+
+      def initialize(old_name:, new_name:)
+        @old_name = old_name
+        @new_name = new_name
+      end
+    end
+
     class AlterTable
       include Dry::Equalizer(:table_name, :changes)
       attr_reader :table_name, :changes
