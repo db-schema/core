@@ -48,6 +48,10 @@ module DbSchema
             migration.changes << Changes::CreateForeignKey.new(table.name, fkey)
           end
         end
+
+        def drop_table(name)
+          migration.changes << Changes::DropTable.new(name)
+        end
       end
     end
   end

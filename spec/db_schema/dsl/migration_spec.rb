@@ -29,6 +29,8 @@ RSpec.describe DbSchema::DSL::Migration do
             t.varchar :last_name
             t.integer :city_id, null: false, references: :cities
           end
+
+          migrator.drop_table(:people)
         end
       end
     end
@@ -61,7 +63,8 @@ RSpec.describe DbSchema::DSL::Migration do
         DbSchema::Changes::CreateForeignKey.new(
           :users,
           DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
-        )
+        ),
+        DbSchema::Changes::DropTable.new(:people)
       ])
     end
   end
