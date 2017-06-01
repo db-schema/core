@@ -140,7 +140,7 @@ module DbSchema
         end
       end
 
-      def field(name, type, custom: false, unique: false, index: false, references: nil, check: nil, **options)
+      def field(name, type, unique: false, index: false, references: nil, check: nil, **options)
         fields << Definitions::Field.build(name, type, options)
 
         if unique
