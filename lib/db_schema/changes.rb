@@ -217,7 +217,7 @@ module DbSchema
       include Dry::Equalizer(:table_name, :changes)
       attr_reader :table_name, :changes
 
-      def initialize(table_name, changes)
+      def initialize(table_name, changes = [])
         @table_name = table_name
         @changes    = changes
       end
@@ -262,6 +262,7 @@ module DbSchema
     end
 
     class RenameColumn
+      include Dry::Equalizer(:old_name, :new_name)
       attr_reader :old_name, :new_name
 
       def initialize(old_name:, new_name:)

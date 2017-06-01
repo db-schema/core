@@ -33,6 +33,12 @@ RSpec.describe DbSchema::DSL::Migration do
           migrator.drop_table :people
 
           migrator.rename_table :comments, to: :messages
+
+          migrator.alter_table :messages do |t|
+            t.add_column :title, :varchar, null: false
+            t.drop_column :updated_at
+            t.rename_column :body, to: :text
+          end
         end
       end
     end
@@ -67,7 +73,17 @@ RSpec.describe DbSchema::DSL::Migration do
           DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
         ),
         DbSchema::Changes::DropTable.new(:people),
-        DbSchema::Changes::RenameTable.new(old_name: :comments, new_name: :messages)
+        DbSchema::Changes::RenameTable.new(old_name: :comments, new_name: :messages),
+        DbSchema::Changes::AlterTable.new(
+          :messages,
+          [
+            DbSchema::Changes::CreateColumn.new(
+              DbSchema::Definitions::Field::Varchar.new(:title, null: false)
+            ),
+            DbSchema::Changes::DropColumn.new(:updated_at),
+            DbSchema::Changes::RenameColumn.new(old_name: :body, new_name: :text)
+          ]
+        )
       ])
     end
   end

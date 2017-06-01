@@ -56,6 +56,39 @@ module DbSchema
         def rename_table(from, to:)
           migration.changes << Changes::RenameTable.new(old_name: from, new_name: to)
         end
+
+        def alter_table(name, &block)
+          alter_table = Changes::AlterTable.new(name)
+          AlterTableYielder.new(alter_table).run(block)
+
+          migration.changes << alter_table
+        end
+
+        class AlterTableYielder
+          attr_reader :alter_table
+
+          def initialize(alter_table)
+            @alter_table = alter_table
+          end
+
+          def run(block)
+            block.call(self)
+          end
+
+          def add_column(name, type, **options)
+            alter_table.changes << Changes::CreateColumn.new(
+              Definitions::Field.build(name, type, options)
+            )
+          end
+
+          def drop_column(name)
+            alter_table.changes << Changes::DropColumn.new(name)
+          end
+
+          def rename_column(from, to:)
+            alter_table.changes << Changes::RenameColumn.new(old_name: from, new_name: to)
+          end
+        end
       end
     end
   end
