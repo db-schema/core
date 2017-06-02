@@ -88,6 +88,22 @@ module DbSchema
           def rename_column(from, to:)
             alter_table.changes << Changes::RenameColumn.new(old_name: from, new_name: to)
           end
+
+          def alter_column_type(name, new_type, **new_attributes)
+            alter_table.changes << Changes::AlterColumnType.new(name, new_type: new_type, **new_attributes)
+          end
+
+          def allow_null(name)
+            alter_table.changes << Changes::AllowNull.new(name)
+          end
+
+          def disallow_null(name)
+            alter_table.changes << Changes::DisallowNull.new(name)
+          end
+
+          def alter_column_default(name, new_default)
+            alter_table.changes << Changes::AlterColumnDefault.new(name, new_default: new_default)
+          end
         end
       end
     end
