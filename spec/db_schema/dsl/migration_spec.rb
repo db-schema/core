@@ -55,6 +55,9 @@ RSpec.describe DbSchema::DSL::Migration do
 
           migrator.create_enum :user_role, %i(guest user admin)
           migrator.drop_enum :user_mood
+
+          migrator.create_extension :ltree
+          migrator.drop_extension :hstore
         end
       end
     end
@@ -129,7 +132,11 @@ RSpec.describe DbSchema::DSL::Migration do
         DbSchema::Changes::CreateEnum.new(
           DbSchema::Definitions::Enum.new(:user_role, %i(guest user admin))
         ),
-        DbSchema::Changes::DropEnum.new(:user_mood)
+        DbSchema::Changes::DropEnum.new(:user_mood),
+        DbSchema::Changes::CreateExtension.new(
+          DbSchema::Definitions::Extension.new(:ltree)
+        ),
+        DbSchema::Changes::DropExtension.new(:hstore)
       ])
     end
   end

@@ -158,6 +158,16 @@ module DbSchema
         def drop_enum(name)
           migration.changes << Changes::DropEnum.new(name)
         end
+
+        def create_extension(name)
+          migration.changes << Changes::CreateExtension.new(
+            Definitions::Extension.new(name)
+          )
+        end
+
+        def drop_extension(name)
+          migration.changes << Changes::DropExtension.new(name)
+        end
       end
     end
   end
