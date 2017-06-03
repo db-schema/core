@@ -45,6 +45,9 @@ RSpec.describe DbSchema::DSL::Migration do
 
             t.add_index :user_id
             t.drop_index :messages_created_at_index
+
+            t.add_check :title_length, 'char_length(title) >= 5'
+            t.drop_check :text_length
           end
         end
       end
@@ -101,7 +104,11 @@ RSpec.describe DbSchema::DSL::Migration do
                 ]
               )
             ),
-            DbSchema::Changes::DropIndex.new(:messages_created_at_index)
+            DbSchema::Changes::DropIndex.new(:messages_created_at_index),
+            DbSchema::Changes::CreateCheckConstraint.new(
+              DbSchema::Definitions::CheckConstraint.new(name: :title_length, condition: 'char_length(title) >= 5')
+            ),
+            DbSchema::Changes::DropCheckConstraint.new(:text_length)
           ]
         )
       ])

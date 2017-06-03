@@ -118,6 +118,16 @@ module DbSchema
           def drop_index(name)
             alter_table.changes << Changes::DropIndex.new(name)
           end
+
+          def add_check(name, condition)
+            alter_table.changes << Changes::CreateCheckConstraint.new(
+              Definitions::CheckConstraint.new(name: name, condition: condition)
+            )
+          end
+
+          def drop_check(name)
+            alter_table.changes << Changes::DropCheckConstraint.new(name)
+          end
         end
       end
     end
