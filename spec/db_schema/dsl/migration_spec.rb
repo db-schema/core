@@ -42,6 +42,9 @@ RSpec.describe DbSchema::DSL::Migration do
             t.allow_null :text
             t.disallow_null :created_at
             t.alter_column_default :created_at, :'now()'
+
+            t.add_index :user_id
+            t.drop_index :messages_created_at_index
           end
         end
       end
@@ -89,7 +92,16 @@ RSpec.describe DbSchema::DSL::Migration do
             DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamptz),
             DbSchema::Changes::AllowNull.new(:text),
             DbSchema::Changes::DisallowNull.new(:created_at),
-            DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()')
+            DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()'),
+            DbSchema::Changes::CreateIndex.new(
+              DbSchema::Definitions::Index.new(
+                name: :messages_user_id_index,
+                columns: [
+                  DbSchema::Definitions::Index::TableField.new(:user_id)
+                ]
+              )
+            ),
+            DbSchema::Changes::DropIndex.new(:messages_created_at_index)
           ]
         )
       ])

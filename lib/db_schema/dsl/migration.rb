@@ -104,6 +104,20 @@ module DbSchema
           def alter_column_default(name, new_default)
             alter_table.changes << Changes::AlterColumnDefault.new(name, new_default: new_default)
           end
+
+          def add_index(*columns, **index_options)
+            alter_table.changes << Changes::CreateIndex.new(
+              TableYielder.build_index(
+                columns,
+                table_name: alter_table.table_name,
+                **index_options
+              )
+            )
+          end
+
+          def drop_index(name)
+            alter_table.changes << Changes::DropIndex.new(name)
+          end
         end
       end
     end
