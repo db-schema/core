@@ -63,47 +63,11 @@ module DbSchema
         field(name, :integer, primary_key: true)
       end
 
-      def index(*columns, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
-        if columns.last.is_a?(Hash)
-          *ascending_columns, ordered_expressions = columns
-        else
-          ascending_columns = columns
-          ordered_expressions = {}
-        end
-
-        columns_data = ascending_columns.each_with_object({}) do |column_name, columns|
-          columns[column_name] = :asc
-        end.merge(ordered_fields).merge(ordered_expressions)
-
-        index_columns = columns_data.map do |column_name, column_order_options|
-          options = case column_order_options
-          when :asc
-            {}
-          when :desc
-            { order: :desc }
-          when :asc_nulls_first
-            { nulls: :first }
-          when :desc_nulls_last
-            { order: :desc, nulls: :last }
-          else
-            raise ArgumentError, 'Only :asc, :desc, :asc_nulls_first and :desc_nulls_last options are supported.'
-          end
-
-          if column_name.is_a?(String)
-            Definitions::Index::Expression.new(column_name, **options)
-          else
-            Definitions::Index::TableField.new(column_name, **options)
-          end
-        end
-
-        index_name = name || "#{table_name}_#{index_columns.map(&:index_name_segment).join('_')}_index"
-
-        indices << Definitions::Index.new(
-          name:      index_name,
-          columns:   index_columns,
-          unique:    unique,
-          type:      using,
-          condition: where
+      def index(*columns, **index_options)
+        indices << TableYielder.build_index(
+          columns,
+          table_name: table_name,
+          **index_options
         )
       end
 
@@ -111,33 +75,12 @@ module DbSchema
         checks << Definitions::CheckConstraint.new(name: name, condition: condition)
       end
 
-      def foreign_key(*fkey_fields, references:, name: nil, on_update: :no_action, on_delete: :no_action, deferrable: false)
-        fkey_name = name || :"#{table_name}_#{fkey_fields.first}_fkey"
-
-        if references.is_a?(Array)
-          # [:table, :field]
-          referenced_table, *referenced_keys = references
-
-          foreign_keys << Definitions::ForeignKey.new(
-            name:       fkey_name,
-            fields:     fkey_fields,
-            table:      referenced_table,
-            keys:       referenced_keys,
-            on_delete:  on_delete,
-            on_update:  on_update,
-            deferrable: deferrable
-          )
-        else
-          # :table
-          foreign_keys << Definitions::ForeignKey.new(
-            name:       fkey_name,
-            fields:     fkey_fields,
-            table:      references,
-            on_delete:  on_delete,
-            on_update:  on_update,
-            deferrable: deferrable
-          )
-        end
+      def foreign_key(*fkey_fields, **fkey_options)
+        foreign_keys << TableYielder.build_foreign_key(
+          fkey_fields,
+          table_name: table_name,
+          **fkey_options
+        )
       end
 
       def field(name, type, unique: false, index: false, references: nil, check: nil, **options)
@@ -172,6 +115,81 @@ module DbSchema
 
       def foreign_keys
         @foreign_keys ||= []
+      end
+
+      class << self
+        def build_index(columns, table_name:, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
+          if columns.last.is_a?(Hash)
+            *ascending_columns, ordered_expressions = columns
+          else
+            ascending_columns = columns
+            ordered_expressions = {}
+          end
+
+          columns_data = ascending_columns.each_with_object({}) do |column_name, columns|
+            columns[column_name] = :asc
+          end.merge(ordered_fields).merge(ordered_expressions)
+
+          index_columns = columns_data.map do |column_name, column_order_options|
+            options = case column_order_options
+            when :asc
+              {}
+            when :desc
+              { order: :desc }
+            when :asc_nulls_first
+              { nulls: :first }
+            when :desc_nulls_last
+              { order: :desc, nulls: :last }
+            else
+              raise ArgumentError, 'Only :asc, :desc, :asc_nulls_first and :desc_nulls_last options are supported.'
+            end
+
+            if column_name.is_a?(String)
+              Definitions::Index::Expression.new(column_name, **options)
+            else
+              Definitions::Index::TableField.new(column_name, **options)
+            end
+          end
+
+          index_name = name || "#{table_name}_#{index_columns.map(&:index_name_segment).join('_')}_index"
+
+          Definitions::Index.new(
+            name:      index_name,
+            columns:   index_columns,
+            unique:    unique,
+            type:      using,
+            condition: where
+          )
+        end
+
+        def build_foreign_key(fkey_fields, table_name:, references:, name: nil, on_update: :no_action, on_delete: :no_action, deferrable: false)
+          fkey_name = name || :"#{table_name}_#{fkey_fields.first}_fkey"
+
+          if references.is_a?(Array)
+            # [:table, :field]
+            referenced_table, *referenced_keys = references
+
+            Definitions::ForeignKey.new(
+              name:       fkey_name,
+              fields:     fkey_fields,
+              table:      referenced_table,
+              keys:       referenced_keys,
+              on_delete:  on_delete,
+              on_update:  on_update,
+              deferrable: deferrable
+            )
+          else
+            # :table
+            Definitions::ForeignKey.new(
+              name:       fkey_name,
+              fields:     fkey_fields,
+              table:      references,
+              on_delete:  on_delete,
+              on_update:  on_update,
+              deferrable: deferrable
+            )
+          end
+        end
       end
     end
   end
