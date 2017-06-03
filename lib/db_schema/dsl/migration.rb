@@ -148,6 +148,16 @@ module DbSchema
             )
           end
         end
+
+        def create_enum(name, values)
+          migration.changes << Changes::CreateEnum.new(
+            Definitions::Enum.new(name, values)
+          )
+        end
+
+        def drop_enum(name)
+          migration.changes << Changes::DropEnum.new(name)
+        end
       end
     end
   end

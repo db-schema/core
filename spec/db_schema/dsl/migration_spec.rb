@@ -52,6 +52,9 @@ RSpec.describe DbSchema::DSL::Migration do
             t.add_foreign_key :user_id, references: :users
             t.drop_foreign_key :messages_section_id_fkey
           end
+
+          migrator.create_enum :user_role, %i(guest user admin)
+          migrator.drop_enum :user_mood
         end
       end
     end
@@ -122,7 +125,11 @@ RSpec.describe DbSchema::DSL::Migration do
             ),
             DbSchema::Changes::DropCheckConstraint.new(:text_length)
           ]
-        )
+        ),
+        DbSchema::Changes::CreateEnum.new(
+          DbSchema::Definitions::Enum.new(:user_role, %i(guest user admin))
+        ),
+        DbSchema::Changes::DropEnum.new(:user_mood)
       ])
     end
   end
