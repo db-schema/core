@@ -59,16 +59,17 @@ module DbSchema
 
         def alter_table(name, &block)
           alter_table = Changes::AlterTable.new(name)
-          AlterTableYielder.new(alter_table).run(block)
+          AlterTableYielder.new(alter_table, migration).run(block)
 
           migration.changes << alter_table
         end
 
         class AlterTableYielder
-          attr_reader :alter_table
+          attr_reader :alter_table, :migration
 
-          def initialize(alter_table)
+          def initialize(alter_table, migration)
             @alter_table = alter_table
+            @migration   = migration
           end
 
           def run(block)
@@ -127,6 +128,24 @@ module DbSchema
 
           def drop_check(name)
             alter_table.changes << Changes::DropCheckConstraint.new(name)
+          end
+
+          def add_foreign_key(*fkey_fields, **fkey_options)
+            migration.changes << Changes::CreateForeignKey.new(
+              alter_table.table_name,
+              TableYielder.build_foreign_key(
+                fkey_fields,
+                table_name: alter_table.table_name,
+                **fkey_options
+              )
+            )
+          end
+
+          def drop_foreign_key(fkey_name)
+            migration.changes << Changes::DropForeignKey.new(
+              alter_table.table_name,
+              fkey_name
+            )
           end
         end
       end

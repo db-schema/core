@@ -48,6 +48,9 @@ RSpec.describe DbSchema::DSL::Migration do
 
             t.add_check :title_length, 'char_length(title) >= 5'
             t.drop_check :text_length
+
+            t.add_foreign_key :user_id, references: :users
+            t.drop_foreign_key :messages_section_id_fkey
           end
         end
       end
@@ -84,6 +87,15 @@ RSpec.describe DbSchema::DSL::Migration do
         ),
         DbSchema::Changes::DropTable.new(:people),
         DbSchema::Changes::RenameTable.new(old_name: :comments, new_name: :messages),
+        DbSchema::Changes::CreateForeignKey.new(
+          :messages,
+          DbSchema::Definitions::ForeignKey.new(
+            name: :messages_user_id_fkey,
+            fields: [:user_id],
+            table: :users
+          )
+        ),
+        DbSchema::Changes::DropForeignKey.new(:messages, :messages_section_id_fkey),
         DbSchema::Changes::AlterTable.new(
           :messages,
           [
