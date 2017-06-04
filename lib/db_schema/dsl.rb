@@ -2,10 +2,11 @@ require_relative 'dsl/migration'
 
 module DbSchema
   class DSL
-    attr_reader :schema
+    attr_reader :schema, :migrations
 
     def initialize(block)
-      @schema = Definitions::Schema.new
+      @schema     = Definitions::Schema.new
+      @migrations = []
 
       block.call(self)
     end
@@ -28,6 +29,10 @@ module DbSchema
 
     def extension(name)
       @schema.extensions << Definitions::Extension.new(name.to_sym)
+    end
+
+    def migrate(&block)
+      migrations << Migration.new(block).migration
     end
 
     class TableYielder
