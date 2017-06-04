@@ -2,17 +2,12 @@ require_relative 'dsl/migration'
 
 module DbSchema
   class DSL
-    attr_reader :block
+    attr_reader :schema
 
     def initialize(block)
-      @block  = block
       @schema = Definitions::Schema.new
-    end
 
-    def schema
       block.call(self)
-
-      @schema
     end
 
     def table(name, &block)

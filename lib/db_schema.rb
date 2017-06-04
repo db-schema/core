@@ -17,12 +17,12 @@ require 'db_schema/version'
 module DbSchema
   class << self
     def describe(&block)
-      desired_schema = DSL.new(block).schema
-      validate(desired_schema)
-      Normalizer.new(desired_schema).normalize_tables
+      desired = DSL.new(block)
+      validate(desired.schema)
+      Normalizer.new(desired.schema).normalize_tables
 
       actual_schema = Reader.read_schema
-      changes = Changes.between(desired_schema, actual_schema)
+      changes = Changes.between(desired.schema, actual_schema)
       return if changes.empty?
 
       log_changes(changes) if configuration.log_changes?
@@ -31,7 +31,7 @@ module DbSchema
       Runner.new(changes).run!
 
       if configuration.post_check_enabled?
-        perform_post_check(desired_schema)
+        perform_post_check(desired.schema)
       end
     end
 
