@@ -32,6 +32,8 @@ module DbSchema
             self.class.create_extension(change)
           when Changes::DropExtension
             self.class.drop_extension(change)
+          when Changes::ExecuteQuery
+            self.class.execute_query(change)
           end
         end
       end
@@ -177,6 +179,10 @@ module DbSchema
 
       def drop_extension(change)
         DbSchema.connection.run(%Q(DROP EXTENSION "#{change.name}"))
+      end
+
+      def execute_query(change)
+        DbSchema.connection.run(change.query)
       end
 
       def map_options(type, options)

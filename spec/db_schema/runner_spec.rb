@@ -631,6 +631,22 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
+    context 'with ExecuteQuery' do
+      let(:changes) do
+        [
+          DbSchema::Changes::ExecuteQuery.new('ALTER TABLE people RENAME TO users')
+        ]
+      end
+
+      it 'runs the query' do
+        subject.run!
+
+        schema = DbSchema::Reader.read_schema
+        expect(schema).not_to have_table(:people)
+        expect(schema).to have_table(:users)
+      end
+    end
+
     it 'runs most operations in a transaction' do
       changes = [
         DbSchema::Changes::AlterTable.new(

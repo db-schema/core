@@ -420,5 +420,14 @@ module DbSchema
 
     class DropExtension < ColumnOperation
     end
+
+    class ExecuteQuery
+      include Dry::Equalizer(:query)
+      attr_reader :query
+
+      def initialize(query)
+        @query = query
+      end
+    end
   end
 end

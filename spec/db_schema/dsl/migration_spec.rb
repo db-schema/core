@@ -58,6 +58,8 @@ RSpec.describe DbSchema::DSL::Migration do
 
           migrator.create_extension :ltree
           migrator.drop_extension :hstore
+
+          migrator.execute 'UPDATE messages SET read = "t"'
         end
       end
     end
@@ -136,7 +138,8 @@ RSpec.describe DbSchema::DSL::Migration do
         DbSchema::Changes::CreateExtension.new(
           DbSchema::Definitions::Extension.new(:ltree)
         ),
-        DbSchema::Changes::DropExtension.new(:hstore)
+        DbSchema::Changes::DropExtension.new(:hstore),
+        DbSchema::Changes::ExecuteQuery.new('UPDATE messages SET read = "t"')
       ])
     end
   end

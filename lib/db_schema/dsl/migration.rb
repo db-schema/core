@@ -168,6 +168,10 @@ module DbSchema
         def drop_extension(name)
           migration.changes << Changes::DropExtension.new(name)
         end
+
+        def execute(query)
+          migration.changes << Changes::ExecuteQuery.new(query)
+        end
       end
     end
   end
