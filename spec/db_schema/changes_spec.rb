@@ -234,19 +234,20 @@ RSpec.describe DbSchema::Changes do
       it 'returns changes between two schemas' do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
-        alter_table = changes.first
+        drop_group_id, drop_country_id, alter_table, create_city_id, create_group_id = changes
         expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
 
         expect(alter_table.changes).to eq([
-          DbSchema::Changes::CreatePrimaryKey.new(:id),
+          DbSchema::Changes::DropCheckConstraint.new(:location_check),
+          DbSchema::Changes::DropIndex.new(:users_name_index),
+          DbSchema::Changes::DropIndex.new(:users_type_index),
+          DbSchema::Changes::DropColumn.new(:age),
           DbSchema::Changes::AlterColumnType.new(:name, new_type: :varchar, length: 60),
-          DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
           DbSchema::Changes::AlterColumnType.new(:type, new_type: :varchar),
+          DbSchema::Changes::AlterColumnType.new(:status, new_type: :user_status),
           DbSchema::Changes::DisallowNull.new(:type),
           DbSchema::Changes::AlterColumnDefault.new(:type, new_default: 'guest'),
-          DbSchema::Changes::AlterColumnType.new(:status, new_type: :user_status),
-          DbSchema::Changes::DropColumn.new(:age),
-          DbSchema::Changes::DropIndex.new(:users_name_index),
+          DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
           DbSchema::Changes::CreateIndex.new(
             DbSchema::Definitions::Index.new(
               name:      :users_name_index,
@@ -263,17 +264,23 @@ RSpec.describe DbSchema::Changes do
               unique:  true
             )
           ),
-          DbSchema::Changes::DropIndex.new(:users_type_index),
-          DbSchema::Changes::DropCheckConstraint.new(:location_check),
           DbSchema::Changes::CreateCheckConstraint.new(
             DbSchema::Definitions::CheckConstraint.new(
               name:      :location_check,
               condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
             )
-          )
+          ),
+          DbSchema::Changes::CreatePrimaryKey.new(:id)
         ])
 
-        expect(changes.drop(1)).to eq([
+        expect(drop_group_id).to eq(
+          DbSchema::Changes::DropForeignKey.new(:users, :users_group_id_fkey)
+        )
+        expect(drop_country_id).to eq(
+          DbSchema::Changes::DropForeignKey.new(:users, :users_country_id_fkey)
+        )
+
+        expect(create_city_id).to eq(
           DbSchema::Changes::CreateForeignKey.new(
             :users,
             DbSchema::Definitions::ForeignKey.new(
@@ -281,8 +288,9 @@ RSpec.describe DbSchema::Changes do
               fields: [:city_id],
               table:  :cities
             )
-          ),
-          DbSchema::Changes::DropForeignKey.new(:users, :users_group_id_fkey),
+          )
+        )
+        expect(create_group_id).to eq(
           DbSchema::Changes::CreateForeignKey.new(
             :users,
             DbSchema::Definitions::ForeignKey.new(
@@ -292,8 +300,7 @@ RSpec.describe DbSchema::Changes do
               on_delete: :cascade
             )
           ),
-          DbSchema::Changes::DropForeignKey.new(:users, :users_country_id_fkey)
-        ])
+        )
       end
 
       context 'with just foreign keys changed' do
@@ -347,8 +354,8 @@ RSpec.describe DbSchema::Changes do
 
           expect(changes.count).to eq(2)
           expect(changes.map(&:class)).to eq([
-            DbSchema::Changes::CreateForeignKey,
-            DbSchema::Changes::DropForeignKey
+            DbSchema::Changes::DropForeignKey,
+            DbSchema::Changes::CreateForeignKey
           ])
         end
       end
@@ -449,12 +456,6 @@ RSpec.describe DbSchema::Changes do
           changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
           expect(changes).to eq([
-            DbSchema::Changes::AlterTable.new(
-              :people,
-              [
-                DbSchema::Changes::AlterColumnDefault.new(:happiness, new_default: 'happy')
-              ]
-            ),
             DbSchema::Changes::AlterEnumValues.new(
               :happiness,
               desired_values,
@@ -465,6 +466,12 @@ RSpec.describe DbSchema::Changes do
                   new_default: 'happy',
                   array:       false
                 }
+              ]
+            ),
+            DbSchema::Changes::AlterTable.new(
+              :people,
+              [
+                DbSchema::Changes::AlterColumnDefault.new(:happiness, new_default: 'happy')
               ]
             )
           ])

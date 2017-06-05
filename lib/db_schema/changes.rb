@@ -33,7 +33,7 @@ module DbSchema
             if field_operations.any? || index_operations.any? || check_operations.any?
               changes << AlterTable.new(
                 table_name,
-                field_operations + index_operations + check_operations
+                sort_alter_table_changes(field_operations + index_operations + check_operations)
               )
             end
 
@@ -83,7 +83,7 @@ module DbSchema
           DropExtension.new(extension.name)
         end
 
-        table_changes + enum_changes + extension_changes
+        sort_all_changes(table_changes + enum_changes + extension_changes)
       end
 
     private
@@ -182,6 +182,44 @@ module DbSchema
             table_changes << CreateForeignKey.new(table_name, desired)
           end
         end
+      end
+
+      def sort_all_changes(changes)
+        Utils.sort_by_class(
+          changes,
+          [
+            CreateExtension,
+            DropForeignKey,
+            AlterEnumValues,
+            CreateEnum,
+            CreateTable,
+            AlterTable,
+            DropTable,
+            DropEnum,
+            CreateForeignKey,
+            DropExtension
+          ]
+        )
+      end
+
+      def sort_alter_table_changes(changes)
+        Utils.sort_by_class(
+          changes,
+          [
+            DropPrimaryKey,
+            DropCheckConstraint,
+            DropIndex,
+            DropColumn,
+            AlterColumnType,
+            AllowNull,
+            DisallowNull,
+            AlterColumnDefault,
+            CreateColumn,
+            CreateIndex,
+            CreateCheckConstraint,
+            CreatePrimaryKey
+          ]
+        )
       end
     end
 

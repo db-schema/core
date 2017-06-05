@@ -3,7 +3,7 @@ module DbSchema
     attr_reader :changes
 
     def initialize(changes)
-      @changes = preprocess_changes(changes)
+      @changes = changes
     end
 
     def run!
@@ -38,25 +38,6 @@ module DbSchema
     end
 
   private
-    def preprocess_changes(changes)
-      Utils.sort_by_class(
-        changes,
-        [
-          Changes::CreateExtension,
-          Changes::DropForeignKey,
-          Changes::AlterEnumValues,
-          Changes::CreateEnum,
-          Changes::CreateTable,
-          Changes::RenameTable,
-          Changes::AlterTable,
-          Changes::DropTable,
-          Changes::DropEnum,
-          Changes::CreateForeignKey,
-          Changes::DropExtension
-        ]
-      )
-    end
-
     class << self
       def create_table(change)
         DbSchema.connection.create_table(change.table.name) do
@@ -95,24 +76,7 @@ module DbSchema
 
       def alter_table(change)
         DbSchema.connection.alter_table(change.table_name) do
-          Utils.sort_by_class(
-            change.changes,
-            [
-              DbSchema::Changes::DropPrimaryKey,
-              DbSchema::Changes::DropCheckConstraint,
-              DbSchema::Changes::DropIndex,
-              DbSchema::Changes::DropColumn,
-              DbSchema::Changes::RenameColumn,
-              DbSchema::Changes::AlterColumnType,
-              DbSchema::Changes::AllowNull,
-              DbSchema::Changes::DisallowNull,
-              DbSchema::Changes::AlterColumnDefault,
-              DbSchema::Changes::CreateColumn,
-              DbSchema::Changes::CreateIndex,
-              DbSchema::Changes::CreateCheckConstraint,
-              DbSchema::Changes::CreatePrimaryKey
-            ]
-          ).each do |element|
+          change.changes.each do |element|
             case element
             when Changes::CreateColumn
               if element.primary_key?
