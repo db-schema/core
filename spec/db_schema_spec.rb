@@ -10,7 +10,8 @@ RSpec.describe DbSchema do
       database.create_enum :happiness, %i(good ok bad)
 
       database.create_table :users do
-        column :id,        :Integer, primary_key: true
+        primary_key :id
+
         column :name,      :Varchar, null: false
         column :email,     :Varchar, size: 100
         column :happiness, :happiness, default: 'ok'
@@ -19,7 +20,8 @@ RSpec.describe DbSchema do
       end
 
       database.create_table :posts do
-        column :id,      :Integer, primary_key: true
+        primary_key :id
+
         column :title,   :Varchar
         column :text,    :Varchar
         column :user_id, :Integer, null: false
@@ -147,6 +149,79 @@ RSpec.describe DbSchema do
       happiness = enums.first
       expect(happiness.name).to eq(:happiness)
       expect(happiness.values).to eq(%i(happy ok unhappy))
+    end
+
+    context 'with conditional migrations' do
+      it 'first runs the applicable migrations, then applies the schema' do
+        subject.connection[:users].insert(name: 'John Smith', email: 'john@smith.com')
+
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :first_name,  null: false, length: 30
+            t.varchar :last_name,   null: false, length: 30
+            t.varchar :email,       null: false
+
+            t.index :first_name, last_name: :desc, name: :users_name_index
+            t.index 'lower(email)', name: :users_email_index, unique: true
+          end
+
+          db.table :posts do |t|
+            t.integer :id, primary_key: true
+            t.varchar :title, null: false
+            t.text    :text
+            t.integer :user_id, null: false
+
+            t.index :user_id, name: :posts_author_index
+            t.foreign_key :user_id, references: :users
+          end
+
+          db.migrate do |migration|
+            migration.apply_if { |schema| schema.has_table?(:people) }
+
+            migration.run do |migrator|
+              migrator.rename_table :people, to: :users
+            end
+          end
+
+          db.migrate do |migration|
+            migration.apply_if do |schema|
+              schema.has_table?(:users)
+            end
+
+            migration.skip_if do |schema|
+              schema.table(:users).has_field?(:first_name)
+            end
+
+            migration.run do |migrator|
+              migrator.alter_table :users do |t|
+                t.add_column :first_name, :varchar, length: 30
+                t.add_column :last_name,  :varchar, length: 30
+              end
+
+              migrator.execute <<-SQL
+UPDATE users SET first_name = split_part(name, ' ', 1),
+                 last_name = split_part(name, ' ', 2)
+              SQL
+
+              migrator.alter_table :users do |t|
+                t.disallow_null :first_name
+                t.disallow_null :last_name
+                t.drop_column :name
+              end
+            end
+          end
+        end
+
+        users = DbSchema::Reader.read_table(:users)
+        expect(users).not_to have_field(:name)
+        expect(users.field(:first_name)).not_to be_null
+        expect(users.field(:last_name)).not_to be_null
+
+        user = subject.connection[:users].first
+        expect(user[:first_name]).to eq('John')
+        expect(user[:last_name]).to eq('Smith')
+      end
     end
 
     context 'with an invalid schema' do

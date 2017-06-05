@@ -22,7 +22,7 @@ module DbSchema
       validate(desired.schema)
       Normalizer.new(desired.schema).normalize_tables
 
-      actual_schema = Reader.read_schema
+      actual_schema = run_migrations(desired.migrations)
       changes = Changes.between(desired.schema, actual_schema)
       return if changes.empty?
 
@@ -89,6 +89,19 @@ module DbSchema
         end
 
         raise InvalidSchemaError, message
+      end
+    end
+
+    def run_migrations(migrations)
+      migrations.reduce(Reader.read_schema) do |schema, migration|
+        migrator = Migrator.new(migration)
+
+        if migrator.applicable?(schema)
+          migrator.run!
+          Reader.read_schema
+        else
+          schema
+        end
       end
     end
 
