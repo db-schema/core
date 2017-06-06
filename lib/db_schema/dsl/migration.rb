@@ -90,8 +90,13 @@ module DbSchema
             alter_table.changes << Changes::RenameColumn.new(old_name: from, new_name: to)
           end
 
-          def alter_column_type(name, new_type, **new_attributes)
-            alter_table.changes << Changes::AlterColumnType.new(name, new_type: new_type, **new_attributes)
+          def alter_column_type(name, new_type, using: nil, **new_attributes)
+            alter_table.changes << Changes::AlterColumnType.new(
+              name,
+              new_type: new_type,
+              using: using,
+              **new_attributes
+            )
           end
 
           def allow_null(name)

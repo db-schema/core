@@ -287,6 +287,21 @@ RSpec.describe DbSchema::Runner do
             expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
           end
         end
+
+        context 'with a :using option' do
+          let(:table_changes) do
+            [
+              DbSchema::Changes::AlterColumnType.new(:name, new_type: :integer, using: 'name::integer')
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            people = DbSchema::Reader.read_table(:people)
+            expect(people[:name].type).to eq(:integer)
+          end
+        end
       end
 
       context 'containing CreatePrimaryKey' do

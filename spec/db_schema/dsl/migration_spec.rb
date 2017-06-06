@@ -39,6 +39,7 @@ RSpec.describe DbSchema::DSL::Migration do
             t.drop_column :updated_at
             t.rename_column :body, to: :text
             t.alter_column_type :created_at, :timestamptz
+            t.alter_column_type :read, :boolean, using: 'read::boolean'
             t.allow_null :text
             t.disallow_null :created_at
             t.alter_column_default :created_at, :'now()'
@@ -113,6 +114,7 @@ RSpec.describe DbSchema::DSL::Migration do
             DbSchema::Changes::DropColumn.new(:updated_at),
             DbSchema::Changes::RenameColumn.new(old_name: :body, new_name: :text),
             DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamptz),
+            DbSchema::Changes::AlterColumnType.new(:read, new_type: :boolean, using: 'read::boolean'),
             DbSchema::Changes::AllowNull.new(:text),
             DbSchema::Changes::DisallowNull.new(:created_at),
             DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()'),

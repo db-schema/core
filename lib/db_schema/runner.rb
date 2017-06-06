@@ -93,7 +93,7 @@ module DbSchema
               rename_column(element.old_name, element.new_name)
             when Changes::AlterColumnType
               attributes = Runner.map_options(element.new_type, element.new_attributes)
-              set_column_type(element.name, element.new_type.capitalize, attributes)
+              set_column_type(element.name, element.new_type.capitalize, using: element.using, **attributes)
             when Changes::CreatePrimaryKey
               raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
             when Changes::DropPrimaryKey

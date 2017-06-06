@@ -310,12 +310,13 @@ module DbSchema
     end
 
     class AlterColumnType
-      include Dry::Equalizer(:name, :new_type, :new_attributes)
-      attr_reader :name, :new_type, :new_attributes
+      include Dry::Equalizer(:name, :new_type, :using, :new_attributes)
+      attr_reader :name, :new_type, :using, :new_attributes
 
-      def initialize(name, new_type:, **new_attributes)
+      def initialize(name, new_type:, using: nil, **new_attributes)
         @name           = name
         @new_type       = new_type
+        @using          = using
         @new_attributes = new_attributes
       end
     end
