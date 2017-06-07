@@ -3,7 +3,7 @@ require 'spec_helper'
 RSpec.describe DbSchema::Migrator do
   before(:each) do
     DbSchema::Runner.new([
-      DbSchema::Changes::CreateTable.new(
+      DbSchema::Operations::CreateTable.new(
         DbSchema::Definitions::Table.new(
           :people,
           fields: [
@@ -56,7 +56,7 @@ RSpec.describe DbSchema::Migrator do
 
   describe '#run!' do
     before(:each) do
-      migration.changes << DbSchema::Changes::RenameTable.new(
+      migration.changes << DbSchema::Operations::RenameTable.new(
         old_name: :people,
         new_name: :users
       )

@@ -76,7 +76,7 @@ RSpec.describe DbSchema::DSL::Migration do
       expect(migration.conditions[:skip].first.call(schema)).to eq(false)
 
       expect(migration.changes).to eq([
-        DbSchema::Changes::CreateTable.new(
+        DbSchema::Operations::CreateTable.new(
           DbSchema::Definitions::Table.new(
             :users,
             fields: [
@@ -90,13 +90,13 @@ RSpec.describe DbSchema::DSL::Migration do
             ]
           )
         ),
-        DbSchema::Changes::CreateForeignKey.new(
+        DbSchema::Operations::CreateForeignKey.new(
           :users,
           DbSchema::Definitions::ForeignKey.new(name: :users_city_id_fkey, fields: [:city_id], table: :cities)
         ),
-        DbSchema::Changes::DropTable.new(:people),
-        DbSchema::Changes::RenameTable.new(old_name: :comments, new_name: :messages),
-        DbSchema::Changes::CreateForeignKey.new(
+        DbSchema::Operations::DropTable.new(:people),
+        DbSchema::Operations::RenameTable.new(old_name: :comments, new_name: :messages),
+        DbSchema::Operations::CreateForeignKey.new(
           :messages,
           DbSchema::Definitions::ForeignKey.new(
             name: :messages_user_id_fkey,
@@ -104,21 +104,21 @@ RSpec.describe DbSchema::DSL::Migration do
             table: :users
           )
         ),
-        DbSchema::Changes::DropForeignKey.new(:messages, :messages_section_id_fkey),
-        DbSchema::Changes::AlterTable.new(
+        DbSchema::Operations::DropForeignKey.new(:messages, :messages_section_id_fkey),
+        DbSchema::Operations::AlterTable.new(
           :messages,
           [
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:title, null: false)
             ),
-            DbSchema::Changes::DropColumn.new(:updated_at),
-            DbSchema::Changes::RenameColumn.new(old_name: :body, new_name: :text),
-            DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamptz),
-            DbSchema::Changes::AlterColumnType.new(:read, new_type: :boolean, using: 'read::boolean'),
-            DbSchema::Changes::AllowNull.new(:text),
-            DbSchema::Changes::DisallowNull.new(:created_at),
-            DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()'),
-            DbSchema::Changes::CreateIndex.new(
+            DbSchema::Operations::DropColumn.new(:updated_at),
+            DbSchema::Operations::RenameColumn.new(old_name: :body, new_name: :text),
+            DbSchema::Operations::AlterColumnType.new(:created_at, new_type: :timestamptz),
+            DbSchema::Operations::AlterColumnType.new(:read, new_type: :boolean, using: 'read::boolean'),
+            DbSchema::Operations::AllowNull.new(:text),
+            DbSchema::Operations::DisallowNull.new(:created_at),
+            DbSchema::Operations::AlterColumnDefault.new(:created_at, new_default: :'now()'),
+            DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name: :messages_user_id_index,
                 columns: [
@@ -126,22 +126,22 @@ RSpec.describe DbSchema::DSL::Migration do
                 ]
               )
             ),
-            DbSchema::Changes::DropIndex.new(:messages_created_at_index),
-            DbSchema::Changes::CreateCheckConstraint.new(
+            DbSchema::Operations::DropIndex.new(:messages_created_at_index),
+            DbSchema::Operations::CreateCheckConstraint.new(
               DbSchema::Definitions::CheckConstraint.new(name: :title_length, condition: 'char_length(title) >= 5')
             ),
-            DbSchema::Changes::DropCheckConstraint.new(:text_length)
+            DbSchema::Operations::DropCheckConstraint.new(:text_length)
           ]
         ),
-        DbSchema::Changes::CreateEnum.new(
+        DbSchema::Operations::CreateEnum.new(
           DbSchema::Definitions::Enum.new(:user_role, %i(guest user admin))
         ),
-        DbSchema::Changes::DropEnum.new(:user_mood),
-        DbSchema::Changes::CreateExtension.new(
+        DbSchema::Operations::DropEnum.new(:user_mood),
+        DbSchema::Operations::CreateExtension.new(
           DbSchema::Definitions::Extension.new(:ltree)
         ),
-        DbSchema::Changes::DropExtension.new(:hstore),
-        DbSchema::Changes::ExecuteQuery.new('UPDATE messages SET read = "t"')
+        DbSchema::Operations::DropExtension.new(:hstore),
+        DbSchema::Operations::ExecuteQuery.new('UPDATE messages SET read = "t"')
       ])
     end
   end

@@ -87,7 +87,7 @@ RSpec.describe DbSchema::Changes do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         expect(changes).to include(
-          DbSchema::Changes::CreateTable.new(
+          DbSchema::Operations::CreateTable.new(
             DbSchema::Definitions::Table.new(
               :users,
               fields:       users_fields,
@@ -96,12 +96,12 @@ RSpec.describe DbSchema::Changes do
             )
           )
         )
-        expect(changes).to include(DbSchema::Changes::DropTable.new(:posts))
+        expect(changes).to include(DbSchema::Operations::DropTable.new(:posts))
         expect(changes).to include(
-          DbSchema::Changes::CreateForeignKey.new(:users, users_foreign_keys.first)
+          DbSchema::Operations::CreateForeignKey.new(:users, users_foreign_keys.first)
         )
         expect(changes).to include(
-          DbSchema::Changes::DropForeignKey.new(:posts, posts_foreign_keys.first.name)
+          DbSchema::Operations::DropForeignKey.new(:posts, posts_foreign_keys.first.name)
         )
       end
 
@@ -235,20 +235,20 @@ RSpec.describe DbSchema::Changes do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         drop_group_id, drop_country_id, alter_table, create_city_id, create_group_id = changes
-        expect(alter_table).to be_a(DbSchema::Changes::AlterTable)
+        expect(alter_table).to be_a(DbSchema::Operations::AlterTable)
 
         expect(alter_table.changes).to eq([
-          DbSchema::Changes::DropCheckConstraint.new(:location_check),
-          DbSchema::Changes::DropIndex.new(:users_name_index),
-          DbSchema::Changes::DropIndex.new(:users_type_index),
-          DbSchema::Changes::DropColumn.new(:age),
-          DbSchema::Changes::AlterColumnType.new(:name, new_type: :varchar, length: 60),
-          DbSchema::Changes::AlterColumnType.new(:type, new_type: :varchar),
-          DbSchema::Changes::AlterColumnType.new(:status, new_type: :user_status),
-          DbSchema::Changes::DisallowNull.new(:type),
-          DbSchema::Changes::AlterColumnDefault.new(:type, new_default: 'guest'),
-          DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
-          DbSchema::Changes::CreateIndex.new(
+          DbSchema::Operations::DropCheckConstraint.new(:location_check),
+          DbSchema::Operations::DropIndex.new(:users_name_index),
+          DbSchema::Operations::DropIndex.new(:users_type_index),
+          DbSchema::Operations::DropColumn.new(:age),
+          DbSchema::Operations::AlterColumnType.new(:name, new_type: :varchar, length: 60),
+          DbSchema::Operations::AlterColumnType.new(:type, new_type: :varchar),
+          DbSchema::Operations::AlterColumnType.new(:status, new_type: :user_status),
+          DbSchema::Operations::DisallowNull.new(:type),
+          DbSchema::Operations::AlterColumnDefault.new(:type, new_default: 'guest'),
+          DbSchema::Operations::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
+          DbSchema::Operations::CreateIndex.new(
             DbSchema::Definitions::Index.new(
               name:      :users_name_index,
               columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
@@ -256,7 +256,7 @@ RSpec.describe DbSchema::Changes do
               condition: 'email IS NOT NULL'
             )
           ),
-          DbSchema::Changes::CreateIndex.new(
+          DbSchema::Operations::CreateIndex.new(
             DbSchema::Definitions::Index.new(
               name:    :users_email_index,
               columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
@@ -264,24 +264,24 @@ RSpec.describe DbSchema::Changes do
               unique:  true
             )
           ),
-          DbSchema::Changes::CreateCheckConstraint.new(
+          DbSchema::Operations::CreateCheckConstraint.new(
             DbSchema::Definitions::CheckConstraint.new(
               name:      :location_check,
               condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
             )
           ),
-          DbSchema::Changes::CreatePrimaryKey.new(:id)
+          DbSchema::Operations::CreatePrimaryKey.new(:id)
         ])
 
         expect(drop_group_id).to eq(
-          DbSchema::Changes::DropForeignKey.new(:users, :users_group_id_fkey)
+          DbSchema::Operations::DropForeignKey.new(:users, :users_group_id_fkey)
         )
         expect(drop_country_id).to eq(
-          DbSchema::Changes::DropForeignKey.new(:users, :users_country_id_fkey)
+          DbSchema::Operations::DropForeignKey.new(:users, :users_country_id_fkey)
         )
 
         expect(create_city_id).to eq(
-          DbSchema::Changes::CreateForeignKey.new(
+          DbSchema::Operations::CreateForeignKey.new(
             :users,
             DbSchema::Definitions::ForeignKey.new(
               name:   :users_city_id_fkey,
@@ -291,7 +291,7 @@ RSpec.describe DbSchema::Changes do
           )
         )
         expect(create_group_id).to eq(
-          DbSchema::Changes::CreateForeignKey.new(
+          DbSchema::Operations::CreateForeignKey.new(
             :users,
             DbSchema::Definitions::ForeignKey.new(
               name:      :users_group_id_fkey,
@@ -354,8 +354,8 @@ RSpec.describe DbSchema::Changes do
 
           expect(changes.count).to eq(2)
           expect(changes.map(&:class)).to eq([
-            DbSchema::Changes::DropForeignKey,
-            DbSchema::Changes::CreateForeignKey
+            DbSchema::Operations::DropForeignKey,
+            DbSchema::Operations::CreateForeignKey
           ])
         end
       end
@@ -383,12 +383,12 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes.count).to eq(2)
         expect(changes).to include(
-          DbSchema::Changes::CreateEnum.new(
+          DbSchema::Operations::CreateEnum.new(
             DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad))
           )
         )
         expect(changes).to include(
-          DbSchema::Changes::DropEnum.new(:skill)
+          DbSchema::Operations::DropEnum.new(:skill)
         )
       end
     end
@@ -413,11 +413,11 @@ RSpec.describe DbSchema::Changes do
         )
       end
 
-      it 'returns a Changes::AlterEnumValues' do
+      it 'returns a Operations::AlterEnumValues' do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         expect(changes).to eq([
-          DbSchema::Changes::AlterEnumValues.new(:happiness, desired_values, [])
+          DbSchema::Operations::AlterEnumValues.new(:happiness, desired_values, [])
         ])
       end
 
@@ -452,11 +452,11 @@ RSpec.describe DbSchema::Changes do
           )
         end
 
-        it 'returns a Changes::AlterEnumValues with existing enum fields' do
+        it 'returns a Operations::AlterEnumValues with existing enum fields' do
           changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
           expect(changes).to eq([
-            DbSchema::Changes::AlterEnumValues.new(
+            DbSchema::Operations::AlterEnumValues.new(
               :happiness,
               desired_values,
               [
@@ -468,10 +468,10 @@ RSpec.describe DbSchema::Changes do
                 }
               ]
             ),
-            DbSchema::Changes::AlterTable.new(
+            DbSchema::Operations::AlterTable.new(
               :people,
               [
-                DbSchema::Changes::AlterColumnDefault.new(:happiness, new_default: 'happy')
+                DbSchema::Operations::AlterColumnDefault.new(:happiness, new_default: 'happy')
               ]
             )
           ])
@@ -508,11 +508,11 @@ RSpec.describe DbSchema::Changes do
             )
           end
 
-          it 'returns a Changes::AlterEnumValues with existing enum array fields' do
+          it 'returns a Operations::AlterEnumValues with existing enum array fields' do
             changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
             expect(changes).to eq([
-              DbSchema::Changes::AlterEnumValues.new(
+              DbSchema::Operations::AlterEnumValues.new(
                 :user_role,
                 [:user, :admin],
                 [
@@ -552,12 +552,12 @@ RSpec.describe DbSchema::Changes do
 
         expect(changes.count).to eq(2)
         expect(changes).to include(
-          DbSchema::Changes::CreateExtension.new(
+          DbSchema::Operations::CreateExtension.new(
             DbSchema::Definitions::Extension.new(:ltree)
           )
         )
         expect(changes).to include(
-          DbSchema::Changes::DropExtension.new(:hstore)
+          DbSchema::Operations::DropExtension.new(:hstore)
         )
       end
     end

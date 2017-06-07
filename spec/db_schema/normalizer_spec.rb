@@ -58,13 +58,13 @@ RSpec.describe DbSchema::Normalizer do
     end
 
     before(:each) do
-      add_hstore = DbSchema::Changes::CreateExtension.new(
+      add_hstore = DbSchema::Operations::CreateExtension.new(
         DbSchema::Definitions::Extension.new(:hstore)
       )
-      add_happiness = DbSchema::Changes::CreateEnum.new(
+      add_happiness = DbSchema::Operations::CreateEnum.new(
         DbSchema::Definitions::Enum.new(:happiness, %i(good bad))
       )
-      add_role = DbSchema::Changes::CreateEnum.new(
+      add_role = DbSchema::Operations::CreateEnum.new(
         DbSchema::Definitions::Enum.new(:user_role, %i(admin))
       )
 
@@ -72,7 +72,7 @@ RSpec.describe DbSchema::Normalizer do
       fields << DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness)
       fields << DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{admin}')
 
-      create_table = DbSchema::Changes::CreateTable.new(
+      create_table = DbSchema::Operations::CreateTable.new(
         DbSchema::Definitions::Table.new(
           :users,
           fields:  fields,
@@ -111,10 +111,10 @@ RSpec.describe DbSchema::Normalizer do
     end
 
     after(:each) do
-      drop_table     = DbSchema::Changes::DropTable.new(:users)
-      drop_happiness = DbSchema::Changes::DropEnum.new(:happiness)
-      drop_role      = DbSchema::Changes::DropEnum.new(:user_role)
-      drop_hstore    = DbSchema::Changes::DropExtension.new(:hstore)
+      drop_table     = DbSchema::Operations::DropTable.new(:users)
+      drop_happiness = DbSchema::Operations::DropEnum.new(:happiness)
+      drop_role      = DbSchema::Operations::DropEnum.new(:user_role)
+      drop_hstore    = DbSchema::Operations::DropExtension.new(:hstore)
 
       DbSchema::Runner.new([drop_table, drop_happiness, drop_role, drop_hstore]).run!
     end

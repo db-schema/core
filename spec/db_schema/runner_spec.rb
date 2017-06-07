@@ -93,7 +93,7 @@ RSpec.describe DbSchema::Runner do
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [
-          DbSchema::Changes::CreateTable.new(
+          DbSchema::Operations::CreateTable.new(
             DbSchema::Definitions::Table.new(
               :users,
               fields:  users_fields,
@@ -101,7 +101,7 @@ RSpec.describe DbSchema::Runner do
               checks:  users_checks
             )
           ),
-          DbSchema::Changes::DropTable.new(:people)
+          DbSchema::Operations::DropTable.new(:people)
         ]
       end
 
@@ -170,7 +170,7 @@ RSpec.describe DbSchema::Runner do
 
     context 'with RenameTable' do
       let(:changes) do
-        [DbSchema::Changes::RenameTable.new(old_name: :people, new_name: :users)]
+        [DbSchema::Operations::RenameTable.new(old_name: :people, new_name: :users)]
       end
 
       it 'applies all the changes' do
@@ -184,23 +184,23 @@ RSpec.describe DbSchema::Runner do
 
     context 'with AlterTable' do
       let(:changes) do
-        [DbSchema::Changes::AlterTable.new(:people, table_changes)]
+        [DbSchema::Operations::AlterTable.new(:people, table_changes)]
       end
 
       context 'containing CreateColumn & DropColumn' do
         let(:table_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:last_name, length: 30, null: false)
             ),
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
-            DbSchema::Changes::DropColumn.new(:name),
-            DbSchema::Changes::DropColumn.new(:id),
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
+            DbSchema::Operations::DropColumn.new(:name),
+            DbSchema::Operations::DropColumn.new(:id),
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
             ),
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, default: :'now()')
             )
           ]
@@ -236,7 +236,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing RenameColumn' do
         let(:table_changes) do
           [
-            DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
+            DbSchema::Operations::RenameColumn.new(old_name: :name, new_name: :full_name)
           ]
         end
 
@@ -253,7 +253,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing AlterColumnType' do
         let(:table_changes) do
           [
-            DbSchema::Changes::AlterColumnType.new(:name, new_type: :text)
+            DbSchema::Operations::AlterColumnType.new(:name, new_type: :text)
           ]
         end
 
@@ -267,9 +267,9 @@ RSpec.describe DbSchema::Runner do
         context 'that changes field attributes' do
           let(:table_changes) do
             [
-              DbSchema::Changes::AlterColumnType.new(:address, new_type: :varchar),
-              DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
-              DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamp)
+              DbSchema::Operations::AlterColumnType.new(:address, new_type: :varchar),
+              DbSchema::Operations::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
+              DbSchema::Operations::AlterColumnType.new(:created_at, new_type: :timestamp)
             ]
           end
 
@@ -291,7 +291,7 @@ RSpec.describe DbSchema::Runner do
         context 'with a :using option' do
           let(:table_changes) do
             [
-              DbSchema::Changes::AlterColumnType.new(:name, new_type: :integer, using: 'name::integer')
+              DbSchema::Operations::AlterColumnType.new(:name, new_type: :integer, using: 'name::integer')
             ]
           end
 
@@ -307,7 +307,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreatePrimaryKey' do
         let(:table_changes) do
           [
-            DbSchema::Changes::CreatePrimaryKey.new(name: :name)
+            DbSchema::Operations::CreatePrimaryKey.new(name: :name)
           ]
         end
 
@@ -321,7 +321,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing DropPrimaryKey' do
         let(:table_changes) do
           [
-            DbSchema::Changes::DropPrimaryKey.new(name: :id)
+            DbSchema::Operations::DropPrimaryKey.new(name: :id)
           ]
         end
 
@@ -335,8 +335,8 @@ RSpec.describe DbSchema::Runner do
       context 'containing AllowNull & DisallowNull' do
         let(:table_changes) do
           [
-            DbSchema::Changes::AllowNull.new(:address),
-            DbSchema::Changes::DisallowNull.new(:name)
+            DbSchema::Operations::AllowNull.new(:address),
+            DbSchema::Operations::DisallowNull.new(:name)
           ]
         end
 
@@ -352,7 +352,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing AlterColumnDefault' do
         let(:table_changes) do
           [
-            DbSchema::Changes::AlterColumnDefault.new(:name, new_default: 'John Smith')
+            DbSchema::Operations::AlterColumnDefault.new(:name, new_default: 'John Smith')
           ]
         end
 
@@ -366,7 +366,7 @@ RSpec.describe DbSchema::Runner do
         context 'with an expression' do
           let(:table_changes) do
             [
-              DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()')
+              DbSchema::Operations::AlterColumnDefault.new(:created_at, new_default: :'now()')
             ]
           end
 
@@ -382,18 +382,18 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreateIndex & DropIndex' do
         let(:table_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Array.new(:interests, element_type: :varchar)
             ),
-            DbSchema::Changes::CreateIndex.new(
+            DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:      :people_name_index,
                 columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)', order: :desc)],
                 condition: 'name IS NOT NULL'
               )
             ),
-            DbSchema::Changes::DropIndex.new(:people_address_index),
-            DbSchema::Changes::CreateIndex.new(
+            DbSchema::Operations::DropIndex.new(:people_address_index),
+            DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:    :people_interests_index,
                 columns: [DbSchema::Definitions::Index::TableField.new(:interests)],
@@ -428,8 +428,8 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreateCheckConstraint & DropCheckConstraint' do
         let(:table_changes) do
           [
-            DbSchema::Changes::DropCheckConstraint.new(:address_length),
-            DbSchema::Changes::CreateCheckConstraint.new(
+            DbSchema::Operations::DropCheckConstraint.new(:address_length),
+            DbSchema::Operations::CreateCheckConstraint.new(
               DbSchema::Definitions::CheckConstraint.new(
                 name:      :min_address_length,
                 condition: 'character_length(address) >= 10'
@@ -469,8 +469,8 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::DropForeignKey.new(:people, :people_city_name_fkey),
-          DbSchema::Changes::CreateForeignKey.new(
+          DbSchema::Operations::DropForeignKey.new(:people, :people_city_name_fkey),
+          DbSchema::Operations::CreateForeignKey.new(
             :people,
             DbSchema::Definitions::ForeignKey.new(
               name:      :people_city_id_fkey,
@@ -479,7 +479,7 @@ RSpec.describe DbSchema::Runner do
               on_delete: :set_null
             )
           ),
-          DbSchema::Changes::CreateForeignKey.new(
+          DbSchema::Operations::CreateForeignKey.new(
             :people,
             DbSchema::Definitions::ForeignKey.new(
               name:      :people_country_name_fkey,
@@ -518,10 +518,10 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::CreateEnum.new(
+          DbSchema::Operations::CreateEnum.new(
             DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
           ),
-          DbSchema::Changes::DropEnum.new(:status)
+          DbSchema::Operations::DropEnum.new(:status)
         ]
       end
 
@@ -541,7 +541,7 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::AlterEnumValues.new(
+          DbSchema::Operations::AlterEnumValues.new(
             :happiness,
             %i(happy ok sad),
             fields
@@ -584,7 +584,7 @@ RSpec.describe DbSchema::Runner do
       context 'with existing fields as arrays of this enum type' do
         let(:changes) do
           [
-            DbSchema::Changes::AlterEnumValues.new(
+            DbSchema::Operations::AlterEnumValues.new(
               :user_role,
               [:user, :admin],
               [
@@ -621,13 +621,13 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::CreateExtension.new(
+          DbSchema::Operations::CreateExtension.new(
             DbSchema::Definitions::Extension.new(:ltree)
           ),
-          DbSchema::Changes::CreateExtension.new(
+          DbSchema::Operations::CreateExtension.new(
             DbSchema::Definitions::Extension.new(:'uuid-ossp')
           ),
-          DbSchema::Changes::DropExtension.new(:hstore)
+          DbSchema::Operations::DropExtension.new(:hstore)
         ]
       end
 
@@ -649,7 +649,7 @@ RSpec.describe DbSchema::Runner do
     context 'with ExecuteQuery' do
       let(:changes) do
         [
-          DbSchema::Changes::ExecuteQuery.new('ALTER TABLE people RENAME TO users')
+          DbSchema::Operations::ExecuteQuery.new('ALTER TABLE people RENAME TO users')
         ]
       end
 
@@ -664,13 +664,13 @@ RSpec.describe DbSchema::Runner do
 
     it 'runs most operations in a transaction' do
       changes = [
-        DbSchema::Changes::AlterTable.new(
+        DbSchema::Operations::AlterTable.new(
           :people,
           [
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:city_name)
             ),
-            DbSchema::Changes::CreateIndex.new(
+            DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:    :people_city_name_index,
                 columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],

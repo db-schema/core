@@ -10,29 +10,29 @@ module DbSchema
       DbSchema.connection.transaction do
         changes.each do |change|
           case change
-          when Changes::CreateTable
+          when Operations::CreateTable
             self.class.create_table(change)
-          when Changes::DropTable
+          when Operations::DropTable
             self.class.drop_table(change)
-          when Changes::RenameTable
+          when Operations::RenameTable
             self.class.rename_table(change)
-          when Changes::AlterTable
+          when Operations::AlterTable
             self.class.alter_table(change)
-          when Changes::CreateForeignKey
+          when Operations::CreateForeignKey
             self.class.create_foreign_key(change)
-          when Changes::DropForeignKey
+          when Operations::DropForeignKey
             self.class.drop_foreign_key(change)
-          when Changes::CreateEnum
+          when Operations::CreateEnum
             self.class.create_enum(change)
-          when Changes::DropEnum
+          when Operations::DropEnum
             self.class.drop_enum(change)
-          when Changes::AlterEnumValues
+          when Operations::AlterEnumValues
             self.class.alter_enum_values(change)
-          when Changes::CreateExtension
+          when Operations::CreateExtension
             self.class.create_extension(change)
-          when Changes::DropExtension
+          when Operations::DropExtension
             self.class.drop_extension(change)
-          when Changes::ExecuteQuery
+          when Operations::ExecuteQuery
             self.class.execute_query(change)
           end
         end
@@ -80,31 +80,31 @@ module DbSchema
         DbSchema.connection.alter_table(change.table_name) do
           change.changes.each do |element|
             case element
-            when Changes::CreateColumn
+            when Operations::CreateColumn
               if element.primary_key?
                 add_primary_key(element.name)
               else
                 options = Runner.map_options(element.type, element.options)
                 add_column(element.name, element.type.capitalize, options)
               end
-            when Changes::DropColumn
+            when Operations::DropColumn
               drop_column(element.name)
-            when Changes::RenameColumn
+            when Operations::RenameColumn
               rename_column(element.old_name, element.new_name)
-            when Changes::AlterColumnType
+            when Operations::AlterColumnType
               attributes = Runner.map_options(element.new_type, element.new_attributes)
               set_column_type(element.name, element.new_type.capitalize, using: element.using, **attributes)
-            when Changes::CreatePrimaryKey
+            when Operations::CreatePrimaryKey
               raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
-            when Changes::DropPrimaryKey
+            when Operations::DropPrimaryKey
               raise NotImplementedError, 'Removing a primary key while leaving the column is currently unsupported'
-            when Changes::AllowNull
+            when Operations::AllowNull
               set_column_allow_null(element.name)
-            when Changes::DisallowNull
+            when Operations::DisallowNull
               set_column_not_null(element.name)
-            when Changes::AlterColumnDefault
+            when Operations::AlterColumnDefault
               set_column_default(element.name, Runner.default_to_sequel(element.new_default))
-            when Changes::CreateIndex
+            when Operations::CreateIndex
               add_index(
                 element.index.columns_to_sequel,
                 name:   element.index.name,
@@ -112,11 +112,11 @@ module DbSchema
                 type:   element.index.type,
                 where:  element.index.condition
               )
-            when Changes::DropIndex
+            when Operations::DropIndex
               drop_index([], name: element.name)
-            when Changes::CreateCheckConstraint
+            when Operations::CreateCheckConstraint
               add_constraint(element.check.name, element.check.condition)
-            when Changes::DropCheckConstraint
+            when Operations::DropCheckConstraint
               drop_constraint(element.name)
             end
           end

@@ -252,21 +252,21 @@ RSpec.describe DbSchema::DSL do
       expect(rename_people_to_users.conditions[:apply].count).to eq(1)
       expect(rename_people_to_users.conditions[:skip]).to be_empty
       expect(rename_people_to_users.changes).to eq([
-        DbSchema::Changes::RenameTable.new(old_name: :people, new_name: :users)
+        DbSchema::Operations::RenameTable.new(old_name: :people, new_name: :users)
       ])
 
       expect(join_names.conditions[:apply].count).to eq(2)
       expect(join_names.conditions[:skip].count).to eq(1)
       expect(join_names.changes).to eq([
-        DbSchema::Changes::AlterTable.new(
+        DbSchema::Operations::AlterTable.new(
           :users,
           [
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:name)
             ),
-            DbSchema::Changes::DisallowNull.new(:name),
-            DbSchema::Changes::DropColumn.new(:first_name),
-            DbSchema::Changes::DropColumn.new(:last_name)
+            DbSchema::Operations::DisallowNull.new(:name),
+            DbSchema::Operations::DropColumn.new(:first_name),
+            DbSchema::Operations::DropColumn.new(:last_name)
           ]
         )
       ])
