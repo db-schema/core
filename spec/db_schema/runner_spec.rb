@@ -661,32 +661,6 @@ RSpec.describe DbSchema::Runner do
         expect(schema).to have_table(:users)
       end
     end
-
-    it 'runs most operations in a transaction' do
-      changes = [
-        DbSchema::Operations::AlterTable.new(
-          :people,
-          [
-            DbSchema::Operations::CreateColumn.new(
-              DbSchema::Definitions::Field::Varchar.new(:city_name)
-            ),
-            DbSchema::Operations::CreateIndex.new(
-              DbSchema::Definitions::Index.new(
-                name:    :people_city_name_index,
-                columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],
-                type:    :gist
-              )
-            )
-          ]
-        )
-      ]
-
-      expect {
-        expect {
-          described_class.new(changes).run!
-        }.to raise_error(Sequel::DatabaseError)
-      }.not_to change { DbSchema.connection.schema(:people).count }
-    end
   end
 
   describe '.map_options' do

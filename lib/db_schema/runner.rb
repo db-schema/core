@@ -7,34 +7,32 @@ module DbSchema
     end
 
     def run!
-      DbSchema.connection.transaction do
-        changes.each do |change|
-          case change
-          when Operations::CreateTable
-            self.class.create_table(change)
-          when Operations::DropTable
-            self.class.drop_table(change)
-          when Operations::RenameTable
-            self.class.rename_table(change)
-          when Operations::AlterTable
-            self.class.alter_table(change)
-          when Operations::CreateForeignKey
-            self.class.create_foreign_key(change)
-          when Operations::DropForeignKey
-            self.class.drop_foreign_key(change)
-          when Operations::CreateEnum
-            self.class.create_enum(change)
-          when Operations::DropEnum
-            self.class.drop_enum(change)
-          when Operations::AlterEnumValues
-            self.class.alter_enum_values(change)
-          when Operations::CreateExtension
-            self.class.create_extension(change)
-          when Operations::DropExtension
-            self.class.drop_extension(change)
-          when Operations::ExecuteQuery
-            self.class.execute_query(change)
-          end
+      changes.each do |change|
+        case change
+        when Operations::CreateTable
+          self.class.create_table(change)
+        when Operations::DropTable
+          self.class.drop_table(change)
+        when Operations::RenameTable
+          self.class.rename_table(change)
+        when Operations::AlterTable
+          self.class.alter_table(change)
+        when Operations::CreateForeignKey
+          self.class.create_foreign_key(change)
+        when Operations::DropForeignKey
+          self.class.drop_foreign_key(change)
+        when Operations::CreateEnum
+          self.class.create_enum(change)
+        when Operations::DropEnum
+          self.class.drop_enum(change)
+        when Operations::AlterEnumValues
+          self.class.alter_enum_values(change)
+        when Operations::CreateExtension
+          self.class.create_extension(change)
+        when Operations::DropExtension
+          self.class.drop_extension(change)
+        when Operations::ExecuteQuery
+          self.class.execute_query(change)
         end
       end
     end

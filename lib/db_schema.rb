@@ -23,17 +23,19 @@ module DbSchema
       validate(desired.schema)
       Normalizer.new(desired.schema).normalize_tables
 
-      actual_schema = run_migrations(desired.migrations)
-      changes = Changes.between(desired.schema, actual_schema)
-      return if changes.empty?
+      DbSchema.connection.transaction do
+        actual_schema = run_migrations(desired.migrations)
+        changes = Changes.between(desired.schema, actual_schema)
+        return if changes.empty?
 
-      log_changes(changes) if configuration.log_changes?
-      return if configuration.dry_run?
+        log_changes(changes) if configuration.log_changes?
+        raise Sequel::Rollback if configuration.dry_run?
 
-      Runner.new(changes).run!
+        Runner.new(changes).run!
 
-      if configuration.post_check_enabled?
-        perform_post_check(desired.schema)
+        if configuration.post_check_enabled?
+          perform_post_check(desired.schema)
+        end
       end
     end
 

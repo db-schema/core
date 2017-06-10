@@ -284,6 +284,32 @@ Requested schema is invalid:
           end
         }.not_to change { DbSchema::Reader.read_schema }
       end
+
+      context 'with applicable migrations' do
+        it 'rolls back both migrations and schema changes' do
+          expect {
+            subject.describe do |db|
+              db.table :people do |t|
+                t.primary_key :id
+                t.varchar :name, null: false
+                t.varchar :email, length: 100
+
+                t.index :email
+              end
+
+              db.migrate do |migration|
+                migration.skip_if do |schema|
+                  schema.has_table?(:people)
+                end
+
+                migration.run do |migrator|
+                  migrator.rename_table :users, to: :people
+                end
+              end
+            end
+          }.not_to change { DbSchema::Reader.read_schema }
+        end
+      end
     end
 
     context 'with differences left after run' do
