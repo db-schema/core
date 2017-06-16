@@ -100,11 +100,21 @@ module DbSchema
         migrator = Migrator.new(migration)
 
         if migrator.applicable?(schema)
+          log_migration(migration) if configuration.log_changes?
           migrator.run!
           Reader.read_schema
         else
           schema
         end
+      end
+    end
+
+    def log_migration(migration)
+      puts 'DbSchema is running this migration:'
+      if migration.changes.respond_to?(:ai)
+        puts migration.changes.ai
+      else
+        puts migration.changes.inspect
       end
     end
 
