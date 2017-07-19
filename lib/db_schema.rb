@@ -23,7 +23,7 @@ module DbSchema
       validate(desired.schema)
       Normalizer.new(desired.schema).normalize_tables
 
-      DbSchema.connection.transaction do
+      connection.transaction do
         actual_schema = run_migrations(desired.migrations)
         changes = Changes.between(desired.schema, actual_schema)
         return if changes.empty?
