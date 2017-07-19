@@ -1,9 +1,10 @@
 module DbSchema
   class Migration
-    include Dry::Equalizer(:conditions, :changes)
-    attr_reader :conditions, :changes
+    include Dry::Equalizer(:name, :conditions, :changes)
+    attr_reader :name, :conditions, :changes
 
-    def initialize
+    def initialize(name)
+      @name = name
       @conditions = { apply: [], skip: [] }
       @changes = []
     end

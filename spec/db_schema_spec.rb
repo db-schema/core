@@ -176,7 +176,7 @@ RSpec.describe DbSchema do
             t.foreign_key :user_id, references: :users
           end
 
-          db.migrate do |migration|
+          db.migrate 'Rename people to users' do |migration|
             migration.apply_if { |schema| schema.has_table?(:people) }
 
             migration.run do |migrator|
@@ -184,7 +184,7 @@ RSpec.describe DbSchema do
             end
           end
 
-          db.migrate do |migration|
+          db.migrate 'Split name into first_name & last_name' do |migration|
             migration.apply_if do |schema|
               schema.has_table?(:users)
             end
@@ -297,7 +297,7 @@ Requested schema is invalid:
                 t.index :email
               end
 
-              db.migrate do |migration|
+              db.migrate 'Rename users to people' do |migration|
                 migration.skip_if do |schema|
                   schema.has_table?(:people)
                 end

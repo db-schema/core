@@ -31,8 +31,8 @@ module DbSchema
       @schema.extensions << Definitions::Extension.new(name.to_sym)
     end
 
-    def migrate(&block)
-      migrations << Migration.new(block).migration
+    def migrate(name, &block)
+      migrations << Migration.new(name, block).migration
     end
 
     class TableYielder

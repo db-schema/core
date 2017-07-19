@@ -16,7 +16,7 @@ RSpec.describe DbSchema::Migrator do
   end
 
   let(:schema)    { DbSchema::Reader.read_schema }
-  let(:migration) { DbSchema::Migration.new }
+  let(:migration) { DbSchema::Migration.new('Migration name') }
 
   subject { DbSchema::Migrator.new(migration) }
 

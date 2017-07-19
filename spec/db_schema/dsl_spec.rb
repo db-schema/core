@@ -51,7 +51,7 @@ RSpec.describe DbSchema::DSL do
         t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
       end
 
-      db.migrate do |migration|
+      db.migrate 'Rename people to users' do |migration|
         migration.apply_if do |schema|
           schema.has_table?(:people)
         end
@@ -61,7 +61,7 @@ RSpec.describe DbSchema::DSL do
         end
       end
 
-      db.migrate do |migration|
+      db.migrate 'Join first_name & last_name into name' do |migration|
         migration.apply_if do |schema|
           schema.table(:users).has_field?(:first_name)
         end
@@ -249,12 +249,14 @@ RSpec.describe DbSchema::DSL do
 
       rename_people_to_users, join_names = migrations
 
+      expect(rename_people_to_users.name).to eq('Rename people to users')
       expect(rename_people_to_users.conditions[:apply].count).to eq(1)
       expect(rename_people_to_users.conditions[:skip]).to be_empty
       expect(rename_people_to_users.changes).to eq([
         DbSchema::Operations::RenameTable.new(old_name: :people, new_name: :users)
       ])
 
+      expect(join_names.name).to eq('Join first_name & last_name into name')
       expect(join_names.conditions[:apply].count).to eq(2)
       expect(join_names.conditions[:skip].count).to eq(1)
       expect(join_names.changes).to eq([

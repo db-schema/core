@@ -3,8 +3,8 @@ module DbSchema
     class Migration
       attr_reader :migration
 
-      def initialize(block)
-        @migration = DbSchema::Migration.new
+      def initialize(name, block)
+        @migration = DbSchema::Migration.new(name)
         block.call(self)
       end
 

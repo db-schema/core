@@ -65,10 +65,12 @@ RSpec.describe DbSchema::DSL::Migration do
       end
     end
 
-    subject { DbSchema::DSL::Migration.new(migration_block) }
+    subject { DbSchema::DSL::Migration.new('Migration name', migration_block) }
 
     it 'returns the migration object' do
       migration = subject.migration
+
+      expect(migration.name).to eq('Migration name')
 
       expect(migration.conditions[:apply].count).to eq(1)
       expect(migration.conditions[:apply].first.call(schema)).to eq(true)
