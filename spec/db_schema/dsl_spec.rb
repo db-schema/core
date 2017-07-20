@@ -243,6 +243,10 @@ RSpec.describe DbSchema::DSL do
   end
 
   describe '#migrations' do
+    before(:each) do
+      pending 'Refactoring DbSchema::Migration'
+    end
+
     it 'returns all conditional migrations' do
       migrations = subject.migrations
       expect(migrations.count).to eq(2)

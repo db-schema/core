@@ -56,6 +56,8 @@ RSpec.describe DbSchema::Migrator do
 
   describe '#run!' do
     before(:each) do
+      pending 'Refactoring DbSchema::Migration'
+
       migration.changes << DbSchema::Operations::RenameTable.new(
         old_name: :people,
         new_name: :users

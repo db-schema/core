@@ -17,7 +17,8 @@ module DbSchema
       end
 
       def run(&block)
-        BodyYielder.new(migration).run(block)
+        # BodyYielder.new(migration).run(block)
+        migration.body = block
       end
 
       class BodyYielder
