@@ -77,7 +77,7 @@ RSpec.describe DbSchema::DSL do
         migration.run do |migrator|
           migrator.alter_table(:users) do |t|
             t.add_column :name, :varchar
-            # copy data from first_name & last_name to name
+            t.execute "UPDATE users SET name = first_name || ' ' || last_name"
             t.disallow_null :name
             t.drop_column :first_name
             t.drop_column :last_name
@@ -243,10 +243,6 @@ RSpec.describe DbSchema::DSL do
   end
 
   describe '#migrations' do
-    before(:each) do
-      pending 'Refactoring DbSchema::Migration'
-    end
-
     it 'returns all conditional migrations' do
       migrations = subject.migrations
       expect(migrations.count).to eq(2)
@@ -256,26 +252,12 @@ RSpec.describe DbSchema::DSL do
       expect(rename_people_to_users.name).to eq('Rename people to users')
       expect(rename_people_to_users.conditions[:apply].count).to eq(1)
       expect(rename_people_to_users.conditions[:skip]).to be_empty
-      expect(rename_people_to_users.changes).to eq([
-        DbSchema::Operations::RenameTable.new(old_name: :people, new_name: :users)
-      ])
+      expect(rename_people_to_users.body).to be_a(Proc)
 
       expect(join_names.name).to eq('Join first_name & last_name into name')
       expect(join_names.conditions[:apply].count).to eq(2)
       expect(join_names.conditions[:skip].count).to eq(1)
-      expect(join_names.changes).to eq([
-        DbSchema::Operations::AlterTable.new(
-          :users,
-          [
-            DbSchema::Operations::CreateColumn.new(
-              DbSchema::Definitions::Field::Varchar.new(:name)
-            ),
-            DbSchema::Operations::DisallowNull.new(:name),
-            DbSchema::Operations::DropColumn.new(:first_name),
-            DbSchema::Operations::DropColumn.new(:last_name)
-          ]
-        )
-      ])
+      expect(join_names.body).to be_a(Proc)
     end
   end
 end
