@@ -26,10 +26,13 @@ module DbSchema
       connection.transaction do
         actual_schema = run_migrations(desired.migrations)
         changes = Changes.between(desired.schema, actual_schema)
-        return if changes.empty?
-
         log_changes(changes) if configuration.log_changes?
-        raise Sequel::Rollback if configuration.dry_run?
+
+        if configuration.dry_run?
+          raise Sequel::Rollback
+        elsif changes.empty?
+          return
+        end
 
         Runner.new(changes).run!
 

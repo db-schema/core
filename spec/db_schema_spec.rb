@@ -289,12 +289,22 @@ Requested schema is invalid:
         it 'rolls back both migrations and schema changes' do
           expect {
             subject.describe do |db|
+              db.enum :happiness, %i(good ok bad)
+
               db.table :people do |t|
                 t.primary_key :id
-                t.varchar :name, null: false
-                t.varchar :email, length: 100
+                t.varchar     :name, null: false
+                t.varchar     :email, length: 100
+                t.happiness   :happiness, default: 'ok'
 
-                t.index :email
+                t.index :email, name: :users_email_index
+              end
+
+              db.table :posts do |t|
+                t.primary_key :id
+                t.varchar     :title
+                t.varchar     :text
+                t.integer     :user_id, null: false, references: :people
               end
 
               db.migrate 'Rename users to people' do |migration|
