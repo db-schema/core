@@ -110,12 +110,7 @@ module DbSchema
     end
 
     def log_migration(migration)
-      puts 'DbSchema is running this migration:'
-      if migration.changes.respond_to?(:ai)
-        puts migration.changes.ai
-      else
-        puts migration.changes.inspect
-      end
+      puts "DbSchema is running migration #{migration.name.ai}"
     end
 
     def log_changes(changes)
