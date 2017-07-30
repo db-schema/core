@@ -1,6 +1,12 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Normalizer do
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+    end
+  end
+
   let(:enums) do
     [
       DbSchema::Definitions::Enum.new(:happiness, %i(good ok bad)),
@@ -81,11 +87,11 @@ RSpec.describe DbSchema::Normalizer do
         )
       )
 
-      DbSchema::Runner.new([add_hstore, add_happiness, add_role, create_table]).run!
+      DbSchema::Runner.new([add_hstore, add_happiness, add_role, create_table], database).run!
     end
 
     it 'normalizes all tables in the schema passed in' do
-      DbSchema::Normalizer.new(schema).normalize_tables
+      DbSchema::Normalizer.new(schema, database).normalize_tables
 
       expect(schema.tables.count).to eq(1)
       users = schema.tables.first
@@ -106,8 +112,8 @@ RSpec.describe DbSchema::Normalizer do
 
     it 'rolls back all temporary tables' do
       expect {
-        DbSchema::Normalizer.new(schema).normalize_tables
-      }.not_to change { DbSchema::Reader.read_schema.tables.count }
+        DbSchema::Normalizer.new(schema, database).normalize_tables
+      }.not_to change { DbSchema::Reader.read_schema(database).tables.count }
     end
 
     after(:each) do
@@ -116,7 +122,7 @@ RSpec.describe DbSchema::Normalizer do
       drop_role      = DbSchema::Operations::DropEnum.new(:user_role)
       drop_hstore    = DbSchema::Operations::DropExtension.new(:hstore)
 
-      DbSchema::Runner.new([drop_table, drop_happiness, drop_role, drop_hstore]).run!
+      DbSchema::Runner.new([drop_table, drop_happiness, drop_role, drop_hstore], database).run!
     end
   end
 end

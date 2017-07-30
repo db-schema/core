@@ -10,8 +10,4 @@ RSpec.configure do |config|
   config.disable_monkey_patching!
 
   config.profile_examples = 10
-
-  config.before(:all) do
-    DbSchema.configure(database: 'db_schema_test')
-  end
 end

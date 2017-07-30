@@ -2,20 +2,21 @@ require 'digest/md5'
 
 module DbSchema
   class Normalizer
-    attr_reader :schema
+    attr_reader :schema, :connection
 
-    def initialize(schema)
-      @schema = schema
+    def initialize(schema, connection)
+      @schema     = schema
+      @connection = connection
     end
 
     def normalize_tables
-      DbSchema.connection.transaction do
+      connection.transaction do
         create_extensions!
         create_enums!
 
         schema.tables = schema.tables.map do |table|
           if table.has_expressions?
-            Table.new(table, hash).normalized_table
+            Table.new(table, hash, connection).normalized_table
           else
             table
           end
@@ -27,11 +28,11 @@ module DbSchema
 
   private
     def create_extensions!
-      operations = (schema.extensions - Reader.read_extensions).map do |extension|
+      operations = (schema.extensions - Reader.read_extensions(connection)).map do |extension|
         Operations::CreateExtension.new(extension)
       end
 
-      Runner.new(operations).run!
+      Runner.new(operations, connection).run!
     end
 
     def create_enums!
@@ -39,7 +40,7 @@ module DbSchema
         Operations::CreateEnum.new(enum.with_name(append_hash(enum.name)))
       end
 
-      Runner.new(operations).run!
+      Runner.new(operations, connection).run!
     end
 
     def append_hash(name)
@@ -57,11 +58,12 @@ module DbSchema
     end
 
     class Table
-      attr_reader :table, :hash
+      attr_reader :table, :hash, :connection
 
-      def initialize(table, hash)
-        @table = table
-        @hash  = hash
+      def initialize(table, hash, connection)
+        @table      = table
+        @hash       = hash
+        @connection = connection
       end
 
       def normalized_table
@@ -77,11 +79,11 @@ module DbSchema
             .with_indices(rename_indices(table.indices))
         )
 
-        Runner.new([operation]).run!
+        Runner.new([operation], connection).run!
       end
 
       def read_temporary_table
-        temporary_table = Reader.read_table(temporary_table_name)
+        temporary_table = Reader.read_table(temporary_table_name, connection)
 
         temporary_table.with_name(table.name)
           .with_fields(rename_types_back(temporary_table.fields))

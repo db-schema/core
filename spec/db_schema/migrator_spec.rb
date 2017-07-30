@@ -1,37 +1,46 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Migrator do
-  before(:each) do
-    DbSchema::Runner.new([
-      DbSchema::Operations::CreateTable.new(
-        DbSchema::Definitions::Table.new(
-          :people,
-          fields: [
-            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-            DbSchema::Definitions::Field::Varchar.new(:name, null: false),
-            DbSchema::Definitions::Field::Varchar.new(:phone),
-            DbSchema::Definitions::Field::Timestamptz.new(:created_at)
-          ],
-          indices: [
-            DbSchema::Definitions::Index.new(
-              name: :people_phone_index,
-              columns: [DbSchema::Definitions::Index::TableField.new(:phone)],
-              unique: true,
-              condition: 'phone IS NOT NULL'
-            )
-          ],
-          checks: [
-            DbSchema::Definitions::CheckConstraint.new(
-              name: :phone_format,
-              condition: %q(phone ~ '\A\+\d{11}\Z')
-            )
-          ]
-        )
-      )
-    ]).run!
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+    end
   end
 
-  let(:schema)    { DbSchema::Reader.read_schema }
+  before(:each) do
+    DbSchema::Runner.new(
+      [
+        DbSchema::Operations::CreateTable.new(
+          DbSchema::Definitions::Table.new(
+            :people,
+            fields: [
+              DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+              DbSchema::Definitions::Field::Varchar.new(:name, null: false),
+              DbSchema::Definitions::Field::Varchar.new(:phone),
+              DbSchema::Definitions::Field::Timestamptz.new(:created_at)
+            ],
+            indices: [
+              DbSchema::Definitions::Index.new(
+                name: :people_phone_index,
+                columns: [DbSchema::Definitions::Index::TableField.new(:phone)],
+                unique: true,
+                condition: 'phone IS NOT NULL'
+              )
+            ],
+            checks: [
+              DbSchema::Definitions::CheckConstraint.new(
+                name: :phone_format,
+                condition: %q(phone ~ '\A\+\d{11}\Z')
+              )
+            ]
+          )
+        )
+      ],
+      database
+    ).run!
+  end
+
+  let(:schema)    { DbSchema::Reader.read_schema(database) }
   let(:migration) { DbSchema::Migration.new('Migration name') }
 
   subject { DbSchema::Migrator.new(migration) }
@@ -87,7 +96,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'creates the table' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).to have_table(:posts)
       end
@@ -101,7 +110,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'drops the table' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).not_to have_table(:people)
       end
@@ -115,7 +124,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'renames the table' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).not_to have_table(:people)
         expect(schema).to have_table(:users)
@@ -133,7 +142,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'adds the column' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).to have_field(:email)
           email = schema.table(:people).field(:email)
@@ -154,7 +163,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'drops the column' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).not_to have_field(:name)
         end
@@ -170,7 +179,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'renames the column' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).not_to have_field(:name)
           expect(schema.table(:people)).to have_field(:first_name)
@@ -187,7 +196,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'changes the column type' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people).field(:name)).to be_a(DbSchema::Definitions::Field::Text)
         end
@@ -203,7 +212,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'removes the NOT NULL constraint from the column' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people).field(:name)).to be_null
         end
@@ -219,7 +228,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'adds the NOT NULL constraint to the column' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people).field(:created_at)).not_to be_null
         end
@@ -235,7 +244,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'changes the default value of the column' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people).field(:created_at).default).to eq(:'now()')
         end
@@ -251,7 +260,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'adds the index' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).to have_index_on(:name)
         end
@@ -267,7 +276,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'drops the index' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).not_to have_index_on(:phone)
         end
@@ -283,7 +292,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'adds the check constraint' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).to have_check(:name_length)
           expect(schema.table(:people).check(:name_length).condition).to eq('character_length(name::text) > 4')
@@ -300,7 +309,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'drops the check constraint' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:people)).not_to have_check(:phone_format)
         end
@@ -308,18 +317,21 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and an add_foreign_key' do
         before(:each) do
-          DbSchema::Runner.new([
-            DbSchema::Operations::CreateTable.new(
-              DbSchema::Definitions::Table.new(
-                :posts,
-                fields: [
-                  DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-                  DbSchema::Definitions::Field::Varchar.new(:title, null: false),
-                  DbSchema::Definitions::Field::Integer.new(:person_id, null: false)
-                ]
+          DbSchema::Runner.new(
+            [
+              DbSchema::Operations::CreateTable.new(
+                DbSchema::Definitions::Table.new(
+                  :posts,
+                  fields: [
+                    DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+                    DbSchema::Definitions::Field::Varchar.new(:title, null: false),
+                    DbSchema::Definitions::Field::Integer.new(:person_id, null: false)
+                  ]
+                )
               )
-            )
-          ]).run!
+            ],
+            database
+          ).run!
         end
 
         let(:body) do
@@ -331,7 +343,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'adds the foreign key' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:posts)).to have_foreign_key_to(:people)
         end
@@ -339,26 +351,29 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and a drop_foreign_key' do
         before(:each) do
-          DbSchema::Runner.new([
-            DbSchema::Operations::CreateTable.new(
-              DbSchema::Definitions::Table.new(
+          DbSchema::Runner.new(
+            [
+              DbSchema::Operations::CreateTable.new(
+                DbSchema::Definitions::Table.new(
+                  :posts,
+                  fields: [
+                    DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+                    DbSchema::Definitions::Field::Varchar.new(:title, null: false),
+                    DbSchema::Definitions::Field::Integer.new(:person_id, null: false)
+                  ]
+                )
+              ),
+              DbSchema::Operations::CreateForeignKey.new(
                 :posts,
-                fields: [
-                  DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-                  DbSchema::Definitions::Field::Varchar.new(:title, null: false),
-                  DbSchema::Definitions::Field::Integer.new(:person_id, null: false)
-                ]
+                DbSchema::Definitions::ForeignKey.new(
+                  name: :posts_person_id_fkey,
+                  fields: [:person_id],
+                  table: :people
+                )
               )
-            ),
-            DbSchema::Operations::CreateForeignKey.new(
-              :posts,
-              DbSchema::Definitions::ForeignKey.new(
-                name: :posts_person_id_fkey,
-                fields: [:person_id],
-                table: :people
-              )
-            )
-          ]).run!
+            ],
+            database
+          ).run!
         end
 
         let(:body) do
@@ -370,7 +385,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         it 'drops the foreign key' do
-          subject.run!
+          subject.run!(database)
 
           expect(schema.table(:posts)).not_to have_foreign_key_to(:people)
         end
@@ -385,7 +400,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'adds the enum' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).to have_enum(:user_role)
         expect(schema.enum(:user_role).values).to eq(%i(guest user admin))
@@ -394,11 +409,14 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a drop_enum' do
       before(:each) do
-        DbSchema::Runner.new([
-          DbSchema::Operations::CreateEnum.new(
-            DbSchema::Definitions::Enum.new(:user_role, %i(guest user admin))
-          )
-        ]).run!
+        DbSchema::Runner.new(
+          [
+            DbSchema::Operations::CreateEnum.new(
+              DbSchema::Definitions::Enum.new(:user_role, %i(guest user admin))
+            )
+          ],
+          database
+        ).run!
       end
 
       let(:body) do
@@ -408,7 +426,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'drops the enum' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).not_to have_enum(:user_role)
       end
@@ -422,7 +440,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'enables the extension' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).to have_extension(:hstore)
       end
@@ -430,11 +448,14 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a drop_extension' do
       before(:each) do
-        DbSchema::Runner.new([
-          DbSchema::Operations::CreateExtension.new(
-            DbSchema::Definitions::Extension.new(:hstore)
-          )
-        ]).run!
+        DbSchema::Runner.new(
+          [
+            DbSchema::Operations::CreateExtension.new(
+              DbSchema::Definitions::Extension.new(:hstore)
+            )
+          ],
+          database
+        ).run!
       end
 
       let(:body) do
@@ -444,7 +465,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'drops the extension' do
-        subject.run!
+        subject.run!(database)
 
         expect(schema).not_to have_extension(:hstore)
       end
@@ -452,7 +473,7 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with an execute' do
       before(:each) do
-        DbSchema.connection[:people].insert(name: 'John Smith')
+        database[:people].insert(name: 'John Smith')
       end
 
       let(:body) do
@@ -462,9 +483,9 @@ RSpec.describe DbSchema::Migrator do
       end
 
       it 'executes the query' do
-        subject.run!
+        subject.run!(database)
 
-        person = DbSchema.connection['SELECT * FROM people'].first
+        person = database['SELECT * FROM people'].first
         expect(person[:phone]).to eq('+79012345678')
       end
     end
@@ -474,31 +495,31 @@ RSpec.describe DbSchema::Migrator do
 
       it "doesn't change the schema" do
         expect {
-          subject.run!
-        }.not_to change { DbSchema::Reader.read_schema }
+          subject.run!(database)
+        }.not_to change { DbSchema::Reader.read_schema(database) }
       end
     end
   end
 
   after(:each) do
-    DbSchema.connection.tables.each do |table_name|
-      DbSchema.connection.foreign_key_list(table_name).each do |foreign_key|
-        DbSchema.connection.alter_table(table_name) do
+    database.tables.each do |table_name|
+      database.foreign_key_list(table_name).each do |foreign_key|
+        database.alter_table(table_name) do
           drop_foreign_key([], name: foreign_key[:name])
         end
       end
     end
 
-    DbSchema::Reader.read_enums.each do |enum|
-      DbSchema.connection.drop_enum(enum.name, cascade: true)
+    DbSchema::Reader.read_enums(database).each do |enum|
+      database.drop_enum(enum.name, cascade: true)
     end
 
-    DbSchema.connection.tables.each do |table_name|
-      DbSchema.connection.drop_table(table_name)
+    database.tables.each do |table_name|
+      database.drop_table(table_name)
     end
 
-    DbSchema::Reader.read_extensions.each do |extension|
-      DbSchema.connection.run("DROP EXTENSION #{extension.name}")
+    DbSchema::Reader.read_extensions(database).each do |extension|
+      database.run("DROP EXTENSION #{extension.name}")
     end
   end
 end

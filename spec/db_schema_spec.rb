@@ -1,7 +1,11 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema do
-  let(:database) { DbSchema.connection }
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+    end
+  end
 
   describe '.describe' do
     before(:each) do
@@ -87,7 +91,7 @@ RSpec.describe DbSchema do
       expect(last_name.last[:db_type]).to eq('character varying(30)')
       expect(last_name.last[:allow_null]).to eq(false)
 
-      users_indices = DbSchema::Reader::Postgres.indices_data_for(:users)
+      users_indices = DbSchema::Reader::Postgres.indices_data_for(:users, database)
       name_index  = users_indices.find { |index| index[:name] == :users_name_index }
       email_index = users_indices.find { |index| index[:name] == :users_email_index }
 
@@ -143,7 +147,7 @@ RSpec.describe DbSchema do
       expect(country_id_fkey[:table]).to eq(:countries)
       expect(country_id_fkey[:key]).to eq([:id])
 
-      enums = DbSchema::Reader.read_enums
+      enums = DbSchema::Reader.read_enums(database)
       expect(enums.count).to eq(1)
 
       happiness = enums.first
@@ -153,7 +157,7 @@ RSpec.describe DbSchema do
 
     context 'with conditional migrations' do
       it 'first runs the applicable migrations, then applies the schema' do
-        subject.connection[:users].insert(name: 'John Smith', email: 'john@smith.com')
+        database[:users].insert(name: 'John Smith', email: 'john@smith.com')
 
         subject.describe do |db|
           db.table :users do |t|
@@ -213,12 +217,12 @@ UPDATE users SET first_name = split_part(name, ' ', 1),
           end
         end
 
-        users = DbSchema::Reader.read_table(:users)
+        users = DbSchema::Reader.read_table(:users, database)
         expect(users).not_to have_field(:name)
         expect(users.field(:first_name)).not_to be_null
         expect(users.field(:last_name)).not_to be_null
 
-        user = subject.connection[:users].first
+        user = database[:users].first
         expect(user[:first_name]).to eq('John')
         expect(user[:last_name]).to eq('Smith')
       end
@@ -282,7 +286,7 @@ Requested schema is invalid:
               t.index :email
             end
           end
-        }.not_to change { DbSchema::Reader.read_schema }
+        }.not_to change { DbSchema::Reader.read_schema(database) }
       end
 
       context 'with applicable migrations' do
@@ -317,7 +321,7 @@ Requested schema is invalid:
                 end
               end
             end
-          }.not_to change { DbSchema::Reader.read_schema }
+          }.not_to change { DbSchema::Reader.read_schema(database) }
         end
       end
     end
@@ -360,6 +364,20 @@ Requested schema is invalid:
       end
     end
 
+    it 'closes the connection after making the changes' do
+      expect {
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :name, null: false
+            t.varchar :email, length: 100
+
+            t.index :email
+          end
+        end
+      }.not_to change { Sequel::DATABASES.count }
+    end
+
     after(:each) do
       database.tables.each do |table_name|
         database.foreign_key_list(table_name).each do |foreign_key|
@@ -369,7 +387,7 @@ Requested schema is invalid:
         end
       end
 
-      DbSchema::Reader.read_schema.enums.each do |enum|
+      DbSchema::Reader.read_enums(database).each do |enum|
         database.drop_enum(enum.name, cascade: true)
       end
 

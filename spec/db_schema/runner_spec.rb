@@ -1,14 +1,18 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Runner do
-  let(:database) { DbSchema.connection }
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+    end
+  end
 
   let(:enums) do
-    DbSchema::Reader.read_schema.enums
+    DbSchema::Reader.read_enums(database)
   end
 
   let(:extensions) do
-    DbSchema::Reader.read_schema.extensions
+    DbSchema::Reader.read_extensions(database)
   end
 
   before(:each) do
@@ -87,7 +91,7 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
-  subject { DbSchema::Runner.new(changes) }
+  subject { DbSchema::Runner.new(changes, database) }
 
   describe '#run!' do
     context 'with CreateTable & DropTable' do
@@ -108,13 +112,13 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        expect(DbSchema.connection.tables).not_to include(:people)
-        expect(DbSchema.connection.tables).to include(:users)
+        expect(database.tables).not_to include(:people)
+        expect(database.tables).to include(:users)
 
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
-        users = DbSchema::Reader.read_schema.tables.find { |table| table.name == :users }
+        users = DbSchema::Reader.read_table(:users, database)
         id, name, email, country_id, created_at, period, some_bit, some_bits, some_varbit, names = users.fields
         expect(id.name).to eq(:id)
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
@@ -146,7 +150,7 @@ RSpec.describe DbSchema::Runner do
         expect(names).to be_a(DbSchema::Definitions::Field::Array)
         expect(names.options[:element_type]).to eq(:varchar)
 
-        indices = DbSchema::Reader::Postgres.indices_data_for(:users)
+        indices = DbSchema::Reader::Postgres.indices_data_for(:users, database)
         name_index  = indices.find { |index| index[:name] == :index_users_on_name }
         email_index = indices.find { |index| index[:name] == :index_users_on_email }
         names_index = indices.find { |index| index[:name] == :users_names_index }
@@ -176,7 +180,7 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        schema = DbSchema::Reader.read_schema
+        schema = DbSchema::Reader.read_schema(database)
         expect(schema).not_to have_table(:people)
         expect(schema).to have_table(:users)
       end
@@ -212,7 +216,7 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_table(:people, database)
           address, country_name, created_at, first_name, last_name, age, uid, updated_at = people.fields
           expect(address.name).to eq(:address)
           expect(created_at.name).to eq(:created_at)
@@ -276,8 +280,7 @@ RSpec.describe DbSchema::Runner do
           it 'applies all the changes' do
             subject.run!
 
-            schema = DbSchema::Reader.read_schema
-            people = schema.tables.find { |table| table.name == :people }
+            people = DbSchema::Reader.read_table(:people, database)
             address, country_name, created_at = people.fields.last(3)
 
             expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
@@ -298,7 +301,7 @@ RSpec.describe DbSchema::Runner do
           it 'applies all the changes' do
             subject.run!
 
-            people = DbSchema::Reader.read_table(:people)
+            people = DbSchema::Reader.read_table(:people, database)
             expect(people[:name].type).to eq(:integer)
           end
         end
@@ -406,7 +409,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          indices = DbSchema::Reader::Postgres.indices_data_for(:people)
+          indices = DbSchema::Reader::Postgres.indices_data_for(:people, database)
           expect(indices.count).to eq(2)
           name_index = indices.find { |index| index[:name] == :people_name_index }
           interests_index = indices.find { |index| index[:name] == :people_interests_index }
@@ -441,7 +444,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_table(:people, database)
           expect(people.checks.count).to eq(1)
           address_check = people.checks.first
           expect(address_check.name).to eq(:min_address_length)
@@ -575,7 +578,7 @@ RSpec.describe DbSchema::Runner do
         it 'converts existing fields to the new type' do
           subject.run!
 
-          field = DbSchema::Reader.read_table(:users).fields.last
+          field = DbSchema::Reader.read_table(:users, database).fields.last
           expect(field.type).to eq(:happiness)
           expect(field.default).to eq('ok')
         end
@@ -606,7 +609,7 @@ RSpec.describe DbSchema::Runner do
         it 'converts existing fields to the new type' do
           subject.run!
 
-          field = DbSchema::Reader.read_table(:users)[:roles]
+          field = DbSchema::Reader.read_table(:users, database)[:roles]
           expect(field.type).to eq(:array)
           expect(field.attributes[:element_type]).to eq(:user_role)
           expect(field.default).to eq('{user}')
@@ -656,7 +659,7 @@ RSpec.describe DbSchema::Runner do
       it 'runs the query' do
         subject.run!
 
-        schema = DbSchema::Reader.read_schema
+        schema = DbSchema::Reader.read_schema(database)
         expect(schema).not_to have_table(:people)
         expect(schema).to have_table(:users)
       end
