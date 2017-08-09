@@ -59,6 +59,10 @@ module DbSchema
       configure(renamed_data.merge(other_options))
     end
 
+    def connection=(external_connection)
+      @external_connection = external_connection
+    end
+
     def configuration
       raise 'You must call DbSchema.configure in order to connect to the database.' if @configuration.nil?
 
@@ -66,6 +70,7 @@ module DbSchema
     end
 
     def reset!
+      @external_connection = nil
       @configuration = nil
     end
 
@@ -73,18 +78,22 @@ module DbSchema
     def with_connection
       raise ArgumentError unless block_given?
 
-      Sequel.connect(
-        adapter:  configuration.adapter,
-        host:     configuration.host,
-        port:     configuration.port,
-        database: configuration.database,
-        user:     configuration.user,
-        password: configuration.password
-      ) do |db|
-        db.extension :pg_enum
-        db.extension :pg_array
+      if @external_connection
+        yield @external_connection
+      else
+        Sequel.connect(
+          adapter:  configuration.adapter,
+          host:     configuration.host,
+          port:     configuration.port,
+          database: configuration.database,
+          user:     configuration.user,
+          password: configuration.password
+        ) do |db|
+          db.extension :pg_enum
+          db.extension :pg_array
 
-        yield db
+          yield db
+        end
       end
     end
 

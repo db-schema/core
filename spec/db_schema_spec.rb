@@ -228,6 +228,37 @@ UPDATE users SET first_name = split_part(name, ' ', 1),
       end
     end
 
+    context 'with an external connection' do
+      let(:external_connection) do
+        Sequel.connect(adapter: 'postgres', database: 'db_schema_test2')
+      end
+
+      before(:each) do
+        subject.connection = external_connection
+      end
+
+      it 'uses it to setup the database' do
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :name
+          end
+        end
+
+        expect(DbSchema::Reader.read_table(:users, database).fields.count).to eq(4)
+        expect(DbSchema::Reader.read_table(:users, external_connection).fields.count).to eq(2)
+      end
+
+      after(:each) do
+        external_connection.tables.each do |table_name|
+          external_connection.drop_table(table_name)
+        end
+
+        external_connection.disconnect
+        subject.reset!
+      end
+    end
+
     context 'with an invalid schema' do
       it 'raises an InvalidSchemaError' do
         message = <<-MSG

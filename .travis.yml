@@ -8,4 +8,4 @@ services:
 addons:
   postgresql: 9.6
 before_script:
-  - psql -c 'CREATE DATABASE db_schema_test;' -U postgres
+  - psql -c 'CREATE DATABASE db_schema_test; CREATE DATABASE db_schema_test2;' -U postgres
