@@ -1,29 +1,41 @@
 module DbSchema
   class Configuration
-    attr_reader :adapter, :host, :port, :database, :user, :password
+    DEFAULT_VALUES = {
+      adapter:     'postgres',
+      host:        'localhost',
+      port:        5432,
+      database:    nil,
+      user:        nil,
+      password:    '',
+      log_changes: true,
+      dry_run:     false,
+      post_check:  true
+    }.freeze
 
-    def initialize(adapter: 'postgres', host: 'localhost', port: 5432, database:, user: nil, password: '', log_changes: true, dry_run: false, post_check: true)
-      @adapter     = adapter
-      @host        = host
-      @port        = port
-      @database    = database
-      @user        = user
-      @password    = password
-      @log_changes = log_changes
-      @dry_run     = dry_run
-      @post_check  = post_check
+    def initialize(params = {})
+      @params = DEFAULT_VALUES.merge(params)
+    end
+
+    def merge(new_params)
+      Configuration.new(@params.merge(new_params))
+    end
+
+    [:adapter, :host, :port, :database, :user, :password].each do |param_name|
+      define_method(param_name) do
+        @params[param_name]
+      end
     end
 
     def log_changes?
-      @log_changes
+      @params[:log_changes]
     end
 
     def dry_run?
-      @dry_run
+      @params[:dry_run]
     end
 
     def post_check_enabled?
-      @post_check
+      @params[:post_check]
     end
   end
 end
