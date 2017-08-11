@@ -44,8 +44,8 @@ module DbSchema
       end
     end
 
-    def configure(connection_parameters)
-      @configuration = Configuration.new(connection_parameters)
+    def configure(params)
+      @configuration = configuration.merge(params)
     end
 
     def configure_from_yaml(yaml_path, environment, **other_options)
@@ -64,9 +64,7 @@ module DbSchema
     end
 
     def configuration
-      raise 'You must call DbSchema.configure in order to connect to the database.' if @configuration.nil?
-
-      @configuration
+      @configuration ||= Configuration.new
     end
 
     def reset!

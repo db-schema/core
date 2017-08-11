@@ -303,7 +303,7 @@ Requested schema is invalid:
 
     context 'in dry run mode' do
       before(:each) do
-        DbSchema.configure(database: 'db_schema_test', log_changes: false, dry_run: true)
+        subject.configure(dry_run: true)
       end
 
       it 'does not make any changes' do
@@ -355,6 +355,10 @@ Requested schema is invalid:
           }.not_to change { DbSchema::Reader.read_schema(database) }
         end
       end
+
+      after(:each) do
+        subject.configure(dry_run: false)
+      end
     end
 
     context 'with differences left after run' do
@@ -384,13 +388,17 @@ Requested schema is invalid:
 
       context 'with post_check disabled' do
         before(:each) do
-          DbSchema.configure(database: 'db_schema_test', log_changes: false, post_check: false)
+          subject.configure(post_check: false)
         end
 
         it 'ignores the mismatch' do
           expect {
             apply_schema
           }.not_to raise_error
+        end
+
+        after(:each) do
+          subject.configure(post_check: true)
         end
       end
     end
@@ -428,65 +436,72 @@ Requested schema is invalid:
     end
   end
 
-  describe '.configure' do
-    it 'stores the connection parameters in configuration object' do
-      subject.configure(
-        host:     'localhost',
-        database: 'db_schema_test',
-        user:     '7even',
-        password: 'secret'
-      )
+  describe '.configuration and .configure' do
+    before(:each) do
+      subject.reset!
+    end
 
-      expect(subject.configuration.host).to eq('localhost')
-      expect(subject.configuration.database).to eq('db_schema_test')
-      expect(subject.configuration.user).to eq('7even')
-      expect(subject.configuration.password).to eq('secret')
+    context 'first call to .configuration' do
+      it 'returns default configuration' do
+        expect(subject.configuration).to eq(DbSchema::Configuration.new)
+      end
+    end
+
+    context '.configuration after a .configure call' do
+      it 'returns a configuration passed to .configure' do
+        subject.configure(
+          host:     'localhost',
+          database: 'db_schema_test',
+          user:     '7even',
+          password: 'secret'
+        )
+
+        expect(subject.configuration).to eq(
+          DbSchema::Configuration.new(
+            host:     'localhost',
+            database: 'db_schema_test',
+            user:     '7even',
+            password: 'secret'
+          )
+        )
+      end
+    end
+
+    context '.configuration after a .configure_from_yaml call' do
+      let(:path) { Pathname.new('../support/database.yml').expand_path(__FILE__) }
+
+      it 'returns a configuration set from a YAML file' do
+        subject.configure_from_yaml(path, :development)
+
+        expect(subject.configuration).to eq(
+          DbSchema::Configuration.new(
+            host:     'localhost',
+            database: 'db_schema_dev',
+            user:     '7even',
+            password: nil
+          )
+        )
+      end
+
+      context 'with extra options to .configure_from_yaml' do
+        it 'passes them to configuration object' do
+          subject.configure_from_yaml(path, :development, dry_run: true)
+
+          expect(subject.configuration).to eq(
+            DbSchema::Configuration.new(
+              host:     'localhost',
+              database: 'db_schema_dev',
+              user:     '7even',
+              password: nil,
+              dry_run:  true
+            )
+          )
+        end
+      end
     end
 
     after(:each) do
       subject.reset!
-    end
-  end
-
-  describe '.configure_from_yaml' do
-    let(:path) { Pathname.new('../support/database.yml').expand_path(__FILE__) }
-
-    it 'configures the connection from a YAML file' do
-      subject.configure_from_yaml(path, :development)
-
-      expect(subject.configuration.adapter).to eq('postgres')
-      expect(subject.configuration.host).to eq('localhost')
-      expect(subject.configuration.port).to eq(5432)
-      expect(subject.configuration.database).to eq('db_schema_dev')
-      expect(subject.configuration.user).to eq('7even')
-      expect(subject.configuration.password).to eq(nil)
-    end
-
-    context 'with extra options' do
-      it 'passes them to configuration object' do
-        subject.configure_from_yaml(path, :development, log_changes: true)
-
-        expect(subject.configuration.database).to eq('db_schema_dev')
-        expect(subject.configuration).to be_log_changes
-      end
-    end
-
-    after(:each) do
-      subject.reset!
-    end
-  end
-
-  describe '.configuration' do
-    context 'without a prior call to .configure' do
-      before(:each) do
-        subject.reset!
-      end
-
-      it 'raises a RuntimeError' do
-        expect {
-          subject.configuration
-        }.to raise_error(RuntimeError, /DbSchema\.configure/)
-      end
     end
   end
 end

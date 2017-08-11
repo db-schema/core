@@ -1,5 +1,9 @@
+require 'dry/equalizer'
+
 module DbSchema
   class Configuration
+    include Dry::Equalizer(:params)
+
     DEFAULT_VALUES = {
       adapter:     'postgres',
       host:        'localhost',
@@ -37,5 +41,8 @@ module DbSchema
     def post_check_enabled?
       @params[:post_check]
     end
+
+  protected
+    attr_reader :params
   end
 end
