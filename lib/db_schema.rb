@@ -18,6 +18,8 @@ require 'db_schema/version'
 
 module DbSchema
   class << self
+    attr_reader :current_schema
+
     def describe(&block)
       with_connection do |connection|
         desired = DSL.new(block)
@@ -31,8 +33,9 @@ module DbSchema
 
           if configuration.dry_run?
             raise Sequel::Rollback
-          elsif changes.empty?
-            return
+          else
+            @current_schema = desired.schema
+            return if changes.empty?
           end
 
           Runner.new(changes, connection).run!
@@ -70,6 +73,7 @@ module DbSchema
     def reset!
       @external_connection = nil
       @configuration = nil
+      @current_schema = nil
     end
 
   private
@@ -110,7 +114,9 @@ module DbSchema
     end
 
     def run_migrations(migrations, connection)
-      migrations.reduce(Reader.read_schema(connection)) do |schema, migration|
+      @current_schema = Reader.read_schema(connection)
+
+      migrations.reduce(@current_schema) do |schema, migration|
         migrator = Migrator.new(migration)
 
         if migrator.applicable?(schema)

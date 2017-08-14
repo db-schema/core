@@ -436,6 +436,76 @@ Requested schema is invalid:
     end
   end
 
+  describe '.current_schema' do
+    before(:each) do
+      subject.configure(database: 'db_schema_test', log_changes: false)
+
+      database.create_table :users do
+        primary_key :id
+
+        column :name,  :Varchar, null: false
+        column :email, :Varchar
+      end
+    end
+
+    def apply_schema
+      subject.describe do |db|
+        db.table :users do |t|
+          t.primary_key :id
+          t.varchar :name, null: false
+          t.varchar :email
+        end
+
+        db.table :posts do |t|
+          t.primary_key :id
+          t.varchar :title
+          t.text    :body
+          t.integer :user_id, references: :users
+        end
+      end
+    end
+
+    context 'without dry_run' do
+      before(:each) do
+        apply_schema
+      end
+
+      it 'stores the applied schema' do
+        schema = subject.current_schema
+
+        expect(schema).to be_a(DbSchema::Definitions::Schema)
+        expect(schema.tables.map(&:name)).to eq(%i(users posts))
+      end
+
+      after(:each) do
+        database.drop_table(:posts)
+        database.drop_table(:users)
+      end
+    end
+
+    context 'with dry_run' do
+      before(:each) do
+        subject.configure(dry_run: true)
+        apply_schema
+      end
+
+      it 'stores the initial schema' do
+        schema = subject.current_schema
+
+        expect(schema).to be_a(DbSchema::Definitions::Schema)
+        expect(schema.tables.map(&:name)).to eq(%i(users))
+      end
+
+      after(:each) do
+        database.drop_table(:users)
+      end
+    end
+
+    after(:each) do
+      subject.reset!
+    end
+  end
+
   describe '.configuration and .configure' do
     before(:each) do
       subject.reset!
