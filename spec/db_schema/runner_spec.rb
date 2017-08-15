@@ -4,6 +4,7 @@ RSpec.describe DbSchema::Runner do
   let(:database) do
     Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
       db.extension :pg_enum
+      db.extension :pg_array
     end
   end
 
