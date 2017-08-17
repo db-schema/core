@@ -1,3 +1,3 @@
 module DbSchema
-  VERSION = '0.3-dev'
+  VERSION = '0.3.rc1'
 end

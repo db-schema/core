@@ -53,7 +53,7 @@ But you would lose it even with manual migrations.
 Add this line to your application's Gemfile:
 
 ``` ruby
-gem 'db_schema', '~> 0.2.5'
+gem 'db_schema', '~> 0.3.rc1'
 ```
 
 And then execute:
@@ -65,7 +65,7 @@ $ bundle
 Or install it yourself as:
 
 ``` sh
-$ gem install db_schema
+$ gem install db_schema --prerelease
 ```
 
 ## Usage
