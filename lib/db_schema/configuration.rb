@@ -17,7 +17,11 @@ module DbSchema
     }.freeze
 
     def initialize(params = {})
-      @params = DEFAULT_VALUES.merge(Configuration.params_from_url(params[:url])).merge(params)
+      @params = [
+        DEFAULT_VALUES,
+        Configuration.params_from_url(params[:url]),
+        Utils.filter_by_keys(params, *DEFAULT_VALUES.keys)
+      ].reduce(:merge)
     end
 
     def merge(new_params)
