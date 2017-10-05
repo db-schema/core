@@ -528,8 +528,7 @@ Requested schema is invalid:
         )
 
         expect(subject.configuration).to eq(
-          DbSchema::Configuration.new(
-            host:     'localhost',
+          DbSchema::Configuration.new.merge(
             database: 'db_schema_test',
             user:     '7even',
             password: 'secret'
@@ -545,8 +544,7 @@ Requested schema is invalid:
         subject.configure_from_yaml(path, :development)
 
         expect(subject.configuration).to eq(
-          DbSchema::Configuration.new(
-            host:     'localhost',
+          DbSchema::Configuration.new.merge(
             database: 'db_schema_dev',
             user:     '7even',
             password: nil
@@ -559,8 +557,7 @@ Requested schema is invalid:
           subject.configure_from_yaml(path, :development, dry_run: true)
 
           expect(subject.configuration).to eq(
-            DbSchema::Configuration.new(
-              host:     'localhost',
+            DbSchema::Configuration.new.merge(
               database: 'db_schema_dev',
               user:     '7even',
               password: nil,

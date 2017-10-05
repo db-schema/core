@@ -16,20 +16,6 @@ RSpec.describe DbSchema::Configuration do
       expect(subject.dry_run?).to            be_falsy
       expect(subject.post_check_enabled?).to be_truthy
     end
-
-    context 'with a :url option' do
-      let(:url) { 'postgresql://user:password@some_host/db_schema' }
-
-      subject { DbSchema::Configuration.new(url: url) }
-
-      it "parses the URL and takes it's non-nil attributes" do
-        expect(subject.host).to eq('some_host')
-        expect(subject.port).to eq(5432)
-        expect(subject.database).to eq('db_schema')
-        expect(subject.user).to eq('user')
-        expect(subject.password).to eq('password')
-      end
-    end
   end
 
   describe '#merge' do
@@ -39,6 +25,20 @@ RSpec.describe DbSchema::Configuration do
       expect(configuration.database).to eq('db_schema_test')
       expect(configuration.user).to     eq('7even')
       expect(configuration.password).to eq('')
+    end
+
+    context 'with a :url option' do
+      let(:url) { 'postgresql://user:password@some_host/db_schema' }
+
+      it "parses the URL and takes it's non-nil attributes" do
+        configuration = subject.merge(url: url)
+
+        expect(configuration.host).to eq('some_host')
+        expect(configuration.port).to eq(5432)
+        expect(configuration.database).to eq('db_schema')
+        expect(configuration.user).to eq('user')
+        expect(configuration.password).to eq('password')
+      end
     end
 
     context 'when called several times' do

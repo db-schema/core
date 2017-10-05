@@ -4,7 +4,7 @@ module DbSchema
   class Configuration
     include Dry::Equalizer(:params)
 
-    DEFAULT_VALUES = {
+    DEFAULT_PARAMS = {
       adapter:     'postgres',
       host:        'localhost',
       port:        5432,
@@ -16,16 +16,18 @@ module DbSchema
       post_check:  true
     }.freeze
 
-    def initialize(params = {})
-      @params = [
-        DEFAULT_VALUES,
-        Configuration.params_from_url(params[:url]),
-        Utils.filter_by_keys(params, *DEFAULT_VALUES.keys)
-      ].reduce(:merge)
+    def initialize(params = DEFAULT_PARAMS)
+      @params = params
     end
 
     def merge(new_params)
-      Configuration.new(@params.merge(new_params))
+      params = [
+        @params,
+        Configuration.params_from_url(new_params[:url]),
+        Utils.filter_by_keys(new_params, *DEFAULT_PARAMS.keys)
+      ].reduce(:merge)
+
+      Configuration.new(params)
     end
 
     [:adapter, :host, :port, :database, :user, :password].each do |param_name|
