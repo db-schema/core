@@ -34,6 +34,16 @@ module DbSchema
         end
       end
 
+      def remove_nil_values(hash)
+        hash.reduce({}) do |new_hash, (key, value)|
+          if value.nil?
+            new_hash
+          else
+            new_hash.merge(key => value)
+          end
+        end
+      end
+
       def sort_by_class(array, sorted_classes)
         sorted_classes.flat_map do |klass|
           array.select { |object| object.is_a?(klass) }

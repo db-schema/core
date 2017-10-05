@@ -17,7 +17,7 @@ module DbSchema
     }.freeze
 
     def initialize(params = {})
-      @params = DEFAULT_VALUES.merge(params)
+      @params = DEFAULT_VALUES.merge(Configuration.params_from_url(params[:url])).merge(params)
     end
 
     def merge(new_params)
@@ -40,6 +40,22 @@ module DbSchema
 
     def post_check_enabled?
       @params[:post_check]
+    end
+
+    class << self
+      def params_from_url(url_string)
+        return {} if url_string.nil?
+        url = URI.parse(url_string)
+
+        Utils.remove_nil_values(
+          adapter:  url.scheme,
+          host:     url.host,
+          port:     url.port,
+          database: url.path.sub(/\A\//, ''),
+          user:     url.user,
+          password: url.password
+        )
+      end
     end
 
   protected

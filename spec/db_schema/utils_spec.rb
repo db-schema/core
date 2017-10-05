@@ -71,6 +71,16 @@ RSpec.describe DbSchema::Utils do
     end
   end
 
+  describe '.remove_nil_values' do
+    let(:hash) do
+      { a: 1, b: nil, c: 3 }
+    end
+
+    it 'returns a new hash containing only key-value pairs with non-nil values' do
+      expect(subject.remove_nil_values(hash)).to eq(a: 1, c: 3)
+    end
+  end
+
   describe '.sort_by_class' do
     let(:class_a) { Class.new }
     let(:class_b) { Class.new }
