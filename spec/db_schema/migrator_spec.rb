@@ -87,7 +87,7 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a create_table' do
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.create_table :posts do |t|
             t.primary_key :id
             t.varchar :title, null: false
@@ -105,7 +105,7 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a drop_table' do
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.drop_table :people
         end
       end
@@ -119,7 +119,7 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a rename_table' do
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.rename_table :people, to: :users
         end
       end
@@ -135,7 +135,7 @@ RSpec.describe DbSchema::Migrator do
     context 'with an alter_table' do
       context 'and an add_column' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.add_column :email, :varchar, null: false
             end
@@ -156,7 +156,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and a drop_column' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.drop_column :name
             end
@@ -172,7 +172,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and a rename_column' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.rename_column :name, to: :first_name
             end
@@ -189,7 +189,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and an alter_column_type' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.alter_column_type :name, :text
             end
@@ -205,7 +205,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and an allow_null' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.allow_null :name
             end
@@ -221,7 +221,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and a disallow_null' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.disallow_null :created_at
             end
@@ -237,7 +237,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and an alter_column_default' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.alter_column_default :created_at, :'now()'
             end
@@ -253,7 +253,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and an add_index' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.add_index :name
             end
@@ -269,7 +269,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and a drop_index' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.drop_index :people_phone_index
             end
@@ -285,7 +285,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and an add_check' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.add_check :name_length, 'character_length(name::text) > 4'
             end
@@ -302,7 +302,7 @@ RSpec.describe DbSchema::Migrator do
 
       context 'and a drop_check' do
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :people do |t|
               t.drop_check :phone_format
             end
@@ -336,7 +336,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :posts do |t|
               t.add_foreign_key :person_id, references: :people
             end
@@ -378,7 +378,7 @@ RSpec.describe DbSchema::Migrator do
         end
 
         let(:body) do
-          -> (migrator) do
+          -> (migrator, db) do
             migrator.alter_table :posts do |t|
               t.drop_foreign_key :posts_person_id_fkey
             end
@@ -395,7 +395,7 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a create_enum' do
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.create_enum :user_role, %i(guest user admin)
         end
       end
@@ -421,7 +421,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.drop_enum :user_role
         end
       end
@@ -435,7 +435,7 @@ RSpec.describe DbSchema::Migrator do
 
     context 'with a create_extension' do
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.create_extension :hstore
         end
       end
@@ -460,7 +460,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.drop_extension :hstore
         end
       end
@@ -478,7 +478,7 @@ RSpec.describe DbSchema::Migrator do
       end
 
       let(:body) do
-        -> (migrator) do
+        -> (migrator, db) do
           migrator.execute "UPDATE people SET phone = '+79012345678'"
         end
       end
@@ -488,6 +488,21 @@ RSpec.describe DbSchema::Migrator do
 
         person = database['SELECT * FROM people'].first
         expect(person[:phone]).to eq('+79012345678')
+      end
+    end
+
+    context 'with an arbitrary code block' do
+      let(:body) do
+        -> (migrator, db) do
+          db[:people].insert(name: 'John Smith')
+        end
+      end
+
+      it 'executes the code' do
+        subject.run!(database)
+
+        people = database['SELECT * FROM people']
+        expect(people.count).to eq(1)
       end
     end
 

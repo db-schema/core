@@ -15,7 +15,7 @@ module DbSchema
     end
 
     def run!(connection)
-      migration.body.call(BodyYielder.new(connection)) unless migration.body.nil?
+      migration.body.call(BodyYielder.new(connection), connection) unless migration.body.nil?
     end
 
     class BodyYielder
