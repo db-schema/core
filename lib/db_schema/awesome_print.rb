@@ -21,16 +21,26 @@ if defined?(AwesomePrint)
           :dbschema_table
         when ::DbSchema::Definitions::Field::Custom
           :dbschema_custom_field
+        when ::DbSchema::Definitions::NullField
+          :dbschema_null_field
         when ::DbSchema::Definitions::Field::Base
           :dbschema_field
+        when ::DbSchema::Definitions::NullIndex
+          :dbschema_null_index
         when ::DbSchema::Definitions::Index
           :dbschema_index
         when ::DbSchema::Definitions::Index::Column
           :dbschema_index_column
+        when ::DbSchema::Definitions::NullCheckConstraint
+          :dbschema_null_check_constraint
         when ::DbSchema::Definitions::CheckConstraint
           :dbschema_check_constraint
+        when ::DbSchema::Definitions::NullForeignKey
+          :dbschema_null_foreign_key
         when ::DbSchema::Definitions::ForeignKey
           :dbschema_foreign_key
+        when ::DbSchema::Definitions::NullEnum
+          :dbschema_null_enum
         when ::DbSchema::Definitions::Enum
           :dbschema_enum
         when ::DbSchema::Definitions::Extension
@@ -148,6 +158,10 @@ if defined?(AwesomePrint)
         "#<DbSchema::Definitions::Field::Custom (#{object.type.ai}) #{object.name.ai}#{options}#{primary_key}>"
       end
 
+      def awesome_dbschema_null_field(object)
+        '#<DbSchema::Definitions::NullField>'
+      end
+
       def awesome_dbschema_index(object)
         columns = format_dbschema_fields(object.columns)
         using = ' using ' + colorize(object.type.to_s, :symbol) unless object.btree?
@@ -172,8 +186,16 @@ if defined?(AwesomePrint)
         data.join(' ')
       end
 
+      def awesome_dbschema_null_index(object)
+        '#<DbSchema::Definitions::NullIndex>'
+      end
+
       def awesome_dbschema_check_constraint(object)
         "#<#{object.class} #{object.name.ai} #{object.condition.ai}>"
+      end
+
+      def awesome_dbschema_null_check_constraint(object)
+        '#<DbSchema::Definitions::NullCheckConstraint>'
       end
 
       def awesome_dbschema_foreign_key(object)
@@ -189,12 +211,20 @@ if defined?(AwesomePrint)
         "#<#{object.class} #{object.name.ai} on #{fields} #{references}#{data.join(', ')}>"
       end
 
+      def awesome_dbschema_null_foreign_key(object)
+        '#<DbSchema::Definitions::NullForeignKey>'
+      end
+
       def awesome_dbschema_enum(object)
         values = object.values.map do |value|
           colorize(value.to_s, :string)
         end.join(', ')
 
         "#<#{object.class} #{object.name.ai} (#{values})>"
+      end
+
+      def awesome_dbschema_null_enum(object)
+        '#<DbSchema::Definitions::NullEnum>'
       end
 
       def awesome_dbschema_create_table(object)
