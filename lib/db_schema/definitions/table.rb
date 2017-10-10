@@ -109,7 +109,12 @@ module DbSchema
     end
 
     class NullTable < Table
-      def initialize; end
+      def initialize
+        @fields       = []
+        @indices      = []
+        @checks       = []
+        @foreign_keys = []
+      end
     end
   end
 end
