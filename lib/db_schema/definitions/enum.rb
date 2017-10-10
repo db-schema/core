@@ -15,7 +15,9 @@ module DbSchema
     end
 
     class NullEnum < Enum
-      def initialize; end
+      def initialize
+        @values = []
+      end
     end
   end
 end
