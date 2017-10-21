@@ -153,6 +153,69 @@ successively on deploy) you can go the simple way and just
 The first puma process will apply the schema while the subsequent ones will see there's nothing
 left to do.
 
+### How it works
+
+When you call `DbSchema.describe` with a block that describes the database structure for your
+application DbSchema compares this *desired* structure with the *actual* structure your
+database has at the moment.
+
+The database structure is a tree; it's top-level node is a `Schema` object that has several
+child nodes - tables, enums and extensions. `Table` objects in turn have child nodes describing
+everything that belongs to a table - fields, indexes etc. The full tree structure looks like this:
+
+* Schema
+  * Table
+    * Field
+    * Index
+    * Check constraint
+    * Foreign key
+  * Enum type
+  * Extension
+
+DbSchema compares two structure trees by finding *objects with matching names* in both trees.
+*Desired* objects that don't have a match in the *actual* schema produce a **create** operation,
+while *actual* objects that don't have a counterpart in the *desired* schema generate a **drop**
+operation.
+
+Then each matching pair is compared by attributes and child objects:
+
+* if the objects differ in their attributes they make an **alter** operation if it is supported
+for that kind of object (that's tables, fields and enum types at the moment) or a pair of **drop**
+and **create** operations if it's not
+* if the objects differ in their child nodes then the process continues recursively for these
+two sets of child objects
+* if the objects are identical no operations take place on them
+
+Then DbSchema runs all these operations inside a transaction.
+
+For example if *desired* schema has tables `users`, `cities` and `posts`, and *actual* schema
+only has `users` and `posts` (where `posts` lack a couple of fields compared to the *desired*
+version), then the `cities` table will be created and new fields will be added to `posts`.
+
+The fact that objects are compared by name implies a very important detail: **you can't rename
+anything just by changing the name in the definition.**
+
+Imagine that you have a `foo` table in your schema definition and an identical table in the database.
+If you change it's name to `bar` in the definition and run your app DbSchema will see there
+is a `bar` table in the *desired* schema but no match in the database so a new `bar` table will be created;
+and since there is a `foo` table in the *actual* schema without a counterpart in the *desired*
+schema DbSchema will drop this table. Of course all data in the `foo` table will be lost.
+
+This can be solved with conditional migrations - a tool that allows you to make some changes to your database
+*before* the schema comparison described earlier takes control. A migration describes all required operations
+in an imperative manner (`rename_table`, `drop_index` etc) with a dedicated DSL. DbSchema doesn't store
+anything about migrations in the database though (as opposed to ActiveRecord or Sequel migrations);
+instead you have to provide some conditions required to run the migration (the goal here is to come up with
+conditions that a) will only trigger if the migration wasn't applied yet and b) are necessary for the
+migration to work) - like "rename the `users`
+table to `people` only if the database has a `users` table" (DbSchema also provides
+a [simple DSL](https://github.com/7even/db_schema/wiki/Schema-analysis-DSL) for schema analysis).
+This way the migration won't be applied again and the whole DbSchema process stays idempotent.
+Also you don't have to keep these migrations forever - once a migration is applied to databases
+in all environments you can safely delete it (though you can give your teammates a week or two to keep up).
+
+Conditional migrations are described [here](https://github.com/7even/db_schema/wiki/Conditional-Migrations).
+
 ## Known problems and limitations
 
 * primary keys are hardcoded to a single NOT NULL integer field with a postgres sequence attached
