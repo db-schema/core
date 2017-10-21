@@ -91,7 +91,7 @@ After DbSchema is configured you can load your schema definition file:
 # config/initializers/db_schema.rb
 
 # ...
-load App.root.join('db/schema.rb')
+load application_root.join('db/schema.rb')
 ```
 
 This `db/schema.rb` file will contain a description of your database structure
@@ -115,37 +115,30 @@ end
 
 Database schema definition DSL is documented [here](https://github.com/7even/db_schema/wiki/Schema-definition-DSL).
 
-In order to get an always-up-to-date database schema in development and test environments
-you need to load the schema definition when your application is starting up.
-On the other hand, in production environment this can cause race condition problems
-as your schema can be applied concurrently by different worker processes
-(this also applies to staging and any other environments where the application is being run
-by multi-worker servers); therefore it is wiser to disable schema auto loading
-in such environments and run it from a rake task on each deploy.
+### Production setup
 
-Here's an initializer example for a Rails app:
+In order to get an always-up-to-date database schema in development and test environments
+you need to load the schema definition when your application is starting up. But if you use
+an application server with multiple workers (puma in cluster mode, unicorn) in other environments
+(production, staging) you may get yourself into situation when different workers simultaneously
+run DbSchema code applying the same changes to your database. If this is the case you will need
+to disable loading the schema definition in those environments and do that from a rake task called
+from your deploy script:
 
 ``` ruby
 # config/initializers/db_schema.rb
-DbSchema.configure_from_yaml(
-  Rails.root.join('config', 'database.yml'),
-  Rails.env
-)
+DbSchema.configure(url: ENV['DATABASE_URL'])
 
-if Rails.env.development? || Rails.env.test?
-  load Rails.root.join('db/schema.rb')
+if ENV['APP_ENV'] == 'development' && ENV['APP_ENV'] == 'test'
+  load application_root.join('db/schema.rb')
 end
-```
 
-And the rake task:
-
-``` ruby
 # lib/tasks/db_schema.rake
 namespace :db do
   namespace :schema do
     desc 'Apply database schema'
     task apply: :environment do
-      load Rails.root.join('db/schema.rb')
+      load application_root.join('db/schema.rb')
     end
   end
 end
@@ -153,7 +146,12 @@ end
 
 Then you just call `rake db:schema:apply` from your deploy script before restarting the app.
 
-If your production setup doesn't include multiple workers starting simultaneously (for example if you run one Puma worker per docker container and restart containers one by one on deploy) you can go the simple way and just `load Rails.root.join('db', 'schema.rb')` in any environment without a separate rake task. The first DbSchema run will apply the schema while the subsequent ones will see there's nothing left to do.
+If your production setup doesn't include multiple application processes starting simultaneously
+(for example if you run one Puma process per docker container and replace containers
+successively on deploy) you can go the simple way and just
+`load application_root.join('db/schema.rb')` in any environment right from the initializer.
+The first puma process will apply the schema while the subsequent ones will see there's nothing
+left to do.
 
 ## Known problems and limitations
 
