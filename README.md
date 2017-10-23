@@ -115,6 +115,14 @@ end
 
 Database schema definition DSL is documented [here](https://github.com/7even/db_schema/wiki/Schema-definition-DSL).
 
+If you want to analyze your database structure in any way from your app (e.g. defining methods
+with `#define_method` for each enum value) you can use `DbSchema.current_schema` - it returns
+a cached copy of the database structure as a `DbSchema::Definitions::Schema` object which you
+can query in different ways. It is available after the schema was applied by DbSchema
+(`DbSchema.describe` remembers the current schema of the database and exposes it
+at `.current_schema`). Documentation for schema analysis DSL can be found
+[here](https://github.com/7even/db_schema/wiki/Schema-analysis-DSL).
+
 ### Production setup
 
 In order to get an always-up-to-date database schema in development and test environments
