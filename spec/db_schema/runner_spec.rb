@@ -545,7 +545,7 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Operations::RenameEnum.new(old_name: :status, new_name: :user_status)
+          DbSchema::Operations::RenameEnum.new(old_name: :status, new_name: :'user status')
         ]
       end
 
@@ -554,7 +554,7 @@ RSpec.describe DbSchema::Runner do
 
         schema = DbSchema::Reader.read_schema(database)
         expect(schema).not_to have_enum(:status)
-        expect(schema).to have_enum(:user_status)
+        expect(schema).to have_enum(:'user status')
       end
     end
 

@@ -144,7 +144,10 @@ module DbSchema
     end
 
     def rename_enum(change)
-      connection.run(%Q(ALTER TYPE "#{change.old_name}" RENAME TO "#{change.new_name}"))
+      old_name = connection.quote_identifier(change.old_name)
+      new_name = connection.quote_identifier(change.new_name)
+
+      connection.run(%Q(ALTER TYPE #{old_name} RENAME TO #{new_name}))
     end
 
     def alter_enum_values(change)
@@ -178,11 +181,11 @@ module DbSchema
     end
 
     def create_extension(change)
-      connection.run(%Q(CREATE EXTENSION "#{change.extension.name}"))
+      connection.run(%Q(CREATE EXTENSION #{connection.quote_identifier(change.extension.name)}))
     end
 
     def drop_extension(change)
-      connection.run(%Q(DROP EXTENSION "#{change.name}"))
+      connection.run(%Q(DROP EXTENSION #{connection.quote_identifier(change.name)}))
     end
 
     def execute_query(change)
