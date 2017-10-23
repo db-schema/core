@@ -1,5 +1,16 @@
 module DbSchema
   module Operations
+    # Abstract base class for rename operations.
+    class RenameOperation
+      include Dry::Equalizer(:old_name, :new_name)
+      attr_reader :old_name, :new_name
+
+      def initialize(old_name:, new_name:)
+        @old_name = old_name
+        @new_name = new_name
+      end
+    end
+
     class CreateTable
       include Dry::Equalizer(:table)
       attr_reader :table
@@ -18,14 +29,7 @@ module DbSchema
       end
     end
 
-    class RenameTable
-      include Dry::Equalizer(:old_name, :new_name)
-      attr_reader :old_name, :new_name
-
-      def initialize(old_name:, new_name:)
-        @old_name = old_name
-        @new_name = new_name
-      end
+    class RenameTable < RenameOperation
     end
 
     class AlterTable
@@ -76,14 +80,7 @@ module DbSchema
     class DropColumn < ColumnOperation
     end
 
-    class RenameColumn
-      include Dry::Equalizer(:old_name, :new_name)
-      attr_reader :old_name, :new_name
-
-      def initialize(old_name:, new_name:)
-        @old_name = old_name
-        @new_name = new_name
-      end
+    class RenameColumn < RenameOperation
     end
 
     class AlterColumnType
@@ -174,6 +171,9 @@ module DbSchema
     end
 
     class DropEnum < ColumnOperation
+    end
+
+    class RenameEnum < RenameOperation
     end
 
     class AlterEnumValues
