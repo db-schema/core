@@ -26,6 +26,8 @@ module DbSchema
           create_enum(change)
         when Operations::DropEnum
           drop_enum(change)
+        when Operations::RenameEnum
+          rename_enum(change)
         when Operations::AlterEnumValues
           alter_enum_values(change)
         when Operations::CreateExtension
@@ -139,6 +141,10 @@ module DbSchema
 
     def drop_enum(change)
       connection.drop_enum(change.name)
+    end
+
+    def rename_enum(change)
+      connection.run(%Q(ALTER TYPE "#{change.old_name}" RENAME TO "#{change.new_name}"))
     end
 
     def alter_enum_values(change)

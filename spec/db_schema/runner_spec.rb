@@ -538,6 +538,26 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
+    context 'with RenameEnum' do
+      before(:each) do
+        database.create_enum :status, %i(registered confirmed_email subscriber)
+      end
+
+      let(:changes) do
+        [
+          DbSchema::Operations::RenameEnum.new(old_name: :status, new_name: :user_status)
+        ]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        schema = DbSchema::Reader.read_schema(database)
+        expect(schema).not_to have_enum(:status)
+        expect(schema).to have_enum(:user_status)
+      end
+    end
+
     context 'with AlterEnumValues' do
       before(:each) do
         database.create_enum :happiness, %i(good ok bad)
