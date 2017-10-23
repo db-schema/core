@@ -155,6 +155,10 @@ module DbSchema
         run Operations::DropEnum.new(name)
       end
 
+      def rename_enum(from, to:)
+        run Operations::RenameEnum.new(old_name: from, new_name: to)
+      end
+
       def create_extension(name)
         run Operations::CreateExtension.new(Definitions::Extension.new(name))
       end

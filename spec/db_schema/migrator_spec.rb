@@ -433,6 +433,32 @@ RSpec.describe DbSchema::Migrator do
       end
     end
 
+    context 'with a rename_enum' do
+      before(:each) do
+        DbSchema::Runner.new(
+          [
+            DbSchema::Operations::CreateEnum.new(
+              DbSchema::Definitions::Enum.new(:role, %i(guest user admin))
+            )
+          ],
+          database
+        ).run!
+      end
+
+      let(:body) do
+        -> (migrator, db) do
+          migrator.rename_enum :role, to: :user_role
+        end
+      end
+
+      it 'renames the enum' do
+        subject.run!(database)
+
+        expect(schema).not_to have_enum(:role)
+        expect(schema).to have_enum(:user_role)
+      end
+    end
+
     context 'with a create_extension' do
       let(:body) do
         -> (migrator, db) do
