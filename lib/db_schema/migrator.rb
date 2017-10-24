@@ -171,8 +171,7 @@ module DbSchema
         run Operations::ExecuteQuery.new(query)
       end
 
-      private
-
+    private
       def run(operation)
         Runner.new(Array(operation), connection).run!
       end
