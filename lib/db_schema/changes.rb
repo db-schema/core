@@ -12,17 +12,17 @@ module DbSchema
           actual  = actual_schema.tables.find  { |table| table.name == table_name }
 
           if desired && !actual
-            changes << CreateTable.new(desired)
+            changes << Operations::CreateTable.new(desired)
 
             fkey_operations = desired.foreign_keys.map do |fkey|
-              CreateForeignKey.new(table_name, fkey)
+              Operations::CreateForeignKey.new(table_name, fkey)
             end
             changes.concat(fkey_operations)
           elsif actual && !desired
-            changes << DropTable.new(table_name)
+            changes << Operations::DropTable.new(table_name)
 
             actual.foreign_keys.each do |fkey|
-              changes << DropForeignKey.new(table_name, fkey.name)
+              changes << Operations::DropForeignKey.new(table_name, fkey.name)
             end
           elsif actual != desired
             field_operations = field_changes(desired.fields, actual.fields)
@@ -31,9 +31,9 @@ module DbSchema
             fkey_operations  = foreign_key_changes(table_name, desired.foreign_keys, actual.foreign_keys)
 
             if field_operations.any? || index_operations.any? || check_operations.any?
-              changes << AlterTable.new(
+              changes << Operations::AlterTable.new(
                 table_name,
-                field_operations + index_operations + check_operations
+                sort_alter_table_changes(field_operations + index_operations + check_operations)
               )
             end
 
@@ -48,9 +48,9 @@ module DbSchema
           actual  = actual_schema.enums.find  { |enum| enum.name == enum_name }
 
           if desired && !actual
-            changes << CreateEnum.new(desired)
+            changes << Operations::CreateEnum.new(desired)
           elsif actual && !desired
-            changes << DropEnum.new(enum_name)
+            changes << Operations::DropEnum.new(enum_name)
           elsif actual != desired
             fields = actual_schema.tables.flat_map do |table|
               table.fields.select do |field|
@@ -73,17 +73,17 @@ module DbSchema
               end
             end
 
-            changes << AlterEnumValues.new(enum_name, desired.values, fields)
+            changes << Operations::AlterEnumValues.new(enum_name, desired.values, fields)
           end
         end
 
         extension_changes = (desired_schema.extensions - actual_schema.extensions).map do |extension|
-          CreateExtension.new(extension)
+          Operations::CreateExtension.new(extension)
         end + (actual_schema.extensions - desired_schema.extensions).map do |extension|
-          DropExtension.new(extension.name)
+          Operations::DropExtension.new(extension.name)
         end
 
-        table_changes + enum_changes + extension_changes
+        sort_all_changes(table_changes + enum_changes + extension_changes)
       end
 
     private
@@ -95,12 +95,12 @@ module DbSchema
           actual  = actual_fields.find  { |field| field.name == field_name }
 
           if desired && !actual
-            table_changes << CreateColumn.new(desired)
+            table_changes << Operations::CreateColumn.new(desired)
           elsif actual && !desired
-            table_changes << DropColumn.new(field_name)
+            table_changes << Operations::DropColumn.new(field_name)
           elsif actual != desired
             if (actual.type != desired.type) || (actual.attributes != desired.attributes)
-              table_changes << AlterColumnType.new(
+              table_changes << Operations::AlterColumnType.new(
                 field_name,
                 new_type: desired.type,
                 **desired.attributes
@@ -108,23 +108,23 @@ module DbSchema
             end
 
             if desired.primary_key? && !actual.primary_key?
-              table_changes << CreatePrimaryKey.new(field_name)
+              table_changes << Operations::CreatePrimaryKey.new(field_name)
             end
 
             if actual.primary_key? && !desired.primary_key?
-              table_changes << DropPrimaryKey.new(field_name)
+              table_changes << Operations::DropPrimaryKey.new(field_name)
             end
 
             if desired.null? && !actual.null?
-              table_changes << AllowNull.new(field_name)
+              table_changes << Operations::AllowNull.new(field_name)
             end
 
             if actual.null? && !desired.null?
-              table_changes << DisallowNull.new(field_name)
+              table_changes << Operations::DisallowNull.new(field_name)
             end
 
             if actual.default != desired.default
-              table_changes << AlterColumnDefault.new(field_name, new_default: desired.default)
+              table_changes << Operations::AlterColumnDefault.new(field_name, new_default: desired.default)
             end
           end
         end
@@ -138,12 +138,12 @@ module DbSchema
           actual  = actual_indices.find  { |index| index.name == index_name }
 
           if desired && !actual
-            table_changes << CreateIndex.new(desired)
+            table_changes << Operations::CreateIndex.new(desired)
           elsif actual && !desired
-            table_changes << DropIndex.new(index_name)
+            table_changes << Operations::DropIndex.new(index_name)
           elsif actual != desired
-            table_changes << DropIndex.new(index_name)
-            table_changes << CreateIndex.new(desired)
+            table_changes << Operations::DropIndex.new(index_name)
+            table_changes << Operations::CreateIndex.new(desired)
           end
         end
       end
@@ -156,12 +156,12 @@ module DbSchema
           actual  = actual_checks.find  { |check| check.name == check_name }
 
           if desired && !actual
-            table_changes << CreateCheckConstraint.new(desired)
+            table_changes << Operations::CreateCheckConstraint.new(desired)
           elsif actual && !desired
-            table_changes << DropCheckConstraint.new(check_name)
+            table_changes << Operations::DropCheckConstraint.new(check_name)
           elsif actual != desired
-            table_changes << DropCheckConstraint.new(check_name)
-            table_changes << CreateCheckConstraint.new(desired)
+            table_changes << Operations::DropCheckConstraint.new(check_name)
+            table_changes << Operations::CreateCheckConstraint.new(desired)
           end
         end
       end
@@ -174,202 +174,53 @@ module DbSchema
           actual  = actual_foreign_keys.find  { |key| key.name == key_name }
 
           if desired && !actual
-            table_changes << CreateForeignKey.new(table_name, desired)
+            table_changes << Operations::CreateForeignKey.new(table_name, desired)
           elsif actual && !desired
-            table_changes << DropForeignKey.new(table_name, key_name)
+            table_changes << Operations::DropForeignKey.new(table_name, key_name)
           elsif actual != desired
-            table_changes << DropForeignKey.new(table_name, key_name)
-            table_changes << CreateForeignKey.new(table_name, desired)
+            table_changes << Operations::DropForeignKey.new(table_name, key_name)
+            table_changes << Operations::CreateForeignKey.new(table_name, desired)
           end
         end
       end
-    end
 
-    class CreateTable
-      include Dry::Equalizer(:table)
-      attr_reader :table
-
-      def initialize(table)
-        @table = table
-      end
-    end
-
-    class DropTable
-      include Dry::Equalizer(:name)
-      attr_reader :name
-
-      def initialize(name)
-        @name = name
-      end
-    end
-
-    class AlterTable
-      include Dry::Equalizer(:table_name, :changes)
-      attr_reader :table_name, :changes
-
-      def initialize(table_name, changes)
-        @table_name = table_name
-        @changes    = changes
-      end
-    end
-
-    # Abstract base class for single-column toggle operations.
-    class ColumnOperation
-      include Dry::Equalizer(:name)
-      attr_reader :name
-
-      def initialize(name)
-        @name = name
-      end
-    end
-
-    class CreateColumn
-      include Dry::Equalizer(:field)
-      attr_reader :field
-
-      def initialize(field)
-        @field = field
+      def sort_all_changes(changes)
+        Utils.sort_by_class(
+          changes,
+          [
+            Operations::CreateExtension,
+            Operations::DropForeignKey,
+            Operations::AlterEnumValues,
+            Operations::CreateEnum,
+            Operations::CreateTable,
+            Operations::AlterTable,
+            Operations::DropTable,
+            Operations::DropEnum,
+            Operations::CreateForeignKey,
+            Operations::DropExtension
+          ]
+        )
       end
 
-      def name
-        field.name
+      def sort_alter_table_changes(changes)
+        Utils.sort_by_class(
+          changes,
+          [
+            Operations::DropPrimaryKey,
+            Operations::DropCheckConstraint,
+            Operations::DropIndex,
+            Operations::DropColumn,
+            Operations::AlterColumnType,
+            Operations::AllowNull,
+            Operations::DisallowNull,
+            Operations::AlterColumnDefault,
+            Operations::CreateColumn,
+            Operations::CreateIndex,
+            Operations::CreateCheckConstraint,
+            Operations::CreatePrimaryKey
+          ]
+        )
       end
-
-      def type
-        field.type
-      end
-
-      def primary_key?
-        field.primary_key?
-      end
-
-      def options
-        field.options
-      end
-    end
-
-    class DropColumn < ColumnOperation
-    end
-
-    class RenameColumn
-      attr_reader :old_name, :new_name
-
-      def initialize(old_name:, new_name:)
-        @old_name = old_name
-        @new_name = new_name
-      end
-    end
-
-    class AlterColumnType
-      include Dry::Equalizer(:name, :new_type, :new_attributes)
-      attr_reader :name, :new_type, :new_attributes
-
-      def initialize(name, new_type:, **new_attributes)
-        @name           = name
-        @new_type       = new_type
-        @new_attributes = new_attributes
-      end
-    end
-
-    class CreatePrimaryKey < ColumnOperation
-    end
-
-    class DropPrimaryKey < ColumnOperation
-    end
-
-    class AllowNull < ColumnOperation
-    end
-
-    class DisallowNull < ColumnOperation
-    end
-
-    class AlterColumnDefault
-      include Dry::Equalizer(:name, :new_default)
-      attr_reader :name, :new_default
-
-      def initialize(name, new_default:)
-        @name        = name
-        @new_default = new_default
-      end
-    end
-
-    class CreateIndex
-      include Dry::Equalizer(:index)
-      attr_reader :index
-
-      def initialize(index)
-        @index = index
-      end
-    end
-
-    class DropIndex < ColumnOperation
-    end
-
-    class CreateCheckConstraint
-      include Dry::Equalizer(:check)
-      attr_reader :check
-
-      def initialize(check)
-        @check = check
-      end
-    end
-
-    class DropCheckConstraint < ColumnOperation
-    end
-
-    class CreateForeignKey
-      include Dry::Equalizer(:table_name, :foreign_key)
-      attr_reader :table_name, :foreign_key
-
-      def initialize(table_name, foreign_key)
-        @table_name  = table_name
-        @foreign_key = foreign_key
-      end
-    end
-
-    class DropForeignKey
-      include Dry::Equalizer(:table_name, :fkey_name)
-      attr_reader :table_name, :fkey_name
-
-      def initialize(table_name, fkey_name)
-        @table_name = table_name
-        @fkey_name  = fkey_name
-      end
-    end
-
-    class CreateEnum
-      include Dry::Equalizer(:enum)
-      attr_reader :enum
-
-      def initialize(enum)
-        @enum = enum
-      end
-    end
-
-    class DropEnum < ColumnOperation
-    end
-
-    class AlterEnumValues
-      include Dry::Equalizer(:enum_name, :new_values, :enum_fields)
-      attr_reader :enum_name, :new_values, :enum_fields
-
-      def initialize(enum_name, new_values, enum_fields)
-        @enum_name   = enum_name
-        @new_values  = new_values
-        @enum_fields = enum_fields
-      end
-    end
-
-    class CreateExtension
-      include Dry::Equalizer(:extension)
-      attr_reader :extension
-
-      def initialize(extension)
-        @extension = extension
-      end
-    end
-
-    class DropExtension < ColumnOperation
     end
   end
 end

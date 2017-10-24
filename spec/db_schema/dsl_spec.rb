@@ -1,61 +1,95 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::DSL do
-  describe '#schema' do
-    let(:schema_block) do
-      -> (db) do
-        db.enum :user_status, %i(user moderator admin)
+  let(:schema_block) do
+    -> (db) do
+      db.enum :user_status, %i(user moderator admin)
 
-        db.extension :hstore
+      db.extension :hstore
 
-        db.table :users do |t|
-          t.primary_key :id
-          t.varchar     :name, null: false, unique: true, check: 'char_length(name) > 0'
-          t.varchar     :email, default: 'mail@example.com'
-          t.char        :sex, index: true
-          t.integer     :city_id, references: :cities
-          t.array       :strings, of: :varchar
-          t.user_status :status, null: false
-          t.array       :previous_statuses, of: :user_status
-          t.happiness   :mood, index: true
-          t.timestamptz :created_at, default: :'now()'
+      db.table :users do |t|
+        t.primary_key :id
+        t.varchar     :name, null: false, unique: true, check: 'char_length(name) > 0'
+        t.varchar     :email, default: 'mail@example.com'
+        t.char        :sex, index: true
+        t.integer     :city_id, references: :cities
+        t.array       :strings, of: :varchar
+        t.user_status :status, null: false
+        t.array       :previous_statuses, of: :user_status
+        t.happiness   :mood, index: true
+        t.timestamptz :created_at, default: :'now()'
 
-          t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
-          t.index :strings, using: :gin
-          t.index 'lower(email)'
+        t.index :email, name: :users_email_idx, unique: true, where: 'email IS NOT NULL'
+        t.index :strings, using: :gin
+        t.index 'lower(email)'
 
-          t.check :valid_sex, "sex IN ('M', 'F')"
+        t.check :valid_sex, "sex IN ('M', 'F')"
+      end
+
+      db.enum :happiness, [:sad, :ok, :good, :happy]
+
+      db.table :cities do |t|
+        t.primary_key :id
+        t.varchar :name, null: false
+      end
+
+      db.table :posts do |t|
+        t.primary_key :id
+        t.varchar :title
+        t.integer :user_id
+        t.varchar :user_name
+        t.integer :col1
+        t.integer :col2
+        t.integer :col3
+        t.integer :col4
+
+        t.index :user_id
+        t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
+        t.index 'col2 - col1' => :desc, 'col3 + col4' => :asc_nulls_first
+
+        t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
+        t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
+      end
+
+      db.migrate 'Rename people to users' do |migration|
+        migration.apply_if do |schema|
+          schema.has_table?(:people)
         end
 
-        db.enum :happiness, [:sad, :ok, :good, :happy]
+        migration.run do |migrator|
+          migrator.rename_table :people, to: :users
+        end
+      end
 
-        db.table :cities do |t|
-          t.primary_key :id
-          t.varchar :name, null: false
+      db.migrate 'Join first_name & last_name into name' do |migration|
+        migration.apply_if do |schema|
+          schema.table(:users).has_field?(:first_name)
         end
 
-        db.table :posts do |t|
-          t.primary_key :id
-          t.varchar :title
-          t.integer :user_id
-          t.varchar :user_name
-          t.integer :col1
-          t.integer :col2
-          t.integer :col3
-          t.integer :col4
+        migration.apply_if do |schema|
+          schema.table(:users).has_field?(:last_name)
+        end
 
-          t.index :user_id
-          t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
-          t.index 'col2 - col1' => :desc, 'col3 + col4' => :asc_nulls_first
+        migration.skip_if do |schema|
+          schema.table(:users).has_field?(:name)
+        end
 
-          t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
-          t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
+        migration.run do |migrator|
+          migrator.alter_table(:users) do |t|
+            t.add_column :name, :varchar
+            t.execute "UPDATE users SET name = first_name || ' ' || last_name"
+            t.disallow_null :name
+            t.drop_column :first_name
+            t.drop_column :last_name
+          end
         end
       end
     end
+  end
 
-    subject { DbSchema::DSL.new(schema_block) }
+  subject { DbSchema::DSL.new(schema_block) }
 
+  describe '#schema' do
     it 'returns a schema definition' do
       schema = subject.schema
 
@@ -205,6 +239,25 @@ RSpec.describe DbSchema::DSL do
       expect(happiness).to be_a(DbSchema::Definitions::Enum)
       expect(happiness.name).to eq(:happiness)
       expect(happiness.values).to eq(%i(sad ok good happy))
+    end
+  end
+
+  describe '#migrations' do
+    it 'returns all conditional migrations' do
+      migrations = subject.migrations
+      expect(migrations.count).to eq(2)
+
+      rename_people_to_users, join_names = migrations
+
+      expect(rename_people_to_users.name).to eq('Rename people to users')
+      expect(rename_people_to_users.conditions[:apply].count).to eq(1)
+      expect(rename_people_to_users.conditions[:skip]).to be_empty
+      expect(rename_people_to_users.body).to be_a(Proc)
+
+      expect(join_names.name).to eq('Join first_name & last_name into name')
+      expect(join_names.conditions[:apply].count).to eq(2)
+      expect(join_names.conditions[:skip].count).to eq(1)
+      expect(join_names.body).to be_a(Proc)
     end
   end
 end

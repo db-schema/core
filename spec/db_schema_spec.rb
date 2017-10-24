@@ -1,7 +1,12 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema do
-  let(:database) { DbSchema.connection }
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+      db.extension :pg_array
+    end
+  end
 
   describe '.describe' do
     before(:each) do
@@ -10,7 +15,8 @@ RSpec.describe DbSchema do
       database.create_enum :happiness, %i(good ok bad)
 
       database.create_table :users do
-        column :id,        :Integer, primary_key: true
+        primary_key :id
+
         column :name,      :Varchar, null: false
         column :email,     :Varchar, size: 100
         column :happiness, :happiness, default: 'ok'
@@ -19,7 +25,8 @@ RSpec.describe DbSchema do
       end
 
       database.create_table :posts do
-        column :id,      :Integer, primary_key: true
+        primary_key :id
+
         column :title,   :Varchar
         column :text,    :Varchar
         column :user_id, :Integer, null: false
@@ -85,7 +92,7 @@ RSpec.describe DbSchema do
       expect(last_name.last[:db_type]).to eq('character varying(30)')
       expect(last_name.last[:allow_null]).to eq(false)
 
-      users_indices = DbSchema::Reader::Postgres.indices_data_for(:users)
+      users_indices = DbSchema::Reader::Postgres.indices_data_for(:users, database)
       name_index  = users_indices.find { |index| index[:name] == :users_name_index }
       email_index = users_indices.find { |index| index[:name] == :users_email_index }
 
@@ -141,12 +148,116 @@ RSpec.describe DbSchema do
       expect(country_id_fkey[:table]).to eq(:countries)
       expect(country_id_fkey[:key]).to eq([:id])
 
-      enums = DbSchema::Reader.read_enums
+      enums = DbSchema::Reader.read_enums(database)
       expect(enums.count).to eq(1)
 
       happiness = enums.first
       expect(happiness.name).to eq(:happiness)
       expect(happiness.values).to eq(%i(happy ok unhappy))
+    end
+
+    context 'with conditional migrations' do
+      it 'first runs the applicable migrations, then applies the schema' do
+        database[:users].insert(name: 'John Smith', email: 'john@smith.com')
+
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :first_name,  null: false, length: 30
+            t.varchar :last_name,   null: false, length: 30
+            t.varchar :email,       null: false
+
+            t.index :first_name, last_name: :desc, name: :users_name_index
+            t.index 'lower(email)', name: :users_email_index, unique: true
+          end
+
+          db.table :posts do |t|
+            t.integer :id, primary_key: true
+            t.varchar :title, null: false
+            t.text    :text
+            t.integer :user_id, null: false
+
+            t.index :user_id, name: :posts_author_index
+            t.foreign_key :user_id, references: :users
+          end
+
+          db.migrate 'Rename people to users' do |migration|
+            migration.apply_if { |schema| schema.has_table?(:people) }
+
+            migration.run do |migrator|
+              migrator.rename_table :people, to: :users
+            end
+          end
+
+          db.migrate 'Split name into first_name & last_name' do |migration|
+            migration.apply_if do |schema|
+              schema.has_table?(:users)
+            end
+
+            migration.skip_if do |schema|
+              schema.table(:users).has_field?(:first_name)
+            end
+
+            migration.run do |migrator|
+              migrator.alter_table :users do |t|
+                t.add_column :first_name, :varchar, length: 30
+                t.add_column :last_name,  :varchar, length: 30
+              end
+
+              migrator.execute <<-SQL
+UPDATE users SET first_name = split_part(name, ' ', 1),
+                 last_name = split_part(name, ' ', 2)
+              SQL
+
+              migrator.alter_table :users do |t|
+                t.disallow_null :first_name
+                t.disallow_null :last_name
+                t.drop_column :name
+              end
+            end
+          end
+        end
+
+        users = DbSchema::Reader.read_table(:users, database)
+        expect(users).not_to have_field(:name)
+        expect(users.field(:first_name)).not_to be_null
+        expect(users.field(:last_name)).not_to be_null
+
+        user = database[:users].first
+        expect(user[:first_name]).to eq('John')
+        expect(user[:last_name]).to eq('Smith')
+      end
+    end
+
+    context 'with an external connection' do
+      let(:external_connection) do
+        Sequel.connect(adapter: 'postgres', database: 'db_schema_test2')
+      end
+
+      before(:each) do
+        subject.connection = external_connection
+      end
+
+      it 'uses it to setup the database' do
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :name
+          end
+        end
+
+        expect(DbSchema::Reader.read_table(:users, database).fields.count).to eq(4)
+        expect(DbSchema::Reader.read_table(:users, external_connection).fields.count).to eq(2)
+      end
+
+      after(:each) do
+        external_connection.tables.each do |table_name|
+          external_connection.drop_table(table_name)
+        end
+
+        external_connection.disconnect
+        subject.reset!
+      end
     end
 
     context 'with an invalid schema' do
@@ -193,7 +304,7 @@ Requested schema is invalid:
 
     context 'in dry run mode' do
       before(:each) do
-        DbSchema.configure(database: 'db_schema_test', log_changes: false, dry_run: true)
+        subject.configure(dry_run: true)
       end
 
       it 'does not make any changes' do
@@ -207,7 +318,47 @@ Requested schema is invalid:
               t.index :email
             end
           end
-        }.not_to change { DbSchema::Reader.read_schema }
+        }.not_to change { DbSchema::Reader.read_schema(database) }
+      end
+
+      context 'with applicable migrations' do
+        it 'rolls back both migrations and schema changes' do
+          expect {
+            subject.describe do |db|
+              db.enum :happiness, %i(good ok bad)
+
+              db.table :people do |t|
+                t.primary_key :id
+                t.varchar     :name, null: false
+                t.varchar     :email, length: 100
+                t.happiness   :happiness, default: 'ok'
+
+                t.index :email, name: :users_email_index
+              end
+
+              db.table :posts do |t|
+                t.primary_key :id
+                t.varchar     :title
+                t.varchar     :text
+                t.integer     :user_id, null: false, references: :people
+              end
+
+              db.migrate 'Rename users to people' do |migration|
+                migration.skip_if do |schema|
+                  schema.has_table?(:people)
+                end
+
+                migration.run do |migrator|
+                  migrator.rename_table :users, to: :people
+                end
+              end
+            end
+          }.not_to change { DbSchema::Reader.read_schema(database) }
+        end
+      end
+
+      after(:each) do
+        subject.configure(dry_run: false)
       end
     end
 
@@ -238,7 +389,7 @@ Requested schema is invalid:
 
       context 'with post_check disabled' do
         before(:each) do
-          DbSchema.configure(database: 'db_schema_test', log_changes: false, post_check: false)
+          subject.configure(post_check: false)
         end
 
         it 'ignores the mismatch' do
@@ -246,7 +397,25 @@ Requested schema is invalid:
             apply_schema
           }.not_to raise_error
         end
+
+        after(:each) do
+          subject.configure(post_check: true)
+        end
       end
+    end
+
+    it 'closes the connection after making the changes' do
+      expect {
+        subject.describe do |db|
+          db.table :users do |t|
+            t.primary_key :id
+            t.varchar :name, null: false
+            t.varchar :email, length: 100
+
+            t.index :email
+          end
+        end
+      }.not_to change { Sequel::DATABASES.count }
     end
 
     after(:each) do
@@ -258,7 +427,7 @@ Requested schema is invalid:
         end
       end
 
-      DbSchema::Reader.read_schema.enums.each do |enum|
+      DbSchema::Reader.read_enums(database).each do |enum|
         database.drop_enum(enum.name, cascade: true)
       end
 
@@ -268,65 +437,139 @@ Requested schema is invalid:
     end
   end
 
-  describe '.configure' do
-    it 'stores the connection parameters in configuration object' do
-      subject.configure(
-        host:     'localhost',
-        database: 'db_schema_test',
-        user:     '7even',
-        password: 'secret'
-      )
+  describe '.current_schema' do
+    before(:each) do
+      subject.configure(database: 'db_schema_test', log_changes: false)
 
-      expect(subject.configuration.host).to eq('localhost')
-      expect(subject.configuration.database).to eq('db_schema_test')
-      expect(subject.configuration.user).to eq('7even')
-      expect(subject.configuration.password).to eq('secret')
-    end
+      database.create_table :users do
+        primary_key :id
 
-    after(:each) do
-      subject.reset!
-    end
-  end
-
-  describe '.configure_from_yaml' do
-    let(:path) { Pathname.new('../support/database.yml').expand_path(__FILE__) }
-
-    it 'configures the connection from a YAML file' do
-      subject.configure_from_yaml(path, :development)
-
-      expect(subject.configuration.adapter).to eq('postgres')
-      expect(subject.configuration.host).to eq('localhost')
-      expect(subject.configuration.port).to eq(5432)
-      expect(subject.configuration.database).to eq('db_schema_dev')
-      expect(subject.configuration.user).to eq('7even')
-      expect(subject.configuration.password).to eq(nil)
-    end
-
-    context 'with extra options' do
-      it 'passes them to configuration object' do
-        subject.configure_from_yaml(path, :development, log_changes: true)
-
-        expect(subject.configuration.database).to eq('db_schema_dev')
-        expect(subject.configuration).to be_log_changes
+        column :name,  :Varchar, null: false
+        column :email, :Varchar
       end
     end
 
-    after(:each) do
-      subject.reset!
-    end
-  end
+    def apply_schema
+      subject.describe do |db|
+        db.table :users do |t|
+          t.primary_key :id
+          t.varchar :name, null: false
+          t.varchar :email
+        end
 
-  describe '.configuration' do
-    context 'without a prior call to .configure' do
+        db.table :posts do |t|
+          t.primary_key :id
+          t.varchar :title
+          t.text    :body
+          t.integer :user_id, references: :users
+        end
+      end
+    end
+
+    context 'without dry_run' do
       before(:each) do
-        subject.reset!
+        apply_schema
       end
 
-      it 'raises a RuntimeError' do
-        expect {
-          subject.configuration
-        }.to raise_error(RuntimeError, /DbSchema\.configure/)
+      it 'stores the applied schema' do
+        schema = subject.current_schema
+
+        expect(schema).to be_a(DbSchema::Definitions::Schema)
+        expect(schema.tables.map(&:name)).to eq(%i(users posts))
       end
+
+      after(:each) do
+        database.drop_table(:posts)
+        database.drop_table(:users)
+      end
+    end
+
+    context 'with dry_run' do
+      before(:each) do
+        subject.configure(dry_run: true)
+        apply_schema
+      end
+
+      it 'stores the initial schema' do
+        schema = subject.current_schema
+
+        expect(schema).to be_a(DbSchema::Definitions::Schema)
+        expect(schema.tables.map(&:name)).to eq(%i(users))
+      end
+
+      after(:each) do
+        database.drop_table(:users)
+      end
+    end
+
+    after(:each) do
+      subject.reset!
+    end
+  end
+
+  describe '.configuration and .configure' do
+    before(:each) do
+      subject.reset!
+    end
+
+    context 'first call to .configuration' do
+      it 'returns default configuration' do
+        expect(subject.configuration).to eq(DbSchema::Configuration.new)
+      end
+    end
+
+    context '.configuration after a .configure call' do
+      it 'returns a configuration passed to .configure' do
+        subject.configure(
+          host:     'localhost',
+          database: 'db_schema_test',
+          user:     '7even',
+          password: 'secret'
+        )
+
+        expect(subject.configuration).to eq(
+          DbSchema::Configuration.new.merge(
+            database: 'db_schema_test',
+            user:     '7even',
+            password: 'secret'
+          )
+        )
+      end
+    end
+
+    context '.configuration after a .configure_from_yaml call' do
+      let(:path) { Pathname.new('../support/database.yml').expand_path(__FILE__) }
+
+      it 'returns a configuration set from a YAML file' do
+        subject.configure_from_yaml(path, :development)
+
+        expect(subject.configuration).to eq(
+          DbSchema::Configuration.new.merge(
+            database: 'db_schema_dev',
+            user:     '7even',
+            password: nil
+          )
+        )
+      end
+
+      context 'with extra options to .configure_from_yaml' do
+        it 'passes them to configuration object' do
+          subject.configure_from_yaml(path, :development, dry_run: true)
+
+          expect(subject.configuration).to eq(
+            DbSchema::Configuration.new.merge(
+              database: 'db_schema_dev',
+              user:     '7even',
+              password: nil,
+              dry_run:  true
+            )
+          )
+        end
+      end
+    end
+
+    after(:each) do
+      subject.reset!
     end
   end
 end

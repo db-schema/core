@@ -1,18 +1,29 @@
 module DbSchema
   module Reader
     class << self
-      extend Forwardable
+      def read_schema(connection)
+        adapter(connection).read_schema(connection)
+      end
 
-      def_delegators :adapter, :read_schema, :read_table, :read_enums, :read_extensions
+      def read_table(table_name, connection)
+        adapter(connection).read_table(table_name, connection)
+      end
 
-      def adapter
-        adapter_name = DbSchema.configuration.adapter
-        registry.fetch(adapter_name) do |adapter_name|
+      def read_enums(connection)
+        adapter(connection).read_enums(connection)
+      end
+
+      def read_extensions(connection)
+        adapter(connection).read_extensions(connection)
+      end
+
+    private
+      def adapter(connection)
+        registry.fetch(connection.adapter_scheme) do |adapter_name|
           raise NotImplementedError, "DbSchema::Reader does not support #{adapter_name}."
         end
       end
 
-    private
       def registry
         @registry ||= {}
       end
@@ -116,30 +127,30 @@ SELECT extname
       SQL
 
       class << self
-        def read_schema
+        def read_schema(connection)
           Definitions::Schema.new(
-            tables:     read_tables,
-            enums:      read_enums,
-            extensions: read_extensions
+            tables:     read_tables(connection),
+            enums:      read_enums(connection),
+            extensions: read_extensions(connection)
           )
         end
 
-        def read_table(table_name)
-          primary_key_name = DbSchema.connection.primary_key(table_name)
+        def read_table(table_name, connection)
+          primary_key_name = connection.primary_key(table_name)
 
-          fields = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].map do |column_data|
+          fields = connection[COLUMN_NAMES_QUERY, table_name.to_s].map do |column_data|
             build_field(column_data, primary_key: column_data[:name] == primary_key_name)
           end
 
-          indices = indices_data_for(table_name).map do |index_data|
+          indices = indices_data_for(table_name, connection).map do |index_data|
             Definitions::Index.new(index_data)
           end.sort_by(&:name)
 
-          foreign_keys = DbSchema.connection.foreign_key_list(table_name).map do |foreign_key_data|
-            build_foreign_key(foreign_key_data)
+          foreign_keys = connection.foreign_key_list(table_name).map do |foreign_key_data|
+            build_foreign_key(foreign_key_data, connection)
           end
 
-          checks = DbSchema.connection[CONSTRAINTS_QUERY, table_name.to_s].map do |check_data|
+          checks = connection[CONSTRAINTS_QUERY, table_name.to_s].map do |check_data|
             Definitions::CheckConstraint.new(
               name:      check_data[:name].to_sym,
               condition: check_data[:condition]
@@ -155,13 +166,13 @@ SELECT extname
           )
         end
 
-        def indices_data_for(table_name)
-          column_names = DbSchema.connection[COLUMN_NAMES_QUERY, table_name.to_s].reduce({}) do |names, column|
+        def indices_data_for(table_name, connection)
+          column_names = connection[COLUMN_NAMES_QUERY, table_name.to_s].reduce({}) do |names, column|
             names.merge(column[:pos] => column[:name].to_sym)
           end
 
-          indices_data     = DbSchema.connection[INDICES_QUERY, table_name.to_s].to_a
-          expressions_data = index_expressions_data(indices_data)
+          indices_data     = connection[INDICES_QUERY, table_name.to_s].to_a
+          expressions_data = index_expressions_data(indices_data, connection)
 
           indices_data.map do |index|
             positions = index[:column_positions].split(' ').map(&:to_i)
@@ -197,26 +208,26 @@ SELECT extname
           end
         end
 
-        def read_tables
-          DbSchema.connection.tables.map do |table_name|
-            read_table(table_name)
+        def read_tables(connection)
+          connection.tables.map do |table_name|
+            read_table(table_name, connection)
           end
         end
 
-        def read_enums
-          DbSchema.connection[ENUMS_QUERY].map do |enum_data|
+        def read_enums(connection)
+          connection[ENUMS_QUERY].map do |enum_data|
             Definitions::Enum.new(enum_data[:name].to_sym, enum_data[:values].map(&:to_sym))
           end
         end
 
-        def read_extensions
-          DbSchema.connection[EXTENSIONS_QUERY].map do |extension_data|
+        def read_extensions(connection)
+          connection[EXTENSIONS_QUERY].map do |extension_data|
             Definitions::Extension.new(extension_data[:extname].to_sym)
           end
         end
 
       private
-        def index_expressions_data(indices_data)
+        def index_expressions_data(indices_data, connection)
           all_positions, max_position = {}, 0
 
           indices_data.each do |index_data|
@@ -230,7 +241,7 @@ SELECT extname
           end
 
           if all_positions.any?
-            DbSchema.connection[
+            connection[
               EXPRESSION_INDICES_QUERY,
               Sequel.pg_array(all_positions.keys),
               Sequel.pg_array((1..max_position.succ).to_a)
@@ -318,8 +329,8 @@ SELECT extname
           )
         end
 
-        def build_foreign_key(data)
-          keys = if data[:key] == [primary_key_for(data[:table])]
+        def build_foreign_key(data, connection)
+          keys = if data[:key] == [primary_key_for(data[:table], connection)]
             [] # this foreign key references a primary key
           else
             data[:key]
@@ -336,15 +347,14 @@ SELECT extname
           )
         end
 
-        def primary_key_for(table_name)
-          if pkey = DbSchema.connection.primary_key(table_name)
+        def primary_key_for(table_name, connection)
+          if pkey = connection.primary_key(table_name)
             pkey.to_sym
           end
         end
       end
     end
 
-    registry['postgres'] = Postgres
-    registry['postgresql'] = Postgres
+    registry[:postgres] = Postgres
   end
 end

@@ -1,213 +1,198 @@
 module DbSchema
   class Runner
-    attr_reader :changes
+    attr_reader :changes, :connection
 
-    def initialize(changes)
-      @changes = preprocess_changes(changes)
+    def initialize(changes, connection)
+      @changes    = changes
+      @connection = connection
     end
 
     def run!
-      DbSchema.connection.transaction do
-        changes.each do |change|
-          case change
-          when Changes::CreateTable
-            self.class.create_table(change)
-          when Changes::DropTable
-            self.class.drop_table(change)
-          when Changes::AlterTable
-            self.class.alter_table(change)
-          when Changes::CreateForeignKey
-            self.class.create_foreign_key(change)
-          when Changes::DropForeignKey
-            self.class.drop_foreign_key(change)
-          when Changes::CreateEnum
-            self.class.create_enum(change)
-          when Changes::DropEnum
-            self.class.drop_enum(change)
-          when Changes::AlterEnumValues
-            self.class.alter_enum_values(change)
-          when Changes::CreateExtension
-            self.class.create_extension(change)
-          when Changes::DropExtension
-            self.class.drop_extension(change)
-          end
+      changes.each do |change|
+        case change
+        when Operations::CreateTable
+          create_table(change)
+        when Operations::DropTable
+          drop_table(change)
+        when Operations::RenameTable
+          rename_table(change)
+        when Operations::AlterTable
+          alter_table(change)
+        when Operations::CreateForeignKey
+          create_foreign_key(change)
+        when Operations::DropForeignKey
+          drop_foreign_key(change)
+        when Operations::CreateEnum
+          create_enum(change)
+        when Operations::DropEnum
+          drop_enum(change)
+        when Operations::RenameEnum
+          rename_enum(change)
+        when Operations::AlterEnumValues
+          alter_enum_values(change)
+        when Operations::CreateExtension
+          create_extension(change)
+        when Operations::DropExtension
+          drop_extension(change)
+        when Operations::ExecuteQuery
+          execute_query(change)
         end
       end
     end
 
   private
-    def preprocess_changes(changes)
-      Utils.sort_by_class(
-        changes,
-        [
-          Changes::CreateExtension,
-          Changes::DropForeignKey,
-          Changes::AlterEnumValues,
-          Changes::CreateEnum,
-          Changes::CreateTable,
-          Changes::AlterTable,
-          Changes::DropTable,
-          Changes::DropEnum,
-          Changes::CreateForeignKey,
-          Changes::DropExtension
-        ]
-      )
+    def create_table(change)
+      connection.create_table(change.table.name) do
+        change.table.fields.each do |field|
+          if field.primary_key?
+            primary_key(field.name)
+          else
+            options = Runner.map_options(field.class.type, field.options)
+            column(field.name, field.type.capitalize, options)
+          end
+        end
+
+        change.table.indices.each do |index|
+          index(
+            index.columns_to_sequel,
+            name:   index.name,
+            unique: index.unique?,
+            type:   index.type,
+            where:  index.condition
+          )
+        end
+
+        change.table.checks.each do |check|
+          constraint(check.name, check.condition)
+        end
+      end
+    end
+
+    def drop_table(change)
+      connection.drop_table(change.name)
+    end
+
+    def rename_table(change)
+      connection.rename_table(change.old_name, change.new_name)
+    end
+
+    def alter_table(change)
+      connection.alter_table(change.table_name) do
+        change.changes.each do |element|
+          case element
+          when Operations::CreateColumn
+            if element.primary_key?
+              add_primary_key(element.name)
+            else
+              options = Runner.map_options(element.type, element.options)
+              add_column(element.name, element.type.capitalize, options)
+            end
+          when Operations::DropColumn
+            drop_column(element.name)
+          when Operations::RenameColumn
+            rename_column(element.old_name, element.new_name)
+          when Operations::AlterColumnType
+            attributes = Runner.map_options(element.new_type, element.new_attributes)
+            set_column_type(element.name, element.new_type.capitalize, using: element.using, **attributes)
+          when Operations::CreatePrimaryKey
+            raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
+          when Operations::DropPrimaryKey
+            raise NotImplementedError, 'Removing a primary key while leaving the column is currently unsupported'
+          when Operations::AllowNull
+            set_column_allow_null(element.name)
+          when Operations::DisallowNull
+            set_column_not_null(element.name)
+          when Operations::AlterColumnDefault
+            set_column_default(element.name, Runner.default_to_sequel(element.new_default))
+          when Operations::CreateIndex
+            add_index(
+              element.index.columns_to_sequel,
+              name:   element.index.name,
+              unique: element.index.unique?,
+              type:   element.index.type,
+              where:  element.index.condition
+            )
+          when Operations::DropIndex
+            drop_index([], name: element.name)
+          when Operations::CreateCheckConstraint
+            add_constraint(element.check.name, element.check.condition)
+          when Operations::DropCheckConstraint
+            drop_constraint(element.name)
+          end
+        end
+      end
+    end
+
+    def create_foreign_key(change)
+      connection.alter_table(change.table_name) do
+        add_foreign_key(change.foreign_key.fields, change.foreign_key.table, change.foreign_key.options)
+      end
+    end
+
+    def drop_foreign_key(change)
+      connection.alter_table(change.table_name) do
+        drop_foreign_key([], name: change.fkey_name)
+      end
+    end
+
+    def create_enum(change)
+      connection.create_enum(change.enum.name, change.enum.values)
+    end
+
+    def drop_enum(change)
+      connection.drop_enum(change.name)
+    end
+
+    def rename_enum(change)
+      old_name = connection.quote_identifier(change.old_name)
+      new_name = connection.quote_identifier(change.new_name)
+
+      connection.run(%Q(ALTER TYPE #{old_name} RENAME TO #{new_name}))
+    end
+
+    def alter_enum_values(change)
+      change.enum_fields.each do |field_data|
+        connection.alter_table(field_data[:table_name]) do
+          set_column_type(field_data[:field_name], :VARCHAR)
+          set_column_default(field_data[:field_name], nil)
+        end
+      end
+
+      connection.drop_enum(change.enum_name)
+      connection.create_enum(change.enum_name, change.new_values)
+
+      change.enum_fields.each do |field_data|
+        connection.alter_table(field_data[:table_name]) do
+          field_type = if field_data[:array]
+            "#{change.enum_name}[]"
+          else
+            change.enum_name
+          end
+
+          set_column_type(
+            field_data[:field_name],
+            field_type,
+            using: "#{field_data[:field_name]}::#{field_type}"
+          )
+
+          set_column_default(field_data[:field_name], field_data[:new_default]) unless field_data[:new_default].nil?
+        end
+      end
+    end
+
+    def create_extension(change)
+      connection.run(%Q(CREATE EXTENSION #{connection.quote_identifier(change.extension.name)}))
+    end
+
+    def drop_extension(change)
+      connection.run(%Q(DROP EXTENSION #{connection.quote_identifier(change.name)}))
+    end
+
+    def execute_query(change)
+      connection.run(change.query)
     end
 
     class << self
-      def create_table(change)
-        DbSchema.connection.create_table(change.table.name) do
-          change.table.fields.each do |field|
-            if field.primary_key?
-              primary_key(field.name)
-            else
-              options = Runner.map_options(field.class.type, field.options)
-              column(field.name, field.type.capitalize, options)
-            end
-          end
-
-          change.table.indices.each do |index|
-            index(
-              index.columns_to_sequel,
-              name:   index.name,
-              unique: index.unique?,
-              type:   index.type,
-              where:  index.condition
-            )
-          end
-
-          change.table.checks.each do |check|
-            constraint(check.name, check.condition)
-          end
-        end
-      end
-
-      def drop_table(change)
-        DbSchema.connection.drop_table(change.name)
-      end
-
-      def alter_table(change)
-        DbSchema.connection.alter_table(change.table_name) do
-          Utils.sort_by_class(
-            change.changes,
-            [
-              DbSchema::Changes::DropPrimaryKey,
-              DbSchema::Changes::DropCheckConstraint,
-              DbSchema::Changes::DropIndex,
-              DbSchema::Changes::DropColumn,
-              DbSchema::Changes::RenameColumn,
-              DbSchema::Changes::AlterColumnType,
-              DbSchema::Changes::AllowNull,
-              DbSchema::Changes::DisallowNull,
-              DbSchema::Changes::AlterColumnDefault,
-              DbSchema::Changes::CreateColumn,
-              DbSchema::Changes::CreateIndex,
-              DbSchema::Changes::CreateCheckConstraint,
-              DbSchema::Changes::CreatePrimaryKey
-            ]
-          ).each do |element|
-            case element
-            when Changes::CreateColumn
-              if element.primary_key?
-                add_primary_key(element.name)
-              else
-                options = Runner.map_options(element.type, element.options)
-                add_column(element.name, element.type.capitalize, options)
-              end
-            when Changes::DropColumn
-              drop_column(element.name)
-            when Changes::RenameColumn
-              rename_column(element.old_name, element.new_name)
-            when Changes::AlterColumnType
-              attributes = Runner.map_options(element.new_type, element.new_attributes)
-              set_column_type(element.name, element.new_type.capitalize, attributes)
-            when Changes::CreatePrimaryKey
-              raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
-            when Changes::DropPrimaryKey
-              raise NotImplementedError, 'Removing a primary key while leaving the column is currently unsupported'
-            when Changes::AllowNull
-              set_column_allow_null(element.name)
-            when Changes::DisallowNull
-              set_column_not_null(element.name)
-            when Changes::AlterColumnDefault
-              set_column_default(element.name, Runner.default_to_sequel(element.new_default))
-            when Changes::CreateIndex
-              add_index(
-                element.index.columns_to_sequel,
-                name:   element.index.name,
-                unique: element.index.unique?,
-                type:   element.index.type,
-                where:  element.index.condition
-              )
-            when Changes::DropIndex
-              drop_index([], name: element.name)
-            when Changes::CreateCheckConstraint
-              add_constraint(element.check.name, element.check.condition)
-            when Changes::DropCheckConstraint
-              drop_constraint(element.name)
-            end
-          end
-        end
-      end
-
-      def create_foreign_key(change)
-        DbSchema.connection.alter_table(change.table_name) do
-          add_foreign_key(change.foreign_key.fields, change.foreign_key.table, change.foreign_key.options)
-        end
-      end
-
-      def drop_foreign_key(change)
-        DbSchema.connection.alter_table(change.table_name) do
-          drop_foreign_key([], name: change.fkey_name)
-        end
-      end
-
-      def create_enum(change)
-        DbSchema.connection.create_enum(change.enum.name, change.enum.values)
-      end
-
-      def drop_enum(change)
-        DbSchema.connection.drop_enum(change.name)
-      end
-
-      def alter_enum_values(change)
-        change.enum_fields.each do |field_data|
-          DbSchema.connection.alter_table(field_data[:table_name]) do
-            set_column_type(field_data[:field_name], :VARCHAR)
-            set_column_default(field_data[:field_name], nil)
-          end
-        end
-
-        DbSchema.connection.drop_enum(change.enum_name)
-        DbSchema.connection.create_enum(change.enum_name, change.new_values)
-
-        change.enum_fields.each do |field_data|
-          DbSchema.connection.alter_table(field_data[:table_name]) do
-            field_type = if field_data[:array]
-              "#{change.enum_name}[]"
-            else
-              change.enum_name
-            end
-
-            set_column_type(
-              field_data[:field_name],
-              field_type,
-              using: "#{field_data[:field_name]}::#{field_type}"
-            )
-
-            set_column_default(field_data[:field_name], field_data[:new_default]) unless field_data[:new_default].nil?
-          end
-        end
-      end
-
-      def create_extension(change)
-        DbSchema.connection.run(%Q(CREATE EXTENSION "#{change.extension.name}"))
-      end
-
-      def drop_extension(change)
-        DbSchema.connection.run(%Q(DROP EXTENSION "#{change.name}"))
-      end
-
       def map_options(type, options)
         mapping = case type
         when :char, :varchar, :bit, :varbit

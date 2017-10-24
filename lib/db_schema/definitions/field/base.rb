@@ -94,5 +94,11 @@ module DbSchema
         end
       end
     end
+
+    class NullField < Field::Base
+      def initialize
+        super(nil)
+      end
+    end
   end
 end

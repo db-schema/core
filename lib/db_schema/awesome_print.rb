@@ -15,8 +15,13 @@ if defined?(AwesomePrint)
         case object
         when ::DbSchema::Definitions::Schema
           :dbschema_schema
-        when ::DbSchema::Definitions::NullTable
-          :dbschema_null_table
+        when ::DbSchema::Definitions::NullTable,
+             ::DbSchema::Definitions::NullField,
+             ::DbSchema::Definitions::NullIndex,
+             ::DbSchema::Definitions::NullCheckConstraint,
+             ::DbSchema::Definitions::NullForeignKey,
+             ::DbSchema::Definitions::NullEnum
+          :dbschema_null_object
         when ::DbSchema::Definitions::Table
           :dbschema_table
         when ::DbSchema::Definitions::Field::Custom
@@ -35,49 +40,36 @@ if defined?(AwesomePrint)
           :dbschema_enum
         when ::DbSchema::Definitions::Extension
           :dbschema_column_operation
-        when ::DbSchema::Changes::CreateTable
+        when ::DbSchema::Operations::CreateTable
           :dbschema_create_table
-        when ::DbSchema::Changes::DropTable
+        when ::DbSchema::Operations::DropTable
           :dbschema_drop_table
-        when ::DbSchema::Changes::AlterTable
+        when ::DbSchema::Operations::AlterTable
           :dbschema_alter_table
-        when ::DbSchema::Changes::CreateColumn
+        when ::DbSchema::Operations::CreateColumn
           :dbschema_create_column
-        when ::DbSchema::Changes::DropColumn
+        when ::DbSchema::Operations::ColumnOperation
           :dbschema_column_operation
-        when ::DbSchema::Changes::RenameColumn
-          :dbschema_rename_column
-        when ::DbSchema::Changes::AlterColumnType
+        when ::DbSchema::Operations::RenameOperation
+          :dbschema_rename
+        when ::DbSchema::Operations::AlterColumnType
           :dbschema_alter_column_type
-        when ::DbSchema::Changes::CreatePrimaryKey,
-             ::DbSchema::Changes::DropPrimaryKey,
-             ::DbSchema::Changes::AllowNull,
-             ::DbSchema::Changes::DisallowNull
-          :dbschema_column_operation
-        when ::DbSchema::Changes::AlterColumnDefault
+        when ::DbSchema::Operations::AlterColumnDefault
           :dbschema_alter_column_default
-        when ::DbSchema::Changes::CreateIndex
+        when ::DbSchema::Operations::CreateIndex
           :dbschema_create_index
-        when ::DbSchema::Changes::DropIndex
-          :dbschema_column_operation
-        when ::DbSchema::Changes::CreateCheckConstraint
+        when ::DbSchema::Operations::CreateCheckConstraint
           :dbschema_create_check_constraint
-        when ::DbSchema::Changes::DropCheckConstraint
-          :dbschema_column_operation
-        when ::DbSchema::Changes::CreateForeignKey
+        when ::DbSchema::Operations::CreateForeignKey
           :dbschema_create_foreign_key
-        when ::DbSchema::Changes::DropForeignKey
+        when ::DbSchema::Operations::DropForeignKey
           :dbschema_drop_foreign_key
-        when ::DbSchema::Changes::CreateEnum
+        when ::DbSchema::Operations::CreateEnum
           :dbschema_create_enum
-        when ::DbSchema::Changes::DropEnum
-          :dbschema_column_operation
-        when ::DbSchema::Changes::AlterEnumValues
+        when ::DbSchema::Operations::AlterEnumValues
           :dbschema_alter_enum_values
-        when ::DbSchema::Changes::CreateExtension
+        when ::DbSchema::Operations::CreateExtension
           :dbschema_create_extension
-        when ::DbSchema::Changes::DropExtension
-          :dbschema_column_operation
         else
           cast_without_dbschema(object, type)
         end
@@ -103,8 +95,8 @@ if defined?(AwesomePrint)
         "#<DbSchema::Definitions::Table #{object.name.ai} #{data_string}>"
       end
 
-      def awesome_dbschema_null_table(object)
-        '#<DbSchema::Definitions::NullTable>'
+      def awesome_dbschema_null_object(object)
+        "#<#{object.class}>"
       end
 
       def awesome_dbschema_field(object)
@@ -202,27 +194,27 @@ if defined?(AwesomePrint)
         data << "checks: #{object.table.checks.ai}" if object.table.checks.any?
 
         data_string = indent_lines(data.join(', '))
-        "#<DbSchema::Changes::CreateTable #{object.table.name.ai} #{data_string}>"
+        "#<DbSchema::Operations::CreateTable #{object.table.name.ai} #{data_string}>"
       end
 
       def awesome_dbschema_drop_table(object)
-        "#<DbSchema::Changes::DropTable #{object.name.ai}>"
+        "#<DbSchema::Operations::DropTable #{object.name.ai}>"
       end
 
       def awesome_dbschema_alter_table(object)
-        "#<DbSchema::Changes::AlterTable #{object.table_name.ai} #{indent_lines(object.changes.ai)}>"
+        "#<DbSchema::Operations::AlterTable #{object.table_name.ai} #{indent_lines(object.changes.ai)}>"
       end
 
       def awesome_dbschema_create_column(object)
-        "#<DbSchema::Changes::CreateColumn #{object.field.ai}>"
+        "#<DbSchema::Operations::CreateColumn #{object.field.ai}>"
       end
 
       def awesome_dbschema_drop_column(object)
-        "#<DbSchema::Changes::DropColumn #{object.name.ai}>"
+        "#<DbSchema::Operations::DropColumn #{object.name.ai}>"
       end
 
-      def awesome_dbschema_rename_column(object)
-        "#<DbSchema::Changes::RenameColumn #{object.old_name.ai} => #{object.new_name.ai}>"
+      def awesome_dbschema_rename(object)
+        "#<#{object.class} #{object.old_name.ai} => #{object.new_name.ai}>"
       end
 
       def awesome_dbschema_alter_column_type(object)
@@ -231,7 +223,7 @@ if defined?(AwesomePrint)
           "#{key} #{v.ai}"
         end.unshift(nil).join(', ')
 
-        "#<DbSchema::Changes::AlterColumnType #{object.name.ai}, #{object.new_type.ai}#{attributes}>"
+        "#<DbSchema::Operations::AlterColumnType #{object.name.ai}, #{object.new_type.ai}#{attributes}>"
       end
 
       def awesome_dbschema_alter_column_default(object)
@@ -241,7 +233,7 @@ if defined?(AwesomePrint)
           object.new_default.ai
         end
 
-        "#<DbSchema::Changes::AlterColumnDefault #{object.name.ai}, #{new_default}>"
+        "#<DbSchema::Operations::AlterColumnDefault #{object.name.ai}, #{new_default}>"
       end
 
       def awesome_dbschema_create_index(object)
@@ -260,11 +252,11 @@ if defined?(AwesomePrint)
       end
 
       def awesome_dbschema_create_foreign_key(object)
-        "#<DbSchema::Changes::CreateForeignKey #{object.foreign_key.ai} on #{object.table_name.ai}>"
+        "#<DbSchema::Operations::CreateForeignKey #{object.foreign_key.ai} on #{object.table_name.ai}>"
       end
 
       def awesome_dbschema_drop_foreign_key(object)
-        "#<DbSchema::Changes::DropForeignKey #{object.fkey_name.ai} on #{object.table_name.ai}>"
+        "#<DbSchema::Operations::DropForeignKey #{object.fkey_name.ai} on #{object.table_name.ai}>"
       end
 
       def awesome_dbschema_create_enum(object)
@@ -284,7 +276,7 @@ if defined?(AwesomePrint)
           colorize(value.to_s, :string)
         end.join(', ')
 
-        "#<DbSchema::Changes::AlterEnumValues #{object.enum_name.ai} to (#{values})>"
+        "#<DbSchema::Operations::AlterEnumValues #{object.enum_name.ai} to (#{values})>"
       end
 
       def awesome_dbschema_create_extension(object)

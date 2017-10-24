@@ -1,20 +1,27 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Reader do
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+      db.extension :pg_array
+    end
+  end
+
   describe '.read_schema' do
     context 'on an empty database' do
-      it 'returns an empty array' do
-        expect(subject.read_schema).to eq(DbSchema::Definitions::Schema.new)
+      it 'returns an empty schema' do
+        expect(subject.read_schema(database)).to eq(DbSchema::Definitions::Schema.new)
       end
     end
 
     context 'on a non-empty database' do
       before(:each) do
-        DbSchema.connection.create_enum :rainbow, %w(red orange yellow green blue purple)
+        database.create_enum :rainbow, %w(red orange yellow green blue purple)
 
-        DbSchema.connection.run('CREATE EXTENSION hstore')
+        database.run('CREATE EXTENSION hstore')
 
-        DbSchema.connection.create_table :users do
+        database.create_table :users do
           column :id, :serial, primary_key: true
           column :name, :varchar, null: false, unique: true
           column :email, :varchar, default: 'mail@example.com', size: 250
@@ -50,7 +57,7 @@ RSpec.describe DbSchema::Reader do
           constraint :is_adult, 'age > 18'
         end
 
-        DbSchema.connection.create_table :posts do
+        database.create_table :posts do
           column :id, :integer, primary_key: true
           column :title, :varchar
           column :user_id, :integer, null: false
@@ -66,7 +73,7 @@ RSpec.describe DbSchema::Reader do
       end
 
       it 'returns the database schema' do
-        schema = subject.read_schema
+        schema = subject.read_schema(database)
 
         users   = schema.tables.find { |table| table.name == :users }
         posts   = schema.tables.find { |table| table.name == :posts }
@@ -217,10 +224,10 @@ RSpec.describe DbSchema::Reader do
       end
 
       after(:each) do
-        DbSchema.connection.drop_table(:posts)
-        DbSchema.connection.drop_table(:users)
-        DbSchema.connection.drop_enum(:rainbow)
-        DbSchema.connection.run('DROP EXTENSION hstore')
+        database.drop_table(:posts)
+        database.drop_table(:users)
+        database.drop_enum(:rainbow)
+        database.run('DROP EXTENSION hstore')
       end
     end
   end

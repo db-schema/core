@@ -4,53 +4,51 @@ require 'yaml'
 require 'db_schema/configuration'
 require 'db_schema/utils'
 require 'db_schema/definitions'
+require 'db_schema/migration'
+require 'db_schema/operations'
 require 'db_schema/awesome_print'
 require 'db_schema/dsl'
 require 'db_schema/validator'
 require 'db_schema/normalizer'
 require 'db_schema/reader'
+require 'db_schema/migrator'
 require 'db_schema/changes'
 require 'db_schema/runner'
 require 'db_schema/version'
 
 module DbSchema
   class << self
+    attr_reader :current_schema
+
     def describe(&block)
-      desired_schema = DSL.new(block).schema
-      validate(desired_schema)
-      Normalizer.new(desired_schema).normalize_tables
+      with_connection do |connection|
+        desired = DSL.new(block)
+        validate(desired.schema)
+        Normalizer.new(desired.schema, connection).normalize_tables
 
-      actual_schema = Reader.read_schema
-      changes = Changes.between(desired_schema, actual_schema)
-      return if changes.empty?
+        connection.transaction do
+          actual_schema = run_migrations(desired.migrations, connection)
+          changes = Changes.between(desired.schema, actual_schema)
+          log_changes(changes) if configuration.log_changes?
 
-      log_changes(changes) if configuration.log_changes?
-      return if configuration.dry_run?
+          if configuration.dry_run?
+            raise Sequel::Rollback
+          else
+            @current_schema = desired.schema
+            return if changes.empty?
+          end
 
-      Runner.new(changes).run!
+          Runner.new(changes, connection).run!
 
-      if configuration.post_check_enabled?
-        perform_post_check(desired_schema)
+          if configuration.post_check_enabled?
+            perform_post_check(desired.schema, connection)
+          end
+        end
       end
     end
 
-    def connection
-      @connection ||= Sequel.connect(
-        adapter:  configuration.adapter,
-        host:     configuration.host,
-        port:     configuration.port,
-        database: configuration.database,
-        user:     configuration.user,
-        password: configuration.password
-      ).tap do |db|
-        db.extension :pg_enum
-        db.extension :pg_array
-      end
-    end
-
-    def configure(connection_parameters)
-      @configuration = Configuration.new(connection_parameters)
-      @connection    = nil
+    def configure(params)
+      @configuration = configuration.merge(params)
     end
 
     def configure_from_yaml(yaml_path, environment, **other_options)
@@ -64,18 +62,43 @@ module DbSchema
       configure(renamed_data.merge(other_options))
     end
 
-    def configuration
-      raise 'You must call DbSchema.configure in order to connect to the database.' if @configuration.nil?
+    def connection=(external_connection)
+      @external_connection = external_connection
+    end
 
-      @configuration
+    def configuration
+      @configuration ||= Configuration.new
     end
 
     def reset!
+      @external_connection = nil
       @configuration = nil
-      @connection    = nil
+      @current_schema = nil
     end
 
   private
+    def with_connection
+      raise ArgumentError unless block_given?
+
+      if @external_connection
+        yield @external_connection
+      else
+        Sequel.connect(
+          adapter:  configuration.adapter,
+          host:     configuration.host,
+          port:     configuration.port,
+          database: configuration.database,
+          user:     configuration.user,
+          password: configuration.password
+        ) do |db|
+          db.extension :pg_enum
+          db.extension :pg_array
+
+          yield db
+        end
+      end
+    end
+
     def validate(schema)
       validation_result = Validator.validate(schema)
 
@@ -90,6 +113,26 @@ module DbSchema
       end
     end
 
+    def run_migrations(migrations, connection)
+      @current_schema = Reader.read_schema(connection)
+
+      migrations.reduce(@current_schema) do |schema, migration|
+        migrator = Migrator.new(migration)
+
+        if migrator.applicable?(schema)
+          log_migration(migration) if configuration.log_changes?
+          migrator.run!(connection)
+          Reader.read_schema(connection)
+        else
+          schema
+        end
+      end
+    end
+
+    def log_migration(migration)
+      puts "DbSchema is running migration #{migration.name.ai}"
+    end
+
     def log_changes(changes)
       return if changes.empty?
 
@@ -101,8 +144,8 @@ module DbSchema
       end
     end
 
-    def perform_post_check(desired_schema)
-      unapplied_changes = Changes.between(desired_schema, Reader.read_schema)
+    def perform_post_check(desired_schema, connection)
+      unapplied_changes = Changes.between(desired_schema, Reader.read_schema(connection))
       return if unapplied_changes.empty?
 
       readable_changes = if unapplied_changes.respond_to?(:ai)

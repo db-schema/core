@@ -1,14 +1,19 @@
 require 'spec_helper'
 
 RSpec.describe DbSchema::Runner do
-  let(:database) { DbSchema.connection }
+  let(:database) do
+    Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
+      db.extension :pg_enum
+      db.extension :pg_array
+    end
+  end
 
   let(:enums) do
-    DbSchema::Reader.read_schema.enums
+    DbSchema::Reader.read_enums(database)
   end
 
   let(:extensions) do
-    DbSchema::Reader.read_schema.extensions
+    DbSchema::Reader.read_extensions(database)
   end
 
   before(:each) do
@@ -87,13 +92,13 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
-  subject { DbSchema::Runner.new(changes) }
+  subject { DbSchema::Runner.new(changes, database) }
 
   describe '#run!' do
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [
-          DbSchema::Changes::CreateTable.new(
+          DbSchema::Operations::CreateTable.new(
             DbSchema::Definitions::Table.new(
               :users,
               fields:  users_fields,
@@ -101,20 +106,20 @@ RSpec.describe DbSchema::Runner do
               checks:  users_checks
             )
           ),
-          DbSchema::Changes::DropTable.new(:people)
+          DbSchema::Operations::DropTable.new(:people)
         ]
       end
 
       it 'applies all the changes' do
         subject.run!
 
-        expect(DbSchema.connection.tables).not_to include(:people)
-        expect(DbSchema.connection.tables).to include(:users)
+        expect(database.tables).not_to include(:people)
+        expect(database.tables).to include(:users)
 
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
-        users = DbSchema::Reader.read_schema.tables.find { |table| table.name == :users }
+        users = DbSchema::Reader.read_table(:users, database)
         id, name, email, country_id, created_at, period, some_bit, some_bits, some_varbit, names = users.fields
         expect(id.name).to eq(:id)
         expect(id).to be_a(DbSchema::Definitions::Field::Integer)
@@ -146,7 +151,7 @@ RSpec.describe DbSchema::Runner do
         expect(names).to be_a(DbSchema::Definitions::Field::Array)
         expect(names.options[:element_type]).to eq(:varchar)
 
-        indices = DbSchema::Reader::Postgres.indices_data_for(:users)
+        indices = DbSchema::Reader::Postgres.indices_data_for(:users, database)
         name_index  = indices.find { |index| index[:name] == :index_users_on_name }
         email_index = indices.find { |index| index[:name] == :index_users_on_email }
         names_index = indices.find { |index| index[:name] == :users_names_index }
@@ -168,25 +173,39 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
+    context 'with RenameTable' do
+      let(:changes) do
+        [DbSchema::Operations::RenameTable.new(old_name: :people, new_name: :users)]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        schema = DbSchema::Reader.read_schema(database)
+        expect(schema).not_to have_table(:people)
+        expect(schema).to have_table(:users)
+      end
+    end
+
     context 'with AlterTable' do
       let(:changes) do
-        [DbSchema::Changes::AlterTable.new(:people, table_changes)]
+        [DbSchema::Operations::AlterTable.new(:people, table_changes)]
       end
 
       context 'containing CreateColumn & DropColumn' do
         let(:table_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:first_name)),
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Varchar.new(:last_name, length: 30, null: false)
             ),
-            DbSchema::Changes::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
-            DbSchema::Changes::DropColumn.new(:name),
-            DbSchema::Changes::DropColumn.new(:id),
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(DbSchema::Definitions::Field::Integer.new(:age, null: false)),
+            DbSchema::Operations::DropColumn.new(:name),
+            DbSchema::Operations::DropColumn.new(:id),
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
             ),
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, default: :'now()')
             )
           ]
@@ -198,7 +217,7 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_table(:people, database)
           address, country_name, created_at, first_name, last_name, age, uid, updated_at = people.fields
           expect(address.name).to eq(:address)
           expect(created_at.name).to eq(:created_at)
@@ -222,7 +241,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing RenameColumn' do
         let(:table_changes) do
           [
-            DbSchema::Changes::RenameColumn.new(old_name: :name, new_name: :full_name)
+            DbSchema::Operations::RenameColumn.new(old_name: :name, new_name: :full_name)
           ]
         end
 
@@ -239,7 +258,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing AlterColumnType' do
         let(:table_changes) do
           [
-            DbSchema::Changes::AlterColumnType.new(:name, new_type: :text)
+            DbSchema::Operations::AlterColumnType.new(:name, new_type: :text)
           ]
         end
 
@@ -253,17 +272,16 @@ RSpec.describe DbSchema::Runner do
         context 'that changes field attributes' do
           let(:table_changes) do
             [
-              DbSchema::Changes::AlterColumnType.new(:address, new_type: :varchar),
-              DbSchema::Changes::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
-              DbSchema::Changes::AlterColumnType.new(:created_at, new_type: :timestamp)
+              DbSchema::Operations::AlterColumnType.new(:address, new_type: :varchar),
+              DbSchema::Operations::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
+              DbSchema::Operations::AlterColumnType.new(:created_at, new_type: :timestamp)
             ]
           end
 
           it 'applies all the changes' do
             subject.run!
 
-            schema = DbSchema::Reader.read_schema
-            people = schema.tables.find { |table| table.name == :people }
+            people = DbSchema::Reader.read_table(:people, database)
             address, country_name, created_at = people.fields.last(3)
 
             expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
@@ -273,12 +291,27 @@ RSpec.describe DbSchema::Runner do
             expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
           end
         end
+
+        context 'with a :using option' do
+          let(:table_changes) do
+            [
+              DbSchema::Operations::AlterColumnType.new(:name, new_type: :integer, using: 'name::integer')
+            ]
+          end
+
+          it 'applies all the changes' do
+            subject.run!
+
+            people = DbSchema::Reader.read_table(:people, database)
+            expect(people[:name].type).to eq(:integer)
+          end
+        end
       end
 
       context 'containing CreatePrimaryKey' do
         let(:table_changes) do
           [
-            DbSchema::Changes::CreatePrimaryKey.new(name: :name)
+            DbSchema::Operations::CreatePrimaryKey.new(name: :name)
           ]
         end
 
@@ -292,7 +325,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing DropPrimaryKey' do
         let(:table_changes) do
           [
-            DbSchema::Changes::DropPrimaryKey.new(name: :id)
+            DbSchema::Operations::DropPrimaryKey.new(name: :id)
           ]
         end
 
@@ -306,8 +339,8 @@ RSpec.describe DbSchema::Runner do
       context 'containing AllowNull & DisallowNull' do
         let(:table_changes) do
           [
-            DbSchema::Changes::AllowNull.new(:address),
-            DbSchema::Changes::DisallowNull.new(:name)
+            DbSchema::Operations::AllowNull.new(:address),
+            DbSchema::Operations::DisallowNull.new(:name)
           ]
         end
 
@@ -323,7 +356,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing AlterColumnDefault' do
         let(:table_changes) do
           [
-            DbSchema::Changes::AlterColumnDefault.new(:name, new_default: 'John Smith')
+            DbSchema::Operations::AlterColumnDefault.new(:name, new_default: 'John Smith')
           ]
         end
 
@@ -337,7 +370,7 @@ RSpec.describe DbSchema::Runner do
         context 'with an expression' do
           let(:table_changes) do
             [
-              DbSchema::Changes::AlterColumnDefault.new(:created_at, new_default: :'now()')
+              DbSchema::Operations::AlterColumnDefault.new(:created_at, new_default: :'now()')
             ]
           end
 
@@ -353,18 +386,18 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreateIndex & DropIndex' do
         let(:table_changes) do
           [
-            DbSchema::Changes::CreateColumn.new(
+            DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Array.new(:interests, element_type: :varchar)
             ),
-            DbSchema::Changes::CreateIndex.new(
+            DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:      :people_name_index,
                 columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)', order: :desc)],
                 condition: 'name IS NOT NULL'
               )
             ),
-            DbSchema::Changes::DropIndex.new(:people_address_index),
-            DbSchema::Changes::CreateIndex.new(
+            DbSchema::Operations::DropIndex.new(:people_address_index),
+            DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:    :people_interests_index,
                 columns: [DbSchema::Definitions::Index::TableField.new(:interests)],
@@ -377,7 +410,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          indices = DbSchema::Reader::Postgres.indices_data_for(:people)
+          indices = DbSchema::Reader::Postgres.indices_data_for(:people, database)
           expect(indices.count).to eq(2)
           name_index = indices.find { |index| index[:name] == :people_name_index }
           interests_index = indices.find { |index| index[:name] == :people_interests_index }
@@ -399,8 +432,8 @@ RSpec.describe DbSchema::Runner do
       context 'containing CreateCheckConstraint & DropCheckConstraint' do
         let(:table_changes) do
           [
-            DbSchema::Changes::DropCheckConstraint.new(:address_length),
-            DbSchema::Changes::CreateCheckConstraint.new(
+            DbSchema::Operations::DropCheckConstraint.new(:address_length),
+            DbSchema::Operations::CreateCheckConstraint.new(
               DbSchema::Definitions::CheckConstraint.new(
                 name:      :min_address_length,
                 condition: 'character_length(address) >= 10'
@@ -412,119 +445,11 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          people = DbSchema::Reader.read_schema.tables.find { |table| table.name == :people }
+          people = DbSchema::Reader.read_table(:people, database)
           expect(people.checks.count).to eq(1)
           address_check = people.checks.first
           expect(address_check.name).to eq(:min_address_length)
           expect(address_check.condition).to eq('character_length(address::text) >= 10')
-        end
-      end
-
-      context "creating a field along with it's index" do
-        let(:table_changes) do
-          [
-            DbSchema::Changes::CreateColumn.new(
-              DbSchema::Definitions::Field::Varchar.new(:email)
-            ),
-            DbSchema::Changes::CreateIndex.new(
-              DbSchema::Definitions::Index.new(
-                name: :people_email_index,
-                columns: [
-                  DbSchema::Definitions::Index::TableField.new(:email)
-                ]
-              )
-            )
-          ]
-        end
-
-        it 'creates the field before creating the index' do
-          subject.run!
-
-          people = DbSchema::Reader.read_schema.tables.find do |table|
-            table.name == :people
-          end
-
-          expect(people.fields.map(&:name)).to include(:email)
-          expect(people.indices).to include(
-            DbSchema::Definitions::Index.new(
-              name: :people_email_index,
-              columns: [
-                DbSchema::Definitions::Index::TableField.new(:email)
-              ]
-            )
-          )
-        end
-      end
-
-      context "dropping a field along with it's index" do
-        let(:table_changes) do
-          [
-            DbSchema::Changes::DropColumn.new(:address),
-            DbSchema::Changes::DropIndex.new(:people_address_index)
-          ]
-        end
-
-        it 'drops the index before dropping the field' do
-          subject.run!
-
-          people = DbSchema::Reader.read_schema.tables.find do |table|
-            table.name == :people
-          end
-
-          expect(people.fields.map(&:name)).not_to include(:address)
-          expect(people.indices).to be_empty
-        end
-      end
-
-      context "creating a field along with it's check constraint" do
-        let(:table_changes) do
-          [
-            DbSchema::Changes::CreateColumn.new(
-              DbSchema::Definitions::Field::Varchar.new(:email)
-            ),
-            DbSchema::Changes::CreateCheckConstraint.new(
-              DbSchema::Definitions::CheckConstraint.new(
-                name:      :email_length,
-                condition: 'char_length(email) > 5'
-              )
-            )
-          ]
-        end
-
-        it 'creates the field before creating the check' do
-          subject.run!
-
-          people = DbSchema::Reader.read_schema.tables.find do |table|
-            table.name == :people
-          end
-
-          expect(people.fields.map(&:name)).to include(:email)
-          expect(people.checks).to include(
-            DbSchema::Definitions::CheckConstraint.new(
-              name:      :email_length,
-              condition: 'char_length(email::text) > 5'
-            )
-          )
-        end
-      end
-
-      context "dropping a field along with it's check constraint" do
-        let(:table_changes) do
-          [
-            DbSchema::Changes::DropColumn.new(:address),
-            DbSchema::Changes::DropCheckConstraint.new(:address_length)
-          ]
-        end
-
-        it 'drops the check before dropping the field' do
-          subject.run!
-
-          people = DbSchema::Reader.read_schema.tables.find do |table|
-            table.name == :people
-          end
-
-          expect(people.fields.map(&:name)).not_to include(:address)
-          expect(people.checks).to be_empty
         end
       end
     end
@@ -548,8 +473,8 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::DropForeignKey.new(:people, :people_city_name_fkey),
-          DbSchema::Changes::CreateForeignKey.new(
+          DbSchema::Operations::DropForeignKey.new(:people, :people_city_name_fkey),
+          DbSchema::Operations::CreateForeignKey.new(
             :people,
             DbSchema::Definitions::ForeignKey.new(
               name:      :people_city_id_fkey,
@@ -558,7 +483,7 @@ RSpec.describe DbSchema::Runner do
               on_delete: :set_null
             )
           ),
-          DbSchema::Changes::CreateForeignKey.new(
+          DbSchema::Operations::CreateForeignKey.new(
             :people,
             DbSchema::Definitions::ForeignKey.new(
               name:      :people_country_name_fkey,
@@ -590,85 +515,6 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
-    context 'with conflicting operations on foreign keys and tables' do
-      before(:each) do
-        DbSchema.connection.create_table :old_table do
-          primary_key :id
-        end
-
-        DbSchema.connection.create_table :other_old_table do
-          primary_key :id
-          foreign_key :old_id, :old_table
-        end
-
-        DbSchema.connection.create_table :referenced_table do
-          primary_key :id
-          integer :referenced_field, unique: true
-        end
-
-        DbSchema.connection.create_table :referring_table do
-          integer :new_id
-          foreign_key :old_id, :old_table
-          foreign_key :referenced_field, :referenced_table, key: :referenced_field
-        end
-      end
-
-      let(:changes) do
-        [
-          DbSchema::Changes::DropTable.new(:old_table),
-          DbSchema::Changes::DropTable.new(:other_old_table),
-          DbSchema::Changes::DropForeignKey.new(:other_old_table, :other_old_table_old_id_fkey),
-          DbSchema::Changes::AlterTable.new(
-            :referenced_table,
-            [DbSchema::Changes::DropColumn.new(:referenced_field)]
-          ),
-          DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_old_id_fkey),
-          DbSchema::Changes::DropForeignKey.new(:referring_table, :referring_table_referenced_field_fkey),
-          DbSchema::Changes::CreateForeignKey.new(
-            :referring_table,
-            DbSchema::Definitions::ForeignKey.new(
-              name:   :referring_table_new_id_fkey,
-              fields: [:new_id],
-              table:  :new_table
-            )
-          ),
-          DbSchema::Changes::CreateTable.new(
-            DbSchema::Definitions::Table.new(
-              :new_table,
-              fields: [
-                DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-                DbSchema::Definitions::Field::Integer.new(:other_new_id)
-              ],
-              indices: []
-            )
-          ),
-          DbSchema::Changes::CreateForeignKey.new(
-            :new_table,
-            DbSchema::Definitions::ForeignKey.new(
-              name:   :new_table_other_new_id_fkey,
-              fields: [:other_new_id],
-              table:  :other_new_table
-            )
-          ),
-          DbSchema::Changes::CreateTable.new(
-            DbSchema::Definitions::Table.new(
-              :other_new_table,
-              fields: [
-                DbSchema::Definitions::Field::Integer.new(:id, primary_key: true)
-              ]
-            )
-          )
-        ]
-      end
-
-      it 'creates and drops tables and foreign keys in appropriate order' do
-        subject.run!
-
-        tables = DbSchema::Reader.read_schema.tables
-        expect(tables.count).to eq(6)
-      end
-    end
-
     context 'with CreateEnum & DropEnum' do
       before(:each) do
         database.create_enum :status, %i(registered confirmed_email subscriber)
@@ -676,10 +522,10 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::CreateEnum.new(
+          DbSchema::Operations::CreateEnum.new(
             DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
           ),
-          DbSchema::Changes::DropEnum.new(:status)
+          DbSchema::Operations::DropEnum.new(:status)
         ]
       end
 
@@ -692,6 +538,26 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
+    context 'with RenameEnum' do
+      before(:each) do
+        database.create_enum :status, %i(registered confirmed_email subscriber)
+      end
+
+      let(:changes) do
+        [
+          DbSchema::Operations::RenameEnum.new(old_name: :status, new_name: :'user status')
+        ]
+      end
+
+      it 'applies all the changes' do
+        subject.run!
+
+        schema = DbSchema::Reader.read_schema(database)
+        expect(schema).not_to have_enum(:status)
+        expect(schema).to have_enum(:'user status')
+      end
+    end
+
     context 'with AlterEnumValues' do
       before(:each) do
         database.create_enum :happiness, %i(good ok bad)
@@ -699,7 +565,7 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::AlterEnumValues.new(
+          DbSchema::Operations::AlterEnumValues.new(
             :happiness,
             %i(happy ok sad),
             fields
@@ -733,7 +599,7 @@ RSpec.describe DbSchema::Runner do
         it 'converts existing fields to the new type' do
           subject.run!
 
-          field = DbSchema::Reader.read_table(:users).fields.last
+          field = DbSchema::Reader.read_table(:users, database).fields.last
           expect(field.type).to eq(:happiness)
           expect(field.default).to eq('ok')
         end
@@ -742,7 +608,7 @@ RSpec.describe DbSchema::Runner do
       context 'with existing fields as arrays of this enum type' do
         let(:changes) do
           [
-            DbSchema::Changes::AlterEnumValues.new(
+            DbSchema::Operations::AlterEnumValues.new(
               :user_role,
               [:user, :admin],
               [
@@ -764,7 +630,7 @@ RSpec.describe DbSchema::Runner do
         it 'converts existing fields to the new type' do
           subject.run!
 
-          field = DbSchema::Reader.read_table(:users)[:roles]
+          field = DbSchema::Reader.read_table(:users, database)[:roles]
           expect(field.type).to eq(:array)
           expect(field.attributes[:element_type]).to eq(:user_role)
           expect(field.default).to eq('{user}')
@@ -779,13 +645,13 @@ RSpec.describe DbSchema::Runner do
 
       let(:changes) do
         [
-          DbSchema::Changes::CreateExtension.new(
+          DbSchema::Operations::CreateExtension.new(
             DbSchema::Definitions::Extension.new(:ltree)
           ),
-          DbSchema::Changes::CreateExtension.new(
+          DbSchema::Operations::CreateExtension.new(
             DbSchema::Definitions::Extension.new(:'uuid-ossp')
           ),
-          DbSchema::Changes::DropExtension.new(:hstore)
+          DbSchema::Operations::DropExtension.new(:hstore)
         ]
       end
 
@@ -804,30 +670,20 @@ RSpec.describe DbSchema::Runner do
       end
     end
 
-    it 'runs most operations in a transaction' do
-      changes = [
-        DbSchema::Changes::AlterTable.new(
-          :people,
-          [
-            DbSchema::Changes::CreateColumn.new(
-              DbSchema::Definitions::Field::Varchar.new(:city_name)
-            ),
-            DbSchema::Changes::CreateIndex.new(
-              DbSchema::Definitions::Index.new(
-                name:    :people_city_name_index,
-                columns: [DbSchema::Definitions::Index::TableField.new(:city_name)],
-                type:    :gist
-              )
-            )
-          ]
-        )
-      ]
+    context 'with ExecuteQuery' do
+      let(:changes) do
+        [
+          DbSchema::Operations::ExecuteQuery.new('ALTER TABLE people RENAME TO users')
+        ]
+      end
 
-      expect {
-        expect {
-          described_class.new(changes).run!
-        }.to raise_error(Sequel::DatabaseError)
-      }.not_to change { DbSchema.connection.schema(:people).count }
+      it 'runs the query' do
+        subject.run!
+
+        schema = DbSchema::Reader.read_schema(database)
+        expect(schema).not_to have_table(:people)
+        expect(schema).to have_table(:users)
+      end
     end
   end
 
