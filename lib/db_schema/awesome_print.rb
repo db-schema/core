@@ -53,42 +53,28 @@ if defined?(AwesomePrint)
           :dbschema_alter_table
         when ::DbSchema::Operations::CreateColumn
           :dbschema_create_column
-        when ::DbSchema::Operations::DropColumn
+        when ::DbSchema::Operations::ColumnOperation
           :dbschema_column_operation
-        when ::DbSchema::Operations::RenameTable,
-             ::DbSchema::Operations::RenameColumn
+        when ::DbSchema::Operations::RenameOperation
           :dbschema_rename
         when ::DbSchema::Operations::AlterColumnType
           :dbschema_alter_column_type
-        when ::DbSchema::Operations::CreatePrimaryKey,
-             ::DbSchema::Operations::DropPrimaryKey,
-             ::DbSchema::Operations::AllowNull,
-             ::DbSchema::Operations::DisallowNull
-          :dbschema_column_operation
         when ::DbSchema::Operations::AlterColumnDefault
           :dbschema_alter_column_default
         when ::DbSchema::Operations::CreateIndex
           :dbschema_create_index
-        when ::DbSchema::Operations::DropIndex
-          :dbschema_column_operation
         when ::DbSchema::Operations::CreateCheckConstraint
           :dbschema_create_check_constraint
-        when ::DbSchema::Operations::DropCheckConstraint
-          :dbschema_column_operation
         when ::DbSchema::Operations::CreateForeignKey
           :dbschema_create_foreign_key
         when ::DbSchema::Operations::DropForeignKey
           :dbschema_drop_foreign_key
         when ::DbSchema::Operations::CreateEnum
           :dbschema_create_enum
-        when ::DbSchema::Operations::DropEnum
-          :dbschema_column_operation
         when ::DbSchema::Operations::AlterEnumValues
           :dbschema_alter_enum_values
         when ::DbSchema::Operations::CreateExtension
           :dbschema_create_extension
-        when ::DbSchema::Operations::DropExtension
-          :dbschema_column_operation
         else
           cast_without_dbschema(object, type)
         end
