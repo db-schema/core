@@ -137,7 +137,7 @@ from your deploy script:
 # config/initializers/db_schema.rb
 DbSchema.configure(url: ENV['DATABASE_URL'])
 
-if ENV['APP_ENV'] == 'development' && ENV['APP_ENV'] == 'test'
+if ENV['APP_ENV'] == 'development' || ENV['APP_ENV'] == 'test'
   load application_root.join('db/schema.rb')
 end
 
