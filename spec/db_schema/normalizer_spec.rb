@@ -95,20 +95,19 @@ RSpec.describe DbSchema::Normalizer do
       DbSchema::Normalizer.new(schema, database).normalize_tables
 
       expect(schema.tables.count).to eq(1)
-      users = schema.tables.first
-      expect(users.name).to eq(:users)
+      users = schema.table(:users)
 
-      expect(users.fields.first).to be_primary_key
-      expect(users.fields[3].default).to eq(:'(18 + 5)')
-      expect(users.fields[5].type).to eq(:happiness)
-      expect(users.fields[6].type).to eq(:array)
-      expect(users.fields[6].attributes[:element_type]).to eq(:user_role)
-      expect(users.fields[6].default).to eq('{user}')
-      expect(users.indices.first.name).to eq(:lower_name_index)
-      expect(users.indices.first.columns.first.name).to eq('lower(name::text)')
-      expect(users.indices.first.condition).to eq('age <> 18')
-      expect(users.checks.first.condition).to eq('char_length(name::text) > 4')
-      expect(users.foreign_keys).to eq(raw_table.foreign_keys)
+      expect(users.field(:id)).to be_primary_key
+      expect(users.field(:age).default).to eq(:'(18 + 5)')
+      expect(users.field(:happiness).type).to eq(:happiness)
+      expect(users.field(:roles)).to be_array
+      expect(users.field(:roles).attributes[:element_type]).to eq(:user_role)
+      expect(users.field(:roles).default).to eq('{user}')
+      expect(users.index(:lower_name_index).columns.first.name).to eq('lower(name::text)')
+      expect(users.index(:lower_name_index).condition).to eq('age <> 18')
+      expect(users.check(:name_length).condition).to eq('char_length(name::text) > 4')
+      expect(users.foreign_key(:users_group_id_fkey).fields).to eq([:group_id])
+      expect(users.foreign_key(:users_group_id_fkey).table).to eq(:groups)
     end
 
     it 'rolls back all temporary tables' do

@@ -224,7 +224,7 @@ RSpec.describe DbSchema::Reader do
 
       it 'reads extensions' do
         expect(schema.extensions.count).to eq(1)
-        expect(schema.extensions.first.name).to eq(:hstore)
+        expect(schema).to have_extension(:hstore)
       end
 
       after(:each) do
