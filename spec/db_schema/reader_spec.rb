@@ -46,7 +46,7 @@ RSpec.describe DbSchema::Reader do
             Sequel.desc(:name),
             Sequel.asc(:lat, nulls: :first),
             Sequel.desc(:lng, nulls: :last)
-          ], unique: true, where: 'email IS NOT NULL'
+          ], name: :users_index, unique: true, where: 'email IS NOT NULL'
           index [:name], type: :spgist
           index [
             Sequel.asc(Sequel.lit('lower(email)')),
@@ -75,152 +75,137 @@ RSpec.describe DbSchema::Reader do
       it 'returns the database schema' do
         schema = subject.read_schema(database)
 
-        users   = schema.tables.find { |table| table.name == :users }
-        posts   = schema.tables.find { |table| table.name == :posts }
-        rainbow = schema.enums.first
-        hstore  = schema.extensions.first
+        users = schema.table(:users)
+        posts = schema.table(:posts)
 
-        expect(rainbow.name).to eq(:rainbow)
-        expect(rainbow.values).to eq(%i(red orange yellow green blue purple))
+        expect(users.field(:id).type).to eq(:integer)
+        expect(users.field(:id)).to be_primary_key
 
-        expect(hstore.name).to eq(:hstore)
+        expect(users.field(:name).type).to eq(:varchar)
+        expect(users.field(:name)).not_to be_null
+        expect(users.field(:name).default).to be_nil
 
-        id, name, email, admin, age, lat, lng, created_at, updated_at,
-        period, other_period, some_bit, several_bits, variable_bits,
-        limited_variable_bits, numbers, color, previous_colors = users.fields
+        expect(users.field(:email).type).to eq(:varchar)
+        expect(users.field(:email)).to be_null
+        expect(users.field(:email).default).to eq('mail@example.com')
+        expect(users.field(:email).options[:length]).to eq(250)
 
-        expect(id).to be_a(DbSchema::Definitions::Field::Integer)
-        expect(id.name).to eq(:id)
-        expect(id).to be_primary_key
-        expect(name).to be_a(DbSchema::Definitions::Field::Varchar)
-        expect(name.name).to eq(:name)
-        expect(name).not_to be_null
-        expect(name.default).to be_nil
-        expect(email).to be_a(DbSchema::Definitions::Field::Varchar)
-        expect(email.name).to eq(:email)
-        expect(email).to be_null
-        expect(email.default).to eq('mail@example.com')
-        expect(email.options[:length]).to eq(250)
-        expect(admin).to be_a(DbSchema::Definitions::Field::Boolean)
-        expect(admin.name).to eq(:admin)
-        expect(admin).not_to be_null
-        expect(admin.default).to eq(false)
-        expect(age).to be_a(DbSchema::Definitions::Field::Integer)
-        expect(age.name).to eq(:age)
-        expect(age.default).to eq(20)
-        expect(lat).to be_a(DbSchema::Definitions::Field::Numeric)
-        expect(lat.name).to eq(:lat)
-        expect(lat.options[:precision]).to eq(6)
-        expect(lat.options[:scale]).to eq(3)
-        expect(lng).to be_a(DbSchema::Definitions::Field::Numeric)
-        expect(lng.name).to eq(:lng)
-        expect(lng.default).to eq(3.45)
-        expect(lng.options[:precision]).to eq(7)
-        expect(lng.options[:scale]).to eq(4)
-        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
-        expect(created_at.name).to eq(:created_at)
-        expect(created_at.default).to eq(Time.new(2016, 4, 28, 1, 25, 0, '+03:00').getlocal)
-        expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
-        expect(updated_at.name).to eq(:updated_at)
-        expect(updated_at.default).to eq(:'now()')
-        expect(period).to be_a(DbSchema::Definitions::Field::Interval)
-        expect(period.name).to eq(:period)
-        expect(period.options[:fields]).to eq(:hour)
-        expect(other_period).to be_a(DbSchema::Definitions::Field::Interval)
-        expect(other_period.name).to eq(:other_period)
-        expect(other_period.options[:fields]).to be_nil
-        expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
-        expect(some_bit.name).to eq(:some_bit)
-        expect(some_bit.options[:length]).to eq(1)
-        expect(several_bits).to be_a(DbSchema::Definitions::Field::Bit)
-        expect(several_bits.name).to eq(:several_bits)
-        expect(several_bits.options[:length]).to eq(5)
-        expect(variable_bits).to be_a(DbSchema::Definitions::Field::Varbit)
-        expect(variable_bits.name).to eq(:variable_bits)
-        expect(variable_bits.options[:length]).to be_nil
-        expect(limited_variable_bits).to be_a(DbSchema::Definitions::Field::Varbit)
-        expect(limited_variable_bits.name).to eq(:limited_variable_bits)
-        expect(limited_variable_bits.options[:length]).to eq(150)
-        expect(numbers).to be_a(DbSchema::Definitions::Field::Array)
-        expect(numbers.name).to eq(:numbers)
-        expect(numbers.options[:element_type]).to eq(:integer)
-        expect(color).to be_a(DbSchema::Definitions::Field::Custom)
-        expect(color.name).to eq(:color)
-        expect(color.type).to eq(:rainbow)
-        expect(color.default).to eq('red')
-        expect(previous_colors).to be_a(DbSchema::Definitions::Field::Array)
-        expect(previous_colors.name).to eq(:previous_colors)
-        expect(previous_colors.options[:element_type]).to eq(:rainbow)
-        expect(previous_colors.default).to eq(:'ARRAY[]::rainbow[]')
+        expect(users.field(:admin).type).to eq(:boolean)
+        expect(users.field(:admin)).not_to be_null
+        expect(users.field(:admin).default).to eq(false)
 
-        id, title, user_id, user_name, created_on, created_at = posts.fields
-        expect(id).to be_a(DbSchema::Definitions::Field::Integer)
-        expect(id.name).to eq(:id)
-        expect(id).to be_primary_key
-        expect(title).to be_a(DbSchema::Definitions::Field::Varchar)
-        expect(title.name).to eq(:title)
-        expect(title).to be_null
-        expect(user_id).to be_a(DbSchema::Definitions::Field::Integer)
-        expect(user_id.name).to eq(:user_id)
-        expect(user_id).not_to be_null
-        expect(created_on).to be_a(DbSchema::Definitions::Field::Date)
-        expect(created_on.name).to eq(:created_on)
-        expect(created_on.default).to eq(Date.new(2016, 4, 28))
-        expect(created_at).to be_a(DbSchema::Definitions::Field::Timetz)
-        expect(created_at.name).to eq(:created_at)
+        expect(users.field(:age).type).to eq(:integer)
+        expect(users.field(:age).default).to eq(20)
+
+        expect(users.field(:lat).type).to eq(:numeric)
+        expect(users.field(:lat).options[:precision]).to eq(6)
+        expect(users.field(:lat).options[:scale]).to eq(3)
+
+        expect(users.field(:lng).type).to eq(:numeric)
+        expect(users.field(:lng).default).to eq(3.45)
+        expect(users.field(:lng).options[:precision]).to eq(7)
+        expect(users.field(:lng).options[:scale]).to eq(4)
+
+        expect(users.field(:created_at).type).to eq(:timestamptz)
+        expect(users.field(:created_at).default).to eq(Time.new(2016, 4, 28, 1, 25, 0, '+03:00').getlocal)
+
+        expect(users.field(:updated_at).type).to eq(:timestamp)
+        expect(users.field(:updated_at).default).to eq(:'now()')
+
+        expect(users.field(:period).type).to eq(:interval)
+        expect(users.field(:period).options[:fields]).to eq(:hour)
+
+        expect(users.field(:other_period).type).to eq(:interval)
+        expect(users.field(:other_period).options[:fields]).to be_nil
+
+        expect(users.field(:some_bit).type).to eq(:bit)
+        expect(users.field(:some_bit).options[:length]).to eq(1)
+
+        expect(users.field(:several_bits).type).to eq(:bit)
+        expect(users.field(:several_bits).options[:length]).to eq(5)
+
+        expect(users.field(:variable_bits).type).to eq(:varbit)
+        expect(users.field(:variable_bits).options[:length]).to be_nil
+
+        expect(users.field(:limited_variable_bits).type).to eq(:varbit)
+        expect(users.field(:limited_variable_bits).options[:length]).to eq(150)
+
+        expect(users.field(:numbers).type).to eq(:array)
+        expect(users.field(:numbers).options[:element_type]).to eq(:integer)
+
+        expect(users.field(:color)).to be_custom
+        expect(users.field(:color).type).to eq(:rainbow)
+        expect(users.field(:color).default).to eq('red')
+
+        expect(users.field(:previous_colors)).to be_array
+        expect(users.field(:previous_colors).options[:element_type]).to eq(:rainbow)
+        expect(users.field(:previous_colors).default).to eq(:'ARRAY[]::rainbow[]')
+
+        expect(posts.field(:id).type).to eq(:integer)
+        expect(posts.field(:id)).to be_primary_key
+
+        expect(posts.field(:title).type).to eq(:varchar)
+        expect(posts.field(:title)).to be_null
+
+        expect(posts.field(:user_id).type).to eq(:integer)
+        expect(posts.field(:user_id)).not_to be_null
+
+        expect(posts.field(:created_on).type).to eq(:date)
+        expect(posts.field(:created_on).default).to eq(Date.new(2016, 4, 28))
+
+        expect(posts.field(:created_at).type).to eq(:timetz)
 
         expect(users.indices.count).to eq(4)
-        email_index, expression_index, name_index, * = users.indices
 
-        expect(email_index.columns).to eq([
+        expect(users.index(:users_index).columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:email),
           DbSchema::Definitions::Index::TableField.new(:name, order: :desc),
           DbSchema::Definitions::Index::TableField.new(:lat, nulls: :first),
           DbSchema::Definitions::Index::TableField.new(:lng, order: :desc, nulls: :last)
         ])
-        expect(email_index).to be_unique
-        expect(email_index.type).to eq(:btree)
-        expect(email_index.condition).to eq('email IS NOT NULL')
+        expect(users.index(:users_index)).to be_unique
+        expect(users.index(:users_index).type).to eq(:btree)
+        expect(users.index(:users_index).condition).to eq('email IS NOT NULL')
 
-        expect(expression_index.columns).to eq([
+        expect(users.index(:users_expression_index).columns).to eq([
           DbSchema::Definitions::Index::Expression.new('lower(email::text)'),
           DbSchema::Definitions::Index::TableField.new(:age),
           DbSchema::Definitions::Index::Expression.new('lower(name::text)', order: :desc)
         ])
 
-        expect(name_index.columns).to eq([
+        expect(users.index(:users_name_index).columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:name)
         ])
-        expect(name_index.type).to eq(:spgist)
+        expect(users.index(:users_name_index).type).to eq(:spgist)
 
         expect(users.checks.count).to eq(1)
-        age_check = users.checks.first
-        expect(age_check.name).to eq(:is_adult)
-        expect(age_check.condition).to eq('age > 18')
+        expect(users.check(:is_adult).condition).to eq('age > 18')
 
         expect(posts.indices.count).to eq(1)
-        user_id_index = posts.indices.first
-        expect(user_id_index.columns).to eq([
+        expect(posts.index(:posts_user_id_index).columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:user_id)
         ])
-        expect(user_id_index).not_to be_unique
+        expect(posts.index(:posts_user_id_index)).not_to be_unique
 
         expect(posts.foreign_keys.count).to eq(2)
-        user_id_fkey, user_name_fkey = posts.foreign_keys
-        expect(user_id_fkey.name).to eq(:posts_user_id_fkey)
-        expect(user_id_fkey.fields).to eq([:user_id])
-        expect(user_id_fkey.table).to eq(:users)
-        expect(user_id_fkey.references_primary_key?).to eq(true)
-        expect(user_id_fkey.on_delete).to eq(:set_null)
-        expect(user_id_fkey.on_update).to eq(:no_action)
-        expect(user_id_fkey).to be_deferrable
-        expect(user_name_fkey.name).to eq(:user_name_fkey)
-        expect(user_name_fkey.fields).to eq([:user_name])
-        expect(user_name_fkey.table).to eq(:users)
-        expect(user_name_fkey.keys).to eq([:name])
-        expect(user_name_fkey.on_delete).to eq(:no_action)
-        expect(user_name_fkey.on_update).to eq(:cascade)
-        expect(user_name_fkey).not_to be_deferrable
+
+        expect(posts.foreign_key(:posts_user_id_fkey).fields).to eq([:user_id])
+        expect(posts.foreign_key(:posts_user_id_fkey).table).to eq(:users)
+        expect(posts.foreign_key(:posts_user_id_fkey).references_primary_key?).to eq(true)
+        expect(posts.foreign_key(:posts_user_id_fkey).on_delete).to eq(:set_null)
+        expect(posts.foreign_key(:posts_user_id_fkey).on_update).to eq(:no_action)
+        expect(posts.foreign_key(:posts_user_id_fkey)).to be_deferrable
+
+        expect(posts.foreign_key(:user_name_fkey).fields).to eq([:user_name])
+        expect(posts.foreign_key(:user_name_fkey).table).to eq(:users)
+        expect(posts.foreign_key(:user_name_fkey).keys).to eq([:name])
+        expect(posts.foreign_key(:user_name_fkey).on_delete).to eq(:no_action)
+        expect(posts.foreign_key(:user_name_fkey).on_update).to eq(:cascade)
+        expect(posts.foreign_key(:user_name_fkey)).not_to be_deferrable
+
+        expect(schema.enum(:rainbow).values).to eq(%i(red orange yellow green blue purple))
+
+        expect(schema.extensions.first.name).to eq(:hstore)
       end
 
       after(:each) do
