@@ -72,9 +72,9 @@ RSpec.describe DbSchema::Reader do
         end
       end
 
-      it 'returns the database schema' do
-        schema = subject.read_schema(database)
+      let(:schema) { subject.read_schema(database) }
 
+      it 'reads field information' do
         users = schema.table(:users)
         posts = schema.table(:posts)
 
@@ -154,6 +154,11 @@ RSpec.describe DbSchema::Reader do
         expect(posts.field(:created_on).default).to eq(Date.new(2016, 4, 28))
 
         expect(posts.field(:created_at).type).to eq(:timetz)
+      end
+
+      it 'reads indexes' do
+        users = schema.table(:users)
+        posts = schema.table(:posts)
 
         expect(users.indices.count).to eq(4)
 
@@ -178,14 +183,22 @@ RSpec.describe DbSchema::Reader do
         ])
         expect(users.index(:users_name_index).type).to eq(:spgist)
 
-        expect(users.checks.count).to eq(1)
-        expect(users.check(:is_adult).condition).to eq('age > 18')
-
         expect(posts.indices.count).to eq(1)
         expect(posts.index(:posts_user_id_index).columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:user_id)
         ])
         expect(posts.index(:posts_user_id_index)).not_to be_unique
+      end
+
+      it 'reads check constraints' do
+        users = schema.table(:users)
+
+        expect(users.checks.count).to eq(1)
+        expect(users.check(:is_adult).condition).to eq('age > 18')
+      end
+
+      it 'reads foreign keys' do
+        posts = schema.table(:posts)
 
         expect(posts.foreign_keys.count).to eq(2)
 
@@ -202,9 +215,15 @@ RSpec.describe DbSchema::Reader do
         expect(posts.foreign_key(:user_name_fkey).on_delete).to eq(:no_action)
         expect(posts.foreign_key(:user_name_fkey).on_update).to eq(:cascade)
         expect(posts.foreign_key(:user_name_fkey)).not_to be_deferrable
+      end
 
+      it 'reads enum types' do
+        expect(schema.enums.count).to eq(1)
         expect(schema.enum(:rainbow).values).to eq(%i(red orange yellow green blue purple))
+      end
 
+      it 'reads extensions' do
+        expect(schema.extensions.count).to eq(1)
         expect(schema.extensions.first.name).to eq(:hstore)
       end
 
