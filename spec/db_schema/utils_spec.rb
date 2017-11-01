@@ -81,6 +81,20 @@ RSpec.describe DbSchema::Utils do
     end
   end
 
+  describe '.to_hash' do
+    let(:klass) { Struct.new(:name) }
+
+    let(:array) do
+      [klass.new(:john), klass.new(:david), klass.new(:jane)]
+    end
+
+    it 'returns a hash indexed by a given attribute value' do
+      hash = subject.to_hash(array, :name)
+
+      expect(hash).to eq(john: klass.new(:john), david: klass.new(:david), jane: klass.new(:jane))
+    end
+  end
+
   describe '.sort_by_class' do
     let(:class_a) { Class.new }
     let(:class_b) { Class.new }

@@ -44,6 +44,12 @@ module DbSchema
         end
       end
 
+      def to_hash(array, attribute)
+        array.reduce({}) do |hash, object|
+          hash.merge(object.public_send(attribute) => object)
+        end
+      end
+
       def sort_by_class(array, sorted_classes)
         sorted_classes.flat_map do |klass|
           array.select { |object| object.is_a?(klass) }
