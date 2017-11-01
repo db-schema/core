@@ -9,6 +9,8 @@ RSpec.describe DbSchema do
   end
 
   describe '.describe' do
+    let(:schema) { DbSchema::Reader.read_schema(database) }
+
     before(:each) do
       subject.configure(database: 'db_schema_test', log_changes: false)
 
@@ -74,86 +76,70 @@ RSpec.describe DbSchema do
         end
       end
 
-      expect(database.tables).to include(:users)
-      expect(database.tables).to include(:posts)
-      expect(database.tables).to include(:cities)
+      expect(schema).to have_table(:users)
+      expect(schema).to have_table(:posts)
+      expect(schema).to have_table(:cities)
 
-      id, email, happiness, first_name, last_name = database.schema(:users)
-      expect(id.first).to eq(:id)
-      expect(email.first).to eq(:email)
-      expect(email.last[:db_type]).to eq('character varying')
-      expect(email.last[:allow_null]).to eq(false)
-      expect(happiness.first).to eq(:happiness)
-      expect(happiness.last[:default]).to eq("'happy'::happiness")
-      expect(first_name.first).to eq(:first_name)
-      expect(first_name.last[:db_type]).to eq('character varying(30)')
-      expect(first_name.last[:allow_null]).to eq(false)
-      expect(last_name.first).to eq(:last_name)
-      expect(last_name.last[:db_type]).to eq('character varying(30)')
-      expect(last_name.last[:allow_null]).to eq(false)
+      users = schema.table(:users)
 
-      users_indices = DbSchema::Reader::Postgres.indices_data_for(:users, database)
-      name_index  = users_indices.find { |index| index[:name] == :users_name_index }
-      email_index = users_indices.find { |index| index[:name] == :users_email_index }
+      expect(users).to have_field(:id)
+      expect(users.field(:email).type).to eq(:varchar)
+      expect(users.field(:email)).not_to be_null
+      expect(users.field(:happiness).type).to eq(:happiness)
+      expect(users.field(:happiness).default).to eq('happy')
+      expect(users.field(:first_name).type).to eq(:varchar)
+      expect(users.field(:first_name).options[:length]).to eq(30)
+      expect(users.field(:first_name)).not_to be_null
+      expect(users.field(:last_name).type).to eq(:varchar)
+      expect(users.field(:last_name).options[:length]).to eq(30)
+      expect(users.field(:last_name)).not_to be_null
 
-      expect(name_index[:columns]).to eq([
+      expect(users.index(:users_name_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:first_name),
         DbSchema::Definitions::Index::TableField.new(:last_name, order: :desc)
       ])
-      expect(name_index[:unique]).to eq(false)
-      expect(email_index[:columns]).to eq([DbSchema::Definitions::Index::Expression.new('lower(email::text)')])
-      expect(email_index[:unique]).to eq(true)
+      expect(users.index(:users_email_index).columns).to eq([
+        DbSchema::Definitions::Index::Expression.new('lower(email::text)')
+      ])
+      expect(users.index(:users_email_index)).to be_unique
 
-      id, title, text, user_id = database.schema(:posts)
-      expect(id.first).to eq(:id)
-      expect(title.first).to eq(:title)
-      expect(title.last[:db_type]).to eq('character varying')
-      expect(title.last[:allow_null]).to eq(false)
-      expect(text.first).to eq(:text)
-      expect(text.last[:db_type]).to eq('text')
-      expect(text.last[:allow_null]).to eq(true)
-      expect(user_id.first).to eq(:user_id)
-      expect(user_id.last[:db_type]).to eq('integer')
-      expect(user_id.last[:allow_null]).to eq(false)
+      posts = schema.table(:posts)
+      expect(posts).to have_field(:id)
+      expect(posts.field(:title).type).to eq(:varchar)
+      expect(posts.field(:title)).not_to be_null
+      expect(posts.field(:text).type).to eq(:text)
+      expect(posts.field(:text)).to be_null
+      expect(posts.field(:user_id).type).to eq(:integer)
+      expect(posts.field(:user_id)).not_to be_null
 
-      user_id_index = database.indexes(:posts)[:posts_author_index]
-      expect(user_id_index[:columns]).to eq([:user_id])
-      expect(user_id_index[:unique]).to eq(false)
+      expect(posts.index(:posts_author_index).columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:user_id)
+      ])
+      expect(posts.index(:posts_author_index)).not_to be_unique
 
-      user_id_fkey = database.foreign_key_list(:posts).first
-      expect(user_id_fkey[:name]).to eq(:posts_user_id_fkey)
-      expect(user_id_fkey[:columns]).to eq([:user_id])
-      expect(user_id_fkey[:table]).to eq(:users)
-      expect(user_id_fkey[:key]).to eq([:id])
+      expect(posts.foreign_key(:posts_user_id_fkey).fields).to eq([:user_id])
+      expect(posts.foreign_key(:posts_user_id_fkey).table).to eq(:users)
+      expect(posts.foreign_key(:posts_user_id_fkey).references_primary_key?).to eq(true)
 
-      id, name, country_id, lat, lng = database.schema(:cities)
-      expect(id.first).to eq(:id)
-      expect(id.last[:db_type]).to eq('integer')
-      expect(id.last[:primary_key]).to eq(true)
-      expect(name.first).to eq(:name)
-      expect(name.last[:db_type]).to eq('character varying')
-      expect(name.last[:allow_null]).to eq(false)
-      expect(country_id.first).to eq(:country_id)
-      expect(country_id.last[:db_type]).to eq('integer')
-      expect(lat.first).to eq(:lat)
-      expect(lat.last[:db_type]).to eq('numeric(6,3)')
-      expect(lng.first).to eq(:lng)
-      expect(lng.last[:db_type]).to eq('numeric(6,3)')
+      cities = schema.table(:cities)
+      expect(cities.field(:id).type).to eq(:integer)
+      expect(cities.field(:id)).to be_primary_key
+      expect(cities.field(:name).type).to eq(:varchar)
+      expect(cities.field(:name)).not_to be_null
+      expect(cities.field(:country_id).type).to eq(:integer)
+      expect(cities.field(:lat).type).to eq(:numeric)
+      expect(cities.field(:lat).options).to eq(precision: 6, scale: 3)
+      expect(cities.field(:lng).type).to eq(:numeric)
+      expect(cities.field(:lng).options).to eq(precision: 6, scale: 3)
 
-      expect(database.indexes(:cities)).to be_empty
+      expect(cities.indices).to be_empty
 
-      country_id_fkey = database.foreign_key_list(:cities).first
-      expect(country_id_fkey[:name]).to eq(:cities_country_id_fkey)
-      expect(country_id_fkey[:columns]).to eq([:country_id])
-      expect(country_id_fkey[:table]).to eq(:countries)
-      expect(country_id_fkey[:key]).to eq([:id])
+      expect(cities.foreign_key(:cities_country_id_fkey).fields).to eq([:country_id])
+      expect(cities.foreign_key(:cities_country_id_fkey).table).to eq(:countries)
+      expect(cities.foreign_key(:cities_country_id_fkey).references_primary_key?).to eq(true)
 
-      enums = DbSchema::Reader.read_enums(database)
-      expect(enums.count).to eq(1)
-
-      happiness = enums.first
-      expect(happiness.name).to eq(:happiness)
-      expect(happiness.values).to eq(%i(happy ok unhappy))
+      expect(schema.enums.count).to eq(1)
+      expect(schema.enum(:happiness).values).to eq(%i(happy ok unhappy))
     end
 
     context 'with conditional migrations' do
@@ -218,7 +204,7 @@ UPDATE users SET first_name = split_part(name, ' ', 1),
           end
         end
 
-        users = DbSchema::Reader.read_table(:users, database)
+        users = schema.table(:users)
         expect(users).not_to have_field(:name)
         expect(users.field(:first_name)).not_to be_null
         expect(users.field(:last_name)).not_to be_null
@@ -419,20 +405,20 @@ Requested schema is invalid:
     end
 
     after(:each) do
-      database.tables.each do |table_name|
-        database.foreign_key_list(table_name).each do |foreign_key|
-          database.alter_table(table_name) do
-            drop_foreign_key([], name: foreign_key[:name])
+      schema.tables.each do |table|
+        table.foreign_keys.each do |foreign_key|
+          database.alter_table(table.name) do
+            drop_foreign_key([], name: foreign_key.name)
           end
         end
       end
 
-      DbSchema::Reader.read_enums(database).each do |enum|
+      schema.enums.each do |enum|
         database.drop_enum(enum.name, cascade: true)
       end
 
-      database.tables.each do |table_name|
-        database.drop_table(table_name)
+      schema.tables.each do |table|
+        database.drop_table(table.name)
       end
     end
   end
