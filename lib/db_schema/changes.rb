@@ -8,32 +8,35 @@ module DbSchema
         table_names = [desired_schema.tables, actual_schema.tables].flatten.map(&:name).uniq
 
         table_changes = table_names.each.with_object([]) do |table_name, changes|
-          desired = desired_schema.tables.find { |table| table.name == table_name }
-          actual  = actual_schema.tables.find  { |table| table.name == table_name }
+          desired = desired_schema.table(table_name)
+          actual  = actual_schema.table(table_name)
 
-          if desired && !actual
+          if desired_schema.has_table?(table_name) && !actual_schema.has_table?(table_name)
             changes << Operations::CreateTable.new(desired)
 
             fkey_operations = desired.foreign_keys.map do |fkey|
               Operations::CreateForeignKey.new(table_name, fkey)
             end
             changes.concat(fkey_operations)
-          elsif actual && !desired
+          elsif actual_schema.has_table?(table_name) && !desired_schema.has_table?(table_name)
             changes << Operations::DropTable.new(table_name)
 
             actual.foreign_keys.each do |fkey|
               changes << Operations::DropForeignKey.new(table_name, fkey.name)
             end
           elsif actual != desired
-            field_operations = field_changes(desired.fields, actual.fields)
-            index_operations = index_changes(desired.indices, actual.indices)
-            check_operations = check_changes(desired.checks, actual.checks)
-            fkey_operations  = foreign_key_changes(table_name, desired.foreign_keys, actual.foreign_keys)
+            alter_table_operations = [
+              field_changes(desired, actual),
+              index_changes(desired, actual),
+              check_changes(desired, actual)
+            ].reduce(:+)
 
-            if field_operations.any? || index_operations.any? || check_operations.any?
+            fkey_operations = foreign_key_changes(desired, actual)
+
+            if alter_table_operations.any?
               changes << Operations::AlterTable.new(
                 table_name,
-                sort_alter_table_changes(field_operations + index_operations + check_operations)
+                sort_alter_table_changes(alter_table_operations)
               )
             end
 
@@ -44,12 +47,12 @@ module DbSchema
         enum_names = [desired_schema.enums, actual_schema.enums].flatten.map(&:name).uniq
 
         enum_changes = enum_names.each_with_object([]) do |enum_name, changes|
-          desired = desired_schema.enums.find { |enum| enum.name == enum_name }
-          actual  = actual_schema.enums.find  { |enum| enum.name == enum_name }
+          desired = desired_schema.enum(enum_name)
+          actual  = actual_schema.enum(enum_name)
 
-          if desired && !actual
+          if desired_schema.has_enum?(enum_name) && !actual_schema.has_enum?(enum_name)
             changes << Operations::CreateEnum.new(desired)
-          elsif actual && !desired
+          elsif actual_schema.has_enum?(enum_name) && !desired_schema.has_enum?(enum_name)
             changes << Operations::DropEnum.new(enum_name)
           elsif actual != desired
             fields = actual_schema.tables.flat_map do |table|
@@ -87,99 +90,99 @@ module DbSchema
       end
 
     private
-      def field_changes(desired_fields, actual_fields)
-        field_names = [desired_fields, actual_fields].flatten.map(&:name).uniq
+      def field_changes(desired_table, actual_table)
+        field_names = [desired_table.fields, actual_table.fields].flatten.map(&:name).uniq
 
-        field_names.each.with_object([]) do |field_name, table_changes|
-          desired = desired_fields.find { |field| field.name == field_name }
-          actual  = actual_fields.find  { |field| field.name == field_name }
+        field_names.each.with_object([]) do |name, table_changes|
+          desired = desired_table.field(name)
+          actual  = actual_table.field(name)
 
-          if desired && !actual
+          if desired_table.has_field?(name) && !actual_table.has_field?(name)
             table_changes << Operations::CreateColumn.new(desired)
-          elsif actual && !desired
-            table_changes << Operations::DropColumn.new(field_name)
+          elsif actual_table.has_field?(name) && !desired_table.has_field?(name)
+            table_changes << Operations::DropColumn.new(name)
           elsif actual != desired
             if (actual.type != desired.type) || (actual.attributes != desired.attributes)
               table_changes << Operations::AlterColumnType.new(
-                field_name,
+                name,
                 new_type: desired.type,
                 **desired.attributes
               )
             end
 
             if desired.primary_key? && !actual.primary_key?
-              table_changes << Operations::CreatePrimaryKey.new(field_name)
+              table_changes << Operations::CreatePrimaryKey.new(name)
             end
 
             if actual.primary_key? && !desired.primary_key?
-              table_changes << Operations::DropPrimaryKey.new(field_name)
+              table_changes << Operations::DropPrimaryKey.new(name)
             end
 
             if desired.null? && !actual.null?
-              table_changes << Operations::AllowNull.new(field_name)
+              table_changes << Operations::AllowNull.new(name)
             end
 
             if actual.null? && !desired.null?
-              table_changes << Operations::DisallowNull.new(field_name)
+              table_changes << Operations::DisallowNull.new(name)
             end
 
             if actual.default != desired.default
-              table_changes << Operations::AlterColumnDefault.new(field_name, new_default: desired.default)
+              table_changes << Operations::AlterColumnDefault.new(name, new_default: desired.default)
             end
           end
         end
       end
 
-      def index_changes(desired_indices, actual_indices)
-        index_names = [desired_indices, actual_indices].flatten.map(&:name).uniq
+      def index_changes(desired_table, actual_table)
+        index_names = [desired_table.indices, actual_table.indices].flatten.map(&:name).uniq
 
-        index_names.each.with_object([]) do |index_name, table_changes|
-          desired = desired_indices.find { |index| index.name == index_name }
-          actual  = actual_indices.find  { |index| index.name == index_name }
+        index_names.each.with_object([]) do |name, table_changes|
+          desired = desired_table.index(name)
+          actual  = actual_table.index(name)
 
-          if desired && !actual
+          if desired_table.has_index?(name) && !actual_table.has_index?(name)
             table_changes << Operations::CreateIndex.new(desired)
-          elsif actual && !desired
-            table_changes << Operations::DropIndex.new(index_name)
+          elsif actual_table.has_index?(name) && !desired_table.has_index?(name)
+            table_changes << Operations::DropIndex.new(name)
           elsif actual != desired
-            table_changes << Operations::DropIndex.new(index_name)
+            table_changes << Operations::DropIndex.new(name)
             table_changes << Operations::CreateIndex.new(desired)
           end
         end
       end
 
-      def check_changes(desired_checks, actual_checks)
-        check_names = [desired_checks, actual_checks].flatten.map(&:name).uniq
+      def check_changes(desired_table, actual_table)
+        check_names = [desired_table.checks, actual_table.checks].flatten.map(&:name).uniq
 
-        check_names.each.with_object([]) do |check_name, table_changes|
-          desired = desired_checks.find { |check| check.name == check_name }
-          actual  = actual_checks.find  { |check| check.name == check_name }
+        check_names.each.with_object([]) do |name, table_changes|
+          desired = desired_table.check(name)
+          actual  = actual_table.check(name)
 
-          if desired && !actual
+          if desired_table.has_check?(name) && !actual_table.has_check?(name)
             table_changes << Operations::CreateCheckConstraint.new(desired)
-          elsif actual && !desired
-            table_changes << Operations::DropCheckConstraint.new(check_name)
+          elsif actual_table.has_check?(name) && !desired_table.has_check?(name)
+            table_changes << Operations::DropCheckConstraint.new(name)
           elsif actual != desired
-            table_changes << Operations::DropCheckConstraint.new(check_name)
+            table_changes << Operations::DropCheckConstraint.new(name)
             table_changes << Operations::CreateCheckConstraint.new(desired)
           end
         end
       end
 
-      def foreign_key_changes(table_name, desired_foreign_keys, actual_foreign_keys)
-        key_names = [desired_foreign_keys, actual_foreign_keys].flatten.map(&:name).uniq
+      def foreign_key_changes(desired_table, actual_table)
+        key_names = [desired_table.foreign_keys, actual_table.foreign_keys].flatten.map(&:name).uniq
 
-        key_names.each.with_object([]) do |key_name, table_changes|
-          desired = desired_foreign_keys.find { |key| key.name == key_name }
-          actual  = actual_foreign_keys.find  { |key| key.name == key_name }
+        key_names.each.with_object([]) do |name, table_changes|
+          desired = desired_table.foreign_key(name)
+          actual  = actual_table.foreign_key(name)
 
-          if desired && !actual
-            table_changes << Operations::CreateForeignKey.new(table_name, desired)
-          elsif actual && !desired
-            table_changes << Operations::DropForeignKey.new(table_name, key_name)
+          if desired_table.has_foreign_key?(name) && !actual_table.has_foreign_key?(name)
+            table_changes << Operations::CreateForeignKey.new(actual_table.name, desired)
+          elsif actual_table.has_foreign_key?(name) && !desired_table.has_foreign_key?(name)
+            table_changes << Operations::DropForeignKey.new(actual_table.name, name)
           elsif actual != desired
-            table_changes << Operations::DropForeignKey.new(table_name, key_name)
-            table_changes << Operations::CreateForeignKey.new(table_name, desired)
+            table_changes << Operations::DropForeignKey.new(actual_table.name, name)
+            table_changes << Operations::CreateForeignKey.new(actual_table.name, desired)
           end
         end
       end
