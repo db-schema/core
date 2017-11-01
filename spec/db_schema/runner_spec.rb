@@ -8,87 +8,87 @@ RSpec.describe DbSchema::Runner do
     end
   end
 
-  before(:each) do
-    database.create_table :people do
-      primary_key :id
-      column :name,         :Varchar
-      column :address,      :Varchar, null: false, size: 150
-      column :country_name, :Varchar
-      column :created_at,   :Timestamptz
-
-      index :address
-
-      constraint :address_length, Sequel.function(:char_length, :address) => 3..50
-    end
-
-    database.create_table :countries do
-      primary_key :id
-      column :name, :varchar, null: false
-
-      index :name, unique: true
-    end
-  end
-
-  let(:users_fields) do
-    [
-      DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-      DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
-      DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
-      DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
-      DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false, default: :'now()'),
-      DbSchema::Definitions::Field::Interval.new(:period, fields: :second),
-      DbSchema::Definitions::Field::Bit.new(:some_bit),
-      DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
-      DbSchema::Definitions::Field::Varbit.new(:some_varbit, length: 250),
-      DbSchema::Definitions::Field::Array.new(:names, element_type: :varchar)
-    ]
-  end
-
-  let(:users_indices) do
-    [
-      DbSchema::Definitions::Index.new(
-        name:    :index_users_on_name,
-        columns: [DbSchema::Definitions::Index::Expression.new('lower(name)')]
-      ),
-      DbSchema::Definitions::Index.new(
-        name:      :index_users_on_email,
-        columns:   [DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)],
-        unique:    true,
-        condition: 'email IS NOT NULL'
-      ),
-      DbSchema::Definitions::Index.new(
-        name:    :users_names_index,
-        columns: [DbSchema::Definitions::Index::TableField.new(:names)],
-        type:    :gin
-      )
-    ]
-  end
-
-  let(:users_checks) {
-    [
-      DbSchema::Definitions::CheckConstraint.new(
-        name:      :min_name_length,
-        condition: 'character_length(name::text) > 4'
-      )
-    ]
-  }
-
-  let(:users_foreign_keys) do
-    [
-      DbSchema::Definitions::ForeignKey.new(
-        name:      :users_country_id_fkey,
-        fields:    [:country_id],
-        table:     :countries,
-        on_delete: :set_null
-      )
-    ]
-  end
-
-  let(:schema) { DbSchema::Reader.read_schema(database) }
-
-  subject { DbSchema::Runner.new(changes, database) }
-
   describe '#run!' do
+    before(:each) do
+      database.create_table :people do
+        primary_key :id
+        column :name,         :Varchar
+        column :address,      :Varchar, null: false, size: 150
+        column :country_name, :Varchar
+        column :created_at,   :Timestamptz
+
+        index :address
+
+        constraint :address_length, Sequel.function(:char_length, :address) => 3..50
+      end
+
+      database.create_table :countries do
+        primary_key :id
+        column :name, :varchar, null: false
+
+        index :name, unique: true
+      end
+    end
+
+    let(:users_fields) do
+      [
+        DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+        DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
+        DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
+        DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
+        DbSchema::Definitions::Field::Timestamp.new(:created_at, null: false, default: :'now()'),
+        DbSchema::Definitions::Field::Interval.new(:period, fields: :second),
+        DbSchema::Definitions::Field::Bit.new(:some_bit),
+        DbSchema::Definitions::Field::Bit.new(:some_bits, length: 7),
+        DbSchema::Definitions::Field::Varbit.new(:some_varbit, length: 250),
+        DbSchema::Definitions::Field::Array.new(:names, element_type: :varchar)
+      ]
+    end
+
+    let(:users_indices) do
+      [
+        DbSchema::Definitions::Index.new(
+          name:    :index_users_on_name,
+          columns: [DbSchema::Definitions::Index::Expression.new('lower(name)')]
+        ),
+        DbSchema::Definitions::Index.new(
+          name:      :index_users_on_email,
+          columns:   [DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)],
+          unique:    true,
+          condition: 'email IS NOT NULL'
+        ),
+        DbSchema::Definitions::Index.new(
+          name:    :users_names_index,
+          columns: [DbSchema::Definitions::Index::TableField.new(:names)],
+          type:    :gin
+        )
+      ]
+    end
+
+    let(:users_checks) {
+      [
+        DbSchema::Definitions::CheckConstraint.new(
+          name:      :min_name_length,
+          condition: 'character_length(name::text) > 4'
+        )
+      ]
+    }
+
+    let(:users_foreign_keys) do
+      [
+        DbSchema::Definitions::ForeignKey.new(
+          name:      :users_country_id_fkey,
+          fields:    [:country_id],
+          table:     :countries,
+          on_delete: :set_null
+        )
+      ]
+    end
+
+    let(:schema) { DbSchema::Reader.read_schema(database) }
+
+    subject { DbSchema::Runner.new(changes, database) }
+
     context 'with CreateTable & DropTable' do
       let(:changes) do
         [
@@ -626,11 +626,6 @@ RSpec.describe DbSchema::Runner do
         expect(schema).to have_extension(:'uuid-ossp')
         expect(schema).not_to have_extension(:hstore)
       end
-
-      after(:each) do
-        database.run('DROP EXTENSION ltree')
-        database.run('DROP EXTENSION "uuid-ossp"')
-      end
     end
 
     context 'with ExecuteQuery' do
@@ -646,6 +641,10 @@ RSpec.describe DbSchema::Runner do
         expect(schema).not_to have_table(:people)
         expect(schema).to have_table(:users)
       end
+    end
+
+    after(:each) do
+      clean!
     end
   end
 
@@ -682,24 +681,6 @@ RSpec.describe DbSchema::Runner do
           expect(DbSchema::Runner.map_options(type, options)).to eq(null: false)
         end
       end
-    end
-  end
-
-  after(:each) do
-    schema.tables.each do |table|
-      table.foreign_keys.each do |foreign_key|
-        database.alter_table(table.name) do
-          drop_foreign_key([], name: foreign_key.name)
-        end
-      end
-    end
-
-    schema.enums.each do |enum|
-      database.drop_enum(enum.name, cascade: true)
-    end
-
-    schema.tables.each do |table|
-      database.drop_table(table.name)
     end
   end
 end

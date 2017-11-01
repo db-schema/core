@@ -544,24 +544,6 @@ RSpec.describe DbSchema::Migrator do
   end
 
   after(:each) do
-    database.tables.each do |table_name|
-      database.foreign_key_list(table_name).each do |foreign_key|
-        database.alter_table(table_name) do
-          drop_foreign_key([], name: foreign_key[:name])
-        end
-      end
-    end
-
-    DbSchema::Reader.read_enums(database).each do |enum|
-      database.drop_enum(enum.name, cascade: true)
-    end
-
-    database.tables.each do |table_name|
-      database.drop_table(table_name)
-    end
-
-    DbSchema::Reader.read_extensions(database).each do |extension|
-      database.run("DROP EXTENSION #{extension.name}")
-    end
+    clean!
   end
 end
