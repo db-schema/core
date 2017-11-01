@@ -33,10 +33,10 @@ RSpec.describe DbSchema::Configuration do
       it "parses the URL and takes it's non-nil attributes" do
         configuration = subject.merge(url: url)
 
-        expect(configuration.host).to eq('some_host')
-        expect(configuration.port).to eq(5432)
+        expect(configuration.host).to     eq('some_host')
+        expect(configuration.port).to     eq(5432)
         expect(configuration.database).to eq('db_schema')
-        expect(configuration.user).to eq('user')
+        expect(configuration.user).to     eq('user')
         expect(configuration.password).to eq('password')
       end
     end
