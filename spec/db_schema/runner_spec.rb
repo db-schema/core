@@ -8,14 +8,6 @@ RSpec.describe DbSchema::Runner do
     end
   end
 
-  let(:enums) do
-    DbSchema::Reader.read_enums(database)
-  end
-
-  let(:extensions) do
-    DbSchema::Reader.read_extensions(database)
-  end
-
   before(:each) do
     database.create_table :people do
       primary_key :id
@@ -92,6 +84,8 @@ RSpec.describe DbSchema::Runner do
     ]
   end
 
+  let(:schema) { DbSchema::Reader.read_schema(database) }
+
   subject { DbSchema::Runner.new(changes, database) }
 
   describe '#run!' do
@@ -113,63 +107,47 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        expect(database.tables).not_to include(:people)
-        expect(database.tables).to include(:users)
+        expect(schema).not_to have_table(:people)
+        expect(schema).to have_table(:users)
 
         expect(database.primary_key(:users)).to eq('id')
         expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
 
-        users = DbSchema::Reader.read_table(:users, database)
-        id, name, email, country_id, created_at, period, some_bit, some_bits, some_varbit, names = users.fields
-        expect(id.name).to eq(:id)
-        expect(id).to be_a(DbSchema::Definitions::Field::Integer)
-        expect(id).to be_primary_key
-        expect(name.name).to eq(:name)
-        expect(name).to be_a(DbSchema::Definitions::Field::Varchar)
-        expect(name.options[:length]).to eq(50)
-        expect(name).not_to be_null
-        expect(email.name).to eq(:email)
-        expect(email).to be_a(DbSchema::Definitions::Field::Varchar)
-        expect(email.default).to eq('mail@example.com')
-        expect(created_at.name).to eq(:created_at)
-        expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
-        expect(created_at).not_to be_null
-        expect(created_at.default).to eq(:'now()')
-        expect(period.name).to eq(:period)
-        expect(period).to be_a(DbSchema::Definitions::Field::Interval)
-        expect(period.options[:fields]).to eq(:second)
-        expect(some_bit.name).to eq(:some_bit)
-        expect(some_bit).to be_a(DbSchema::Definitions::Field::Bit)
-        expect(some_bit.options[:length]).to eq(1)
-        expect(some_bits.name).to eq(:some_bits)
-        expect(some_bits).to be_a(DbSchema::Definitions::Field::Bit)
-        expect(some_bits.options[:length]).to eq(7)
-        expect(some_varbit.name).to eq(:some_varbit)
-        expect(some_varbit).to be_a(DbSchema::Definitions::Field::Varbit)
-        expect(some_varbit.options[:length]).to eq(250)
-        expect(names.name).to eq(:names)
-        expect(names).to be_a(DbSchema::Definitions::Field::Array)
-        expect(names.options[:element_type]).to eq(:varchar)
+        users = schema.table(:users)
 
-        indices = DbSchema::Reader::Postgres.indices_data_for(:users, database)
-        name_index  = indices.find { |index| index[:name] == :index_users_on_name }
-        email_index = indices.find { |index| index[:name] == :index_users_on_email }
-        names_index = indices.find { |index| index[:name] == :users_names_index }
+        expect(users.field(:id).type).to eq(:integer)
+        expect(users.field(:id)).to be_primary_key
+        expect(users.field(:name).type).to eq(:varchar)
+        expect(users.field(:name).options[:length]).to eq(50)
+        expect(users.field(:name)).not_to be_null
+        expect(users.field(:email).type).to eq(:varchar)
+        expect(users.field(:email).default).to eq('mail@example.com')
+        expect(users.field(:created_at).type).to eq(:timestamp)
+        expect(users.field(:created_at)).not_to be_null
+        expect(users.field(:created_at).default).to eq(:'now()')
+        expect(users.field(:period).type).to eq(:interval)
+        expect(users.field(:period).options[:fields]).to eq(:second)
+        expect(users.field(:some_bit).type).to eq(:bit)
+        expect(users.field(:some_bit).options[:length]).to eq(1)
+        expect(users.field(:some_bits).type).to eq(:bit)
+        expect(users.field(:some_bits).options[:length]).to eq(7)
+        expect(users.field(:some_varbit).type).to eq(:varbit)
+        expect(users.field(:some_varbit).options[:length]).to eq(250)
+        expect(users.field(:names)).to be_array
+        expect(users.field(:names).options[:element_type]).to eq(:varchar)
 
-        expect(name_index[:columns]).to eq([DbSchema::Definitions::Index::Expression.new('lower(name::text)')])
-        expect(name_index[:unique]).to eq(false)
-        expect(name_index[:type]).to eq(:btree)
-        expect(email_index[:columns]).to eq([DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)])
-        expect(email_index[:unique]).to eq(true)
-        expect(email_index[:type]).to eq(:btree)
-        expect(email_index[:condition]).to eq('email IS NOT NULL')
-        expect(names_index[:columns]).to eq([DbSchema::Definitions::Index::TableField.new(:names)])
-        expect(names_index[:type]).to eq(:gin)
+        expect(users.index(:index_users_on_name).columns).to eq([DbSchema::Definitions::Index::Expression.new('lower(name::text)')])
+        expect(users.index(:index_users_on_name)).not_to be_unique
+        expect(users.index(:index_users_on_name).type).to eq(:btree)
+        expect(users.index(:index_users_on_email).columns).to eq([DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)])
+        expect(users.index(:index_users_on_email)).to be_unique
+        expect(users.index(:index_users_on_email).type).to eq(:btree)
+        expect(users.index(:index_users_on_email).condition).to eq('email IS NOT NULL')
+        expect(users.index(:users_names_index).columns).to eq([DbSchema::Definitions::Index::TableField.new(:names)])
+        expect(users.index(:users_names_index).type).to eq(:gin)
 
         expect(users.checks.count).to eq(1)
-        name_length_check = users.checks.first
-        expect(name_length_check.name).to eq(:min_name_length)
-        expect(name_length_check.condition).to eq('character_length(name::text) > 4')
+        expect(users.check(:min_name_length).condition).to eq('character_length(name::text) > 4')
       end
     end
 
@@ -181,7 +159,6 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        schema = DbSchema::Reader.read_schema(database)
         expect(schema).not_to have_table(:people)
         expect(schema).to have_table(:users)
       end
@@ -217,24 +194,18 @@ RSpec.describe DbSchema::Runner do
           expect(database.primary_key(:people)).to eq('uid')
           expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
-          people = DbSchema::Reader.read_table(:people, database)
-          address, country_name, created_at, first_name, last_name, age, uid, updated_at = people.fields
-          expect(address.name).to eq(:address)
-          expect(created_at.name).to eq(:created_at)
-          expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamptz)
-          expect(first_name.name).to eq(:first_name)
-          expect(first_name).to be_a(DbSchema::Definitions::Field::Varchar)
-          expect(last_name.name).to eq(:last_name)
-          expect(last_name).to be_a(DbSchema::Definitions::Field::Varchar)
-          expect(last_name.options[:length]).to eq(30)
-          expect(last_name).not_to be_null
-          expect(age.name).to eq(:age)
-          expect(age).to be_a(DbSchema::Definitions::Field::Integer)
-          expect(age).not_to be_null
-          expect(uid.name).to eq(:uid)
-          expect(updated_at.name).to eq(:updated_at)
-          expect(updated_at).to be_a(DbSchema::Definitions::Field::Timestamp)
-          expect(updated_at.default).to eq(:'now()')
+          people = schema.table(:people)
+          expect(people).to have_field(:address)
+          expect(people.field(:created_at).type).to eq(:timestamptz)
+          expect(people.field(:first_name).type).to eq(:varchar)
+          expect(people.field(:last_name).type).to eq(:varchar)
+          expect(people.field(:last_name).options[:length]).to eq(30)
+          expect(people.field(:last_name)).not_to be_null
+          expect(people.field(:age).type).to eq(:integer)
+          expect(people.field(:age)).not_to be_null
+          expect(people.field(:uid)).to be_primary_key
+          expect(people.field(:updated_at).type).to eq(:timestamp)
+          expect(people.field(:updated_at).default).to eq(:'now()')
         end
       end
 
@@ -248,10 +219,8 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          id, full_name = database.schema(:people)
-          expect(id.first).to eq(:id)
-          expect(full_name.first).to eq(:full_name)
-          expect(full_name.last[:db_type]).to eq('character varying')
+          expect(schema.table(:people)).to have_field(:full_name)
+          expect(schema.table(:people).field(:full_name).type).to eq(:varchar)
         end
       end
 
@@ -265,8 +234,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          id, name = database.schema(:people)
-          expect(name.last[:db_type]).to eq('text')
+          expect(schema.table(:people).field(:name).type).to eq(:text)
         end
 
         context 'that changes field attributes' do
@@ -281,14 +249,13 @@ RSpec.describe DbSchema::Runner do
           it 'applies all the changes' do
             subject.run!
 
-            people = DbSchema::Reader.read_table(:people, database)
-            address, country_name, created_at = people.fields.last(3)
+            people = schema.table(:people)
 
-            expect(address).to be_a(DbSchema::Definitions::Field::Varchar)
-            expect(address.options[:length]).to be_nil
-            expect(country_name).to be_a(DbSchema::Definitions::Field::Varchar)
-            expect(country_name.options[:length]).to eq(40)
-            expect(created_at).to be_a(DbSchema::Definitions::Field::Timestamp)
+            expect(people.field(:address).type).to eq(:varchar)
+            expect(people.field(:address).options[:length]).to be_nil
+            expect(people.field(:country_name).type).to eq(:varchar)
+            expect(people.field(:country_name).options[:length]).to eq(40)
+            expect(people.field(:created_at).type).to eq(:timestamp)
           end
         end
 
@@ -302,8 +269,7 @@ RSpec.describe DbSchema::Runner do
           it 'applies all the changes' do
             subject.run!
 
-            people = DbSchema::Reader.read_table(:people, database)
-            expect(people[:name].type).to eq(:integer)
+            expect(schema.table(:people).field(:name).type).to eq(:integer)
           end
         end
       end
@@ -347,9 +313,8 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          id, name, address = database.schema(:people)
-          expect(name.last[:allow_null]).to eq(false)
-          expect(address.last[:allow_null]).to eq(true)
+          expect(schema.table(:people).field(:name)).not_to be_null
+          expect(schema.table(:people).field(:address)).to be_null
         end
       end
 
@@ -363,8 +328,7 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          name = database.schema(:people)[1]
-          expect(name.last[:default]).to eq("'John Smith'::character varying")
+          expect(schema.table(:people).field(:name).default).to eq('John Smith')
         end
 
         context 'with an expression' do
@@ -377,8 +341,7 @@ RSpec.describe DbSchema::Runner do
           it 'applies all the changes' do
             subject.run!
 
-            created_at = database.schema(:people).last
-            expect(created_at.last[:default]).to eq('now()')
+            expect(schema.table(:people).field(:created_at).default).to eq(:'now()')
           end
         end
       end
@@ -410,22 +373,24 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          indices = DbSchema::Reader::Postgres.indices_data_for(:people, database)
-          expect(indices.count).to eq(2)
-          name_index = indices.find { |index| index[:name] == :people_name_index }
-          interests_index = indices.find { |index| index[:name] == :people_interests_index }
+          expect(schema.table(:people)).not_to have_index(:people_address_index)
+          expect(schema.table(:people)).to have_index(:people_name_index)
+          expect(schema.table(:people)).to have_index(:people_interests_index)
 
-          expect(name_index[:columns]).to eq([
+          name_index = schema.table(:people).index(:people_name_index)
+          expect(name_index.columns).to eq([
             DbSchema::Definitions::Index::Expression.new('lower(name::text)', order: :desc)
           ])
-          expect(name_index[:unique]).to eq(false)
-          expect(name_index[:type]).to eq(:btree)
-          expect(name_index[:condition]).to eq('name IS NOT NULL')
+          expect(name_index).not_to be_unique
+          expect(name_index.type).to eq(:btree)
+          expect(name_index.condition).to eq('name IS NOT NULL')
+
+          interests_index = schema.table(:people).index(:people_interests_index)
           # non-BTree indexes don't support index ordering
-          expect(interests_index[:columns]).to eq([
+          expect(interests_index.columns).to eq([
             DbSchema::Definitions::Index::TableField.new(:interests)
           ])
-          expect(interests_index[:type]).to eq(:gin)
+          expect(interests_index.type).to eq(:gin)
         end
       end
 
@@ -445,11 +410,9 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          people = DbSchema::Reader.read_table(:people, database)
-          expect(people.checks.count).to eq(1)
-          address_check = people.checks.first
-          expect(address_check.name).to eq(:min_address_length)
-          expect(address_check.condition).to eq('character_length(address::text) >= 10')
+          expect(schema.table(:people)).not_to have_check(:address_length)
+          expect(schema.table(:people)).to have_check(:min_address_length)
+          expect(schema.table(:people).check(:min_address_length).condition).to eq('character_length(address::text) >= 10')
         end
       end
     end
@@ -499,19 +462,21 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        expect(database.foreign_key_list(:people).count).to eq(2)
-        city_id_fkey, country_name_fkey = database.foreign_key_list(:people)
-        expect(city_id_fkey[:name]).to eq(:people_city_id_fkey)
-        expect(city_id_fkey[:columns]).to eq([:city_id])
-        expect(city_id_fkey[:table]).to eq(:cities)
-        expect(city_id_fkey[:on_delete]).to eq(:set_null)
-        expect(city_id_fkey[:on_update]).to eq(:no_action)
-        expect(country_name_fkey[:name]).to eq(:people_country_name_fkey)
-        expect(country_name_fkey[:columns]).to eq([:country_name])
-        expect(country_name_fkey[:table]).to eq(:countries)
-        expect(country_name_fkey[:key]).to eq([:name])
-        expect(country_name_fkey[:on_delete]).to eq(:no_action)
-        expect(country_name_fkey[:on_update]).to eq(:cascade)
+        people = schema.table(:people)
+        expect(people).not_to have_foreign_key(:people_city_name_fkey)
+        expect(people).to have_foreign_key(:people_city_id_fkey)
+        expect(people).to have_foreign_key(:people_country_name_fkey)
+
+        expect(people.foreign_key(:people_city_id_fkey).fields).to eq([:city_id])
+        expect(people.foreign_key(:people_city_id_fkey).table).to eq(:cities)
+        expect(people.foreign_key(:people_city_id_fkey).on_delete).to eq(:set_null)
+        expect(people.foreign_key(:people_city_id_fkey).on_update).to eq(:no_action)
+
+        expect(people.foreign_key(:people_country_name_fkey).fields).to eq([:country_name])
+        expect(people.foreign_key(:people_country_name_fkey).table).to eq(:countries)
+        expect(people.foreign_key(:people_country_name_fkey).keys).to eq([:name])
+        expect(people.foreign_key(:people_country_name_fkey).on_delete).to eq(:no_action)
+        expect(people.foreign_key(:people_country_name_fkey).on_update).to eq(:cascade)
       end
     end
 
@@ -532,9 +497,9 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        expect(enums).to eq([
-          DbSchema::Definitions::Enum.new(:happiness, %i(happy ok sad))
-        ])
+        expect(schema).to have_enum(:happiness)
+        expect(schema.enum(:happiness).values).to eq(%i(happy ok sad))
+        expect(schema).not_to have_enum(:status)
       end
     end
 
@@ -552,7 +517,6 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        schema = DbSchema::Reader.read_schema(database)
         expect(schema).not_to have_enum(:status)
         expect(schema).to have_enum(:'user status')
       end
@@ -578,8 +542,8 @@ RSpec.describe DbSchema::Runner do
       it 'replaces the enum with a new one' do
         subject.run!
 
-        expect(enums.count).to eq(1)
-        expect(enums.first.values).to eq(%i(happy ok sad))
+        expect(schema).to have_enum(:happiness)
+        expect(schema.enum(:happiness).values).to eq(%i(happy ok sad))
       end
 
       context 'with existing fields of this enum type' do
@@ -599,7 +563,7 @@ RSpec.describe DbSchema::Runner do
         it 'converts existing fields to the new type' do
           subject.run!
 
-          field = DbSchema::Reader.read_table(:users, database).fields.last
+          field = schema.table(:users).field(:happiness)
           expect(field.type).to eq(:happiness)
           expect(field.default).to eq('ok')
         end
@@ -630,8 +594,8 @@ RSpec.describe DbSchema::Runner do
         it 'converts existing fields to the new type' do
           subject.run!
 
-          field = DbSchema::Reader.read_table(:users, database)[:roles]
-          expect(field.type).to eq(:array)
+          field = schema.table(:users).field(:roles)
+          expect(field).to be_array
           expect(field.attributes[:element_type]).to eq(:user_role)
           expect(field.default).to eq('{user}')
         end
@@ -658,10 +622,9 @@ RSpec.describe DbSchema::Runner do
       it 'applies all the changes' do
         subject.run!
 
-        expect(extensions).to eq([
-          DbSchema::Definitions::Extension.new(:ltree),
-          DbSchema::Definitions::Extension.new(:'uuid-ossp')
-        ])
+        expect(schema).to have_extension(:ltree)
+        expect(schema).to have_extension(:'uuid-ossp')
+        expect(schema).not_to have_extension(:hstore)
       end
 
       after(:each) do
@@ -680,7 +643,6 @@ RSpec.describe DbSchema::Runner do
       it 'runs the query' do
         subject.run!
 
-        schema = DbSchema::Reader.read_schema(database)
         expect(schema).not_to have_table(:people)
         expect(schema).to have_table(:users)
       end
@@ -724,20 +686,20 @@ RSpec.describe DbSchema::Runner do
   end
 
   after(:each) do
-    database.tables.each do |table_name|
-      database.foreign_key_list(table_name).each do |foreign_key|
-        database.alter_table(table_name) do
-          drop_foreign_key([], name: foreign_key[:name])
+    schema.tables.each do |table|
+      table.foreign_keys.each do |foreign_key|
+        database.alter_table(table.name) do
+          drop_foreign_key([], name: foreign_key.name)
         end
       end
     end
 
-    enums.each do |enum|
+    schema.enums.each do |enum|
       database.drop_enum(enum.name, cascade: true)
     end
 
-    database.tables.each do |table_name|
-      database.drop_table(table_name)
+    schema.tables.each do |table|
+      database.drop_table(table.name)
     end
   end
 end
