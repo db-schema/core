@@ -132,7 +132,7 @@ RSpec.describe DbSchema do
       expect(cities.field(:lng).type).to eq(:numeric)
       expect(cities.field(:lng).options).to eq(precision: 6, scale: 3)
 
-      expect(cities.indices).to be_empty
+      expect(cities.indexes).to be_empty
 
       expect(cities.foreign_key(:cities_country_id_fkey).fields).to eq([:country_id])
       expect(cities.foreign_key(:cities_country_id_fkey).table).to eq(:countries)

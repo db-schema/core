@@ -37,7 +37,7 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Field::Ltree.new(:path),
         DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:user_status)
       ],
-      indices: [
+      indexes: [
         DbSchema::Definitions::Index.new(
           name: :lower_name_index,
           columns: [
@@ -83,7 +83,7 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Table.new(
           :users,
           fields:  fields,
-          indices: raw_table.indices,
+          indexes: raw_table.indexes,
           checks:  raw_table.checks
         )
       )

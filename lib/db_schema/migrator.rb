@@ -31,7 +31,7 @@ module DbSchema
         table = Definitions::Table.new(
           name,
           fields:       table_yielder.fields,
-          indices:      table_yielder.indices,
+          indexes:      table_yielder.indexes,
           checks:       table_yielder.checks,
           foreign_keys: table_yielder.foreign_keys
         )

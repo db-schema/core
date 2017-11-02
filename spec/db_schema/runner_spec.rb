@@ -45,7 +45,7 @@ RSpec.describe DbSchema::Runner do
       ]
     end
 
-    let(:users_indices) do
+    let(:users_indexes) do
       [
         DbSchema::Definitions::Index.new(
           name:    :index_users_on_name,
@@ -96,7 +96,7 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Definitions::Table.new(
               :users,
               fields:  users_fields,
-              indices: users_indices,
+              indexes: users_indexes,
               checks:  users_checks
             )
           ),

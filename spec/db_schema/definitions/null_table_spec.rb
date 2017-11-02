@@ -13,9 +13,9 @@ RSpec.describe DbSchema::Definitions::NullTable do
     end
   end
 
-  describe '#indices' do
+  describe '#indexes' do
     it 'returns an empty array' do
-      expect(subject.indices).to eq([])
+      expect(subject.indexes).to eq([])
     end
   end
 

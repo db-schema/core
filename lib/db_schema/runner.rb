@@ -52,7 +52,7 @@ module DbSchema
           end
         end
 
-        change.table.indices.each do |index|
+        change.table.indexes.each do |index|
           index(
             index.columns_to_sequel,
             name:   index.name,

@@ -160,7 +160,7 @@ RSpec.describe DbSchema::Reader do
         users = schema.table(:users)
         posts = schema.table(:posts)
 
-        expect(users.indices.count).to eq(4)
+        expect(users.indexes.count).to eq(4)
 
         expect(users.index(:users_index).columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:email),
@@ -183,7 +183,7 @@ RSpec.describe DbSchema::Reader do
         ])
         expect(users.index(:users_name_index).type).to eq(:spgist)
 
-        expect(posts.indices.count).to eq(1)
+        expect(posts.indexes.count).to eq(1)
         expect(posts.index(:posts_user_id_index).columns).to eq([
           DbSchema::Definitions::Index::TableField.new(:user_id)
         ])

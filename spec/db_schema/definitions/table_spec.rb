@@ -11,7 +11,7 @@ RSpec.describe DbSchema::Definitions::Table do
         DbSchema::Definitions::Field::Varchar.new(:last_name),
         DbSchema::Definitions::Field::Integer.new(:city_id, null: false)
       ],
-      indices: [
+      indexes: [
         DbSchema::Definitions::Index.new(
           name: :users_phone_index,
           columns: [
@@ -70,7 +70,7 @@ RSpec.describe DbSchema::Definitions::Table do
   describe '#index' do
     context 'with a name of an existing index' do
       it 'returns the index definition' do
-        expect(subject.index(:users_name_index)).to eq(subject.indices.last)
+        expect(subject.index(:users_name_index)).to eq(subject.indexes.last)
       end
     end
 

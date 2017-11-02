@@ -136,8 +136,8 @@ RSpec.describe DbSchema::DSL do
       users = schema.table(:users)
       posts = schema.table(:posts)
 
-      expect(users.indices.count).to eq(6)
-      expect(posts.indices.count).to eq(3)
+      expect(users.indexes.count).to eq(6)
+      expect(posts.indexes.count).to eq(3)
 
       expect(users.index(:users_name_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:name)
@@ -167,7 +167,7 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::Expression.new('lower(email)')
       ])
 
-      user_id_index, sorted_index, expression_index = posts.indices
+      user_id_index, sorted_index, expression_index = posts.indexes
       expect(posts.index(:posts_user_id_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:user_id)
       ])

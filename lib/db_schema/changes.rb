@@ -98,8 +98,8 @@ module DbSchema
 
       def index_changes(desired_table, actual_table)
         compare_collections(
-          desired_table.indices,
-          actual_table.indices,
+          desired_table.indexes,
+          actual_table.indexes,
           create: -> (index) { Operations::CreateIndex.new(index) },
           drop:   -> (index) { Operations::DropIndex.new(index.name) },
           change: -> (desired, actual) do

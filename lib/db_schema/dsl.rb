@@ -17,7 +17,7 @@ module DbSchema
       @schema.tables << Definitions::Table.new(
         name,
         fields:       table_yielder.fields,
-        indices:      table_yielder.indices,
+        indexes:      table_yielder.indexes,
         checks:       table_yielder.checks,
         foreign_keys: table_yielder.foreign_keys
       )
@@ -64,7 +64,7 @@ module DbSchema
       end
 
       def index(*columns, **index_options)
-        indices << TableYielder.build_index(
+        indexes << TableYielder.build_index(
           columns,
           table_name: table_name,
           **index_options
@@ -105,8 +105,8 @@ module DbSchema
         @fields ||= []
       end
 
-      def indices
-        @indices ||= []
+      def indexes
+        @indexes ||= []
       end
 
       def checks

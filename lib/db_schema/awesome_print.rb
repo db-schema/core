@@ -87,7 +87,7 @@ if defined?(AwesomePrint)
 
       def awesome_dbschema_table(object)
         data = ["fields: #{object.fields.ai}"]
-        data << "indices: #{object.indices.ai}" if object.indices.any?
+        data << "indexes: #{object.indexes.ai}" if object.indexes.any?
         data << "checks: #{object.checks.ai}" if object.checks.any?
         data << "foreign_keys: #{object.foreign_keys.ai}" if object.foreign_keys.any?
 
@@ -190,7 +190,7 @@ if defined?(AwesomePrint)
 
       def awesome_dbschema_create_table(object)
         data = ["fields: #{object.table.fields.ai}"]
-        data << "indices: #{object.table.indices.ai}" if object.table.indices.any?
+        data << "indexes: #{object.table.indexes.ai}" if object.table.indexes.any?
         data << "checks: #{object.table.checks.ai}" if object.table.checks.any?
 
         data_string = indent_lines(data.join(', '))

@@ -10,7 +10,7 @@ RSpec.describe DbSchema::Validator do
           DbSchema::Definitions::Table.new(
             :users,
             fields:  users_fields,
-            indices: users_indices
+            indexes: users_indexes
           ),
           DbSchema::Definitions::Table.new(
             :posts,
@@ -44,7 +44,7 @@ RSpec.describe DbSchema::Validator do
       ]
     end
 
-    let(:users_indices) do
+    let(:users_indexes) do
       [
         DbSchema::Definitions::Index.new(
           name: :users_name_index,
@@ -92,7 +92,7 @@ RSpec.describe DbSchema::Validator do
         ]
       end
 
-      let(:users_indices) { [] }
+      let(:users_indexes) { [] }
 
       it 'returns an invalid result with errors' do
         expect(result).not_to be_valid
@@ -103,7 +103,7 @@ RSpec.describe DbSchema::Validator do
     end
 
     context 'on a schema with index on unknown field' do
-      let(:users_indices) do
+      let(:users_indexes) do
         [
           DbSchema::Definitions::Index.new(
             name: :invalid_index,
@@ -274,7 +274,7 @@ RSpec.describe DbSchema::Validator do
         ]
       end
 
-      let(:users_indices) { [] }
+      let(:users_indexes) { [] }
 
       it 'returns an invalid result with errors' do
         expect(result).not_to be_valid

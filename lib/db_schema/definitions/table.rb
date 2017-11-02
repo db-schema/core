@@ -1,20 +1,20 @@
 module DbSchema
   module Definitions
     class Table
-      include Dry::Equalizer(:name, :fields, :indices, :checks, :foreign_keys)
-      attr_reader :name, :fields, :indices, :checks, :foreign_keys
+      include Dry::Equalizer(:name, :fields, :indexes, :checks, :foreign_keys)
+      attr_reader :name, :fields, :indexes, :checks, :foreign_keys
 
-      def initialize(name, fields: [], indices: [], checks: [], foreign_keys: [])
+      def initialize(name, fields: [], indexes: [], checks: [], foreign_keys: [])
         @name         = name.to_sym
         @fields       = fields
-        @indices      = indices
+        @indexes      = indexes
         @checks       = checks
         @foreign_keys = foreign_keys
       end
 
       def has_expressions?
         fields.any?(&:default_is_expression?) ||
-          indices.any?(&:has_expressions?) ||
+          indexes.any?(&:has_expressions?) ||
           checks.any?
       end
 
@@ -28,7 +28,7 @@ module DbSchema
       end
 
       def index(index_name)
-        indices.find { |index| index.name == index_name } || NullIndex.new
+        indexes.find { |index| index.name == index_name } || NullIndex.new
       end
 
       def has_index?(index_name)
@@ -36,13 +36,13 @@ module DbSchema
       end
 
       def has_index_on?(*field_names)
-        indices.any? do |index|
+        indexes.any? do |index|
           index.columns.none?(&:expression?) && index.columns.map(&:name) == field_names
         end
       end
 
       def has_unique_index_on?(*field_names)
-        indices.any? do |index|
+        indexes.any? do |index|
           index.unique? && index.columns.none?(&:expression?) && index.columns.map(&:name) == field_names
         end
       end
@@ -71,7 +71,7 @@ module DbSchema
         Table.new(
           new_name,
           fields:       fields,
-          indices:      indices,
+          indexes:      indexes,
           checks:       checks,
           foreign_keys: foreign_keys
         )
@@ -81,17 +81,17 @@ module DbSchema
         Table.new(
           name,
           fields:       new_fields,
-          indices:      indices,
+          indexes:      indexes,
           checks:       checks,
           foreign_keys: foreign_keys
         )
       end
 
-      def with_indices(new_indices)
+      def with_indexes(new_indexes)
         Table.new(
           name,
           fields:       fields,
-          indices:      new_indices,
+          indexes:      new_indexes,
           checks:       checks,
           foreign_keys: foreign_keys
         )
@@ -101,7 +101,7 @@ module DbSchema
         Table.new(
           name,
           fields:       fields,
-          indices:      indices,
+          indexes:      indexes,
           checks:       checks,
           foreign_keys: new_foreign_keys
         )
@@ -111,7 +111,7 @@ module DbSchema
     class NullTable < Table
       def initialize
         @fields       = []
-        @indices      = []
+        @indexes      = []
         @checks       = []
         @foreign_keys = []
       end

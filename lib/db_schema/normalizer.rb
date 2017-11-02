@@ -50,7 +50,7 @@ module DbSchema
     def hash
       @hash ||= begin
         names = schema.tables.flat_map do |table|
-          [table.name] + table.fields.map(&:name) + table.indices.map(&:name) + table.checks.map(&:name)
+          [table.name] + table.fields.map(&:name) + table.indexes.map(&:name) + table.checks.map(&:name)
         end
 
         Digest::MD5.hexdigest(names.join(','))[0..9]
@@ -76,7 +76,7 @@ module DbSchema
         operation = Operations::CreateTable.new(
           table.with_name(temporary_table_name)
             .with_fields(rename_types(table.fields))
-            .with_indices(rename_indices(table.indices))
+            .with_indexes(rename_indexes(table.indexes))
         )
 
         Runner.new([operation], connection).run!
@@ -87,7 +87,7 @@ module DbSchema
 
         temporary_table.with_name(table.name)
           .with_fields(rename_types_back(temporary_table.fields))
-          .with_indices(rename_indices_back(temporary_table.indices))
+          .with_indexes(rename_indexes_back(temporary_table.indexes))
           .with_foreign_keys(table.foreign_keys)
       end
 
@@ -115,14 +115,14 @@ module DbSchema
         end
       end
 
-      def rename_indices(indices)
-        indices.map do |index|
+      def rename_indexes(indexes)
+        indexes.map do |index|
           index.with_name(append_hash(index.name))
         end
       end
 
-      def rename_indices_back(indices)
-        indices.map do |index|
+      def rename_indexes_back(indexes)
+        indexes.map do |index|
           index.with_name(remove_hash(index.name))
         end
       end

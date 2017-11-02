@@ -78,7 +78,7 @@ SELECT conname AS name,
    AND contype = 'c'
       SQL
 
-      INDICES_QUERY = <<-SQL.freeze
+      INDEXES_QUERY = <<-SQL.freeze
    SELECT relname AS name,
           indkey AS column_positions,
           indisunique AS unique,
@@ -102,7 +102,7 @@ LEFT JOIN pg_am
   GROUP BY name, column_positions, indisunique, index_options, condition, index_type, index_oid
       SQL
 
-      EXPRESSION_INDICES_QUERY = <<-SQL.freeze
+      EXPRESSION_INDEXES_QUERY = <<-SQL.freeze
     WITH index_ids AS (SELECT unnest(?) AS index_id),
          elements AS (SELECT unnest(?) AS element)
   SELECT index_id,
@@ -142,7 +142,7 @@ SELECT extname
             build_field(column_data, primary_key: column_data[:name] == primary_key_name)
           end
 
-          indices = indices_data_for(table_name, connection).map do |index_data|
+          indexes = indexes_data_for(table_name, connection).map do |index_data|
             Definitions::Index.new(index_data)
           end.sort_by(&:name)
 
@@ -160,21 +160,21 @@ SELECT extname
           Definitions::Table.new(
             table_name,
             fields:       fields,
-            indices:      indices,
+            indexes:      indexes,
             checks:       checks,
             foreign_keys: foreign_keys
           )
         end
 
-        def indices_data_for(table_name, connection)
+        def indexes_data_for(table_name, connection)
           column_names = connection[COLUMN_NAMES_QUERY, table_name.to_s].reduce({}) do |names, column|
             names.merge(column[:pos] => column[:name].to_sym)
           end
 
-          indices_data     = connection[INDICES_QUERY, table_name.to_s].to_a
-          expressions_data = index_expressions_data(indices_data, connection)
+          indexes_data     = connection[INDEXES_QUERY, table_name.to_s].to_a
+          expressions_data = index_expressions_data(indexes_data, connection)
 
-          indices_data.map do |index|
+          indexes_data.map do |index|
             positions = index[:column_positions].split(' ').map(&:to_i)
             options   = index[:index_options].split(' ').map(&:to_i)
 
@@ -227,10 +227,10 @@ SELECT extname
         end
 
       private
-        def index_expressions_data(indices_data, connection)
+        def index_expressions_data(indexes_data, connection)
           all_positions, max_position = {}, 0
 
-          indices_data.each do |index_data|
+          indexes_data.each do |index_data|
             positions = index_data[:column_positions].split(' ').map(&:to_i)
             expression_positions = positions.each_index.select { |i| positions[i].zero? }
 
@@ -242,7 +242,7 @@ SELECT extname
 
           if all_positions.any?
             connection[
-              EXPRESSION_INDICES_QUERY,
+              EXPRESSION_INDEXES_QUERY,
               Sequel.pg_array(all_positions.keys),
               Sequel.pg_array((1..max_position.succ).to_a)
             ].each_with_object({}) do |index_data, indexes_data|

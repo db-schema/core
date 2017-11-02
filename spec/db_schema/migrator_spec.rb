@@ -20,7 +20,7 @@ RSpec.describe DbSchema::Migrator do
               DbSchema::Definitions::Field::Varchar.new(:phone),
               DbSchema::Definitions::Field::Timestamptz.new(:created_at)
             ],
-            indices: [
+            indexes: [
               DbSchema::Definitions::Index.new(
                 name: :people_phone_index,
                 columns: [DbSchema::Definitions::Index::TableField.new(:phone)],

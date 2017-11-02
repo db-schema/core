@@ -125,7 +125,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:status)
         ]
 
-        indices = [
+        indexes = [
           DbSchema::Definitions::Index.new(
             name:      :users_name_index,
             columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
@@ -166,7 +166,7 @@ RSpec.describe DbSchema::Changes do
             DbSchema::Definitions::Table.new(
               :users,
               fields:       fields,
-              indices:      indices,
+              indexes:      indexes,
               checks:       checks,
               foreign_keys: foreign_keys
             )
@@ -186,7 +186,7 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Definitions::Field::Integer.new(:status)
         ]
 
-        indices = [
+        indexes = [
           DbSchema::Definitions::Index.new(
             name:    :users_name_index,
             columns: [DbSchema::Definitions::Index::TableField.new(:name)]
@@ -223,7 +223,7 @@ RSpec.describe DbSchema::Changes do
             DbSchema::Definitions::Table.new(
               :users,
               fields:       fields,
-              indices:      indices,
+              indexes:      indexes,
               checks:       checks,
               foreign_keys: foreign_keys
             )
