@@ -1,4 +1,4 @@
-# DbSchema [![Build Status](https://travis-ci.org/7even/db_schema.svg?branch=master)](https://travis-ci.org/7even/db_schema) [![Gem Version](https://badge.fury.io/rb/db_schema.svg)](https://badge.fury.io/rb/db_schema) [![Join the chat at https://gitter.im/7even/db_schema](https://badges.gitter.im/7even/db_schema.svg)](https://gitter.im/7even/db_schema?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# DbSchema [![Build Status](https://travis-ci.org/db-schema/core.svg?branch=master)](https://travis-ci.org/db-schema/core) [![Gem Version](https://badge.fury.io/rb/db_schema.svg)](https://badge.fury.io/rb/db_schema) [![Join the chat at https://gitter.im/7even/db_schema](https://badges.gitter.im/7even/db_schema.svg)](https://gitter.im/7even/db_schema?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 DbSchema is an opinionated database schema management tool that lets you maintain your DB schema with a single ruby file.
 
@@ -83,7 +83,7 @@ DbSchema.configure(
 ```
 
 There is also a Rails' `database.yml`-compatible `configure_from_yaml` method. DbSchema configuration
-is discussed in detail [here](https://github.com/7even/db_schema/wiki/Configuration).
+is discussed in detail [here](https://github.com/db-schema/core/wiki/Configuration).
 
 After DbSchema is configured you can load your schema definition file:
 
@@ -113,7 +113,7 @@ DbSchema.describe do |db|
 end
 ```
 
-Database schema definition DSL is documented [here](https://github.com/7even/db_schema/wiki/Schema-definition-DSL).
+Database schema definition DSL is documented [here](https://github.com/db-schema/core/wiki/Schema-definition-DSL).
 
 If you want to analyze your database structure in any way from your app (e.g. defining methods
 with `#define_method` for each enum value) you can use `DbSchema.current_schema` - it returns
@@ -121,7 +121,7 @@ a cached copy of the database structure as a `DbSchema::Definitions::Schema` obj
 can query in different ways. It is available after the schema was applied by DbSchema
 (`DbSchema.describe` remembers the current schema of the database and exposes it
 at `.current_schema`). Documentation for schema analysis DSL can be found
-[here](https://github.com/7even/db_schema/wiki/Schema-analysis-DSL).
+[here](https://github.com/db-schema/core/wiki/Schema-analysis-DSL).
 
 ### Production setup
 
@@ -217,12 +217,12 @@ instead you have to provide some conditions required to run the migration (the g
 conditions that a) will only trigger if the migration wasn't applied yet and b) are necessary for the
 migration to work) - like "rename the `users`
 table to `people` only if the database has a `users` table" (DbSchema also provides
-a [simple DSL](https://github.com/7even/db_schema/wiki/Schema-analysis-DSL) for schema analysis).
+a [simple DSL](https://github.com/db-schema/core/wiki/Schema-analysis-DSL) for schema analysis).
 This way the migration won't be applied again and the whole DbSchema process stays idempotent.
 Also you don't have to keep these migrations forever - once a migration is applied to databases
 in all environments you can safely delete it (though you can give your teammates a week or two to keep up).
 
-Conditional migrations are described [here](https://github.com/7even/db_schema/wiki/Conditional-Migrations).
+Conditional migrations are described [here](https://github.com/db-schema/core/wiki/Conditional-Migrations).
 
 ## Known problems and limitations
 
@@ -237,7 +237,7 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at [7even/db_schema](https://github.com/7even/db_schema).
+Bug reports and pull requests are welcome on GitHub at [db-schema/core](https://github.com/db-schema/core).
 
 ## License
 
