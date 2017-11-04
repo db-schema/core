@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema::DSL do
   let(:schema_block) do
     -> (db) do

@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema::Changes do
   describe '.between' do
     context 'with tables being added and removed' do

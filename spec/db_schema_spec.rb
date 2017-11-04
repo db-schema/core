@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema do
   let(:database) do
     Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|

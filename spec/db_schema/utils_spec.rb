@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema::Utils do
   describe '.rename_keys' do
     let(:hash) do

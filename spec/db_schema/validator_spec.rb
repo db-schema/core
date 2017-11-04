@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema::Validator do
   describe '.validate' do
     let(:result) { DbSchema::Validator.validate(schema) }

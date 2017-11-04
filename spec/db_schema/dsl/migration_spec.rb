@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema::DSL::Migration do
   describe '#migration' do
     let(:schema) do

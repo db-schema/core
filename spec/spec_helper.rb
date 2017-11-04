@@ -14,4 +14,8 @@ RSpec.configure do |config|
   config.profile_examples = 10
 
   config.include DbCleaner
+
+  config.expect_with :rspec do |c|
+    c.syntax = :expect
+  end
 end
