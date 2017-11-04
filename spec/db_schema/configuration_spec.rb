@@ -1,5 +1,3 @@
-require 'spec_helper'
-
 RSpec.describe DbSchema::Configuration do
   subject { DbSchema::Configuration.new }
 
