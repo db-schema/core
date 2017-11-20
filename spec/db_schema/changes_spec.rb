@@ -140,6 +140,10 @@ RSpec.describe DbSchema::Changes do
 
         checks = [
           DbSchema::Definitions::CheckConstraint.new(
+            name:      :min_name_length_check,
+            condition: 'char_length(name) > 5'
+          ),
+          DbSchema::Definitions::CheckConstraint.new(
             name:      :location_check,
             condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
           )
@@ -197,6 +201,10 @@ RSpec.describe DbSchema::Changes do
 
         checks = [
           DbSchema::Definitions::CheckConstraint.new(
+            name:      :min_age_check,
+            condition: 'age >= 18'
+          ),
+          DbSchema::Definitions::CheckConstraint.new(
             name:      :location_check,
             condition: 'city_id IS NOT NULL AND country_id IS NOT NULL'
           )
@@ -237,6 +245,7 @@ RSpec.describe DbSchema::Changes do
 
         expect(alter_table.changes).to eq([
           DbSchema::Operations::DropCheckConstraint.new(:location_check),
+          DbSchema::Operations::DropCheckConstraint.new(:min_age_check),
           DbSchema::Operations::DropIndex.new(:users_name_index),
           DbSchema::Operations::DropIndex.new(:users_type_index),
           DbSchema::Operations::DropColumn.new(:age),
@@ -260,6 +269,12 @@ RSpec.describe DbSchema::Changes do
               columns: [DbSchema::Definitions::Index::TableField.new(:email, order: :desc)],
               type:    :hash,
               unique:  true
+            )
+          ),
+          DbSchema::Operations::CreateCheckConstraint.new(
+            DbSchema::Definitions::CheckConstraint.new(
+              name:      :min_name_length_check,
+              condition: 'char_length(name) > 5'
             )
           ),
           DbSchema::Operations::CreateCheckConstraint.new(

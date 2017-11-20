@@ -115,8 +115,8 @@ module DbSchema
         compare_collections(
           desired_table.checks,
           actual_table.checks,
-          create: -> (check) { Operations::CreateCheck.new(check) },
-          drop:   -> (check) { Operations::DropIndex.new(check.name) },
+          create: -> (check) { Operations::CreateCheckConstraint.new(check) },
+          drop:   -> (check) { Operations::DropCheckConstraint.new(check.name) },
           change: -> (desired, actual) do
             [
               Operations::DropCheckConstraint.new(actual.name),
