@@ -8,6 +8,10 @@ module DbSchema
         @name      = name.to_sym
         @condition = condition
       end
+
+      def with_condition(new_condition)
+        CheckConstraint.new(name: name, condition: new_condition)
+      end
     end
 
     class NullCheckConstraint < CheckConstraint

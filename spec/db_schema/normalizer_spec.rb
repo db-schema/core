@@ -30,7 +30,7 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Field::Integer.new(:group_id),
         DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5'),
         DbSchema::Definitions::Field::Hstore.new(:data),
-        DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: 'ok'),
+        DbSchema::Definitions::Field::Custom.class_for(:happiness).new(:happiness, default: field_default),
         DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{user}'),
         DbSchema::Definitions::Field::Ltree.new(:path),
         DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:user_status)
@@ -41,11 +41,11 @@ RSpec.describe DbSchema::Normalizer do
           columns: [
             DbSchema::Definitions::Index::Expression.new('lower(name)')
           ],
-          condition: 'age != 18'
+          condition: index_condition
         )
       ],
       checks: [
-        DbSchema::Definitions::CheckConstraint.new(name: :name_length, condition: 'char_length(name) > 4')
+        DbSchema::Definitions::CheckConstraint.new(name: :name_length, condition: check_condition)
       ],
       foreign_keys: [
         DbSchema::Definitions::ForeignKey.new(name: :users_group_id_fkey, fields: [:group_id], table: :groups)
@@ -54,6 +54,10 @@ RSpec.describe DbSchema::Normalizer do
   end
 
   describe '.normalized_tables' do
+    let(:field_default)   { 'ok' }
+    let(:index_condition) { 'age != 18' }
+    let(:check_condition) { 'char_length(name) > 4' }
+
     let(:schema) do
       DbSchema::Definitions::Schema.new(
         tables:     [raw_table],
@@ -112,6 +116,21 @@ RSpec.describe DbSchema::Normalizer do
       expect {
         DbSchema::Normalizer.new(schema, database).normalize_tables
       }.not_to change { DbSchema::Reader.read_schema(database).tables.count }
+    end
+
+    context 'with enums used inside expressions' do
+      let(:field_default)   { :"('ok'::text)::happiness" }
+      let(:index_condition) { "happiness = 'good'::happiness" }
+      let(:check_condition) { "char_length(name::text) > 4 OR happiness = 'good'::happiness" }
+
+      it 'keeps the original type names inside expressions' do
+        DbSchema::Normalizer.new(schema, database).normalize_tables
+
+        users = schema.table(:users)
+        expect(users.field(:happiness).default).to eq(field_default)
+        expect(users.index(:lower_name_index).condition).to eq(index_condition)
+        expect(users.check(:name_length).condition).to eq(check_condition)
+      end
     end
 
     after(:each) do

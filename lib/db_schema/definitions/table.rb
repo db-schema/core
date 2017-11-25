@@ -97,6 +97,16 @@ module DbSchema
         )
       end
 
+      def with_checks(new_checks)
+        Table.new(
+          name,
+          fields:       fields,
+          indexes:      indexes,
+          checks:       new_checks,
+          foreign_keys: foreign_keys
+        )
+      end
+
       def with_foreign_keys(new_foreign_keys)
         Table.new(
           name,

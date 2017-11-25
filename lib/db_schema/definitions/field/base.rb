@@ -64,6 +64,10 @@ module DbSchema
           Field.build(name, type, **options, primary_key: primary_key?, attr_name => attr_value)
         end
 
+        def with_default(new_default)
+          Field.build(name, type, **options, primary_key: primary_key?, default: new_default)
+        end
+
         class << self
           def register(*types)
             types.each do |type|

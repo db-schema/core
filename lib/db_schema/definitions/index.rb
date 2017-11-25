@@ -41,6 +41,16 @@ module DbSchema
           condition: condition
         )
       end
+
+      def with_condition(new_condition)
+        Index.new(
+          name:      name,
+          columns:   columns,
+          unique:    unique?,
+          type:      type,
+          condition: new_condition
+        )
+      end
     end
 
     class NullIndex < Index
