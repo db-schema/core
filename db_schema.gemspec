@@ -32,5 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'terminal-notifier'
   spec.add_development_dependency 'terminal-notifier-guard'
 
-  spec.add_development_dependency 'db_schema-reader-postgres'
+  spec.add_development_dependency 'db_schema-reader-postgres', '~> 0.1.1'
 end

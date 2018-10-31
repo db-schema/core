@@ -114,7 +114,8 @@ module DbSchema
     end
 
     def run_migrations(migrations, connection)
-      @current_schema = Reader.read_schema(connection)
+      reader = Reader.reader_for(connection)
+      @current_schema = reader.read_schema
 
       migrations.reduce(@current_schema) do |schema, migration|
         migrator = Migrator.new(migration)
@@ -122,7 +123,7 @@ module DbSchema
         if migrator.applicable?(schema)
           log_migration(migration) if configuration.log_changes?
           migrator.run!(connection)
-          Reader.read_schema(connection)
+          reader.read_schema
         else
           schema
         end
@@ -145,7 +146,7 @@ module DbSchema
     end
 
     def perform_post_check(desired_schema, connection)
-      unapplied_changes = Changes.between(desired_schema, Reader.read_schema(connection))
+      unapplied_changes = Changes.between(desired_schema, Reader.reader_for(connection).read_schema)
       return if unapplied_changes.empty?
 
       readable_changes = if unapplied_changes.respond_to?(:ai)

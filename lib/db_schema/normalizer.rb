@@ -28,7 +28,7 @@ module DbSchema
 
   private
     def create_extensions!
-      operations = (schema.extensions - Reader.read_extensions(connection)).map do |extension|
+      operations = (schema.extensions - Reader.reader_for(connection).read_extensions).map do |extension|
         Operations::CreateExtension.new(extension)
       end
 
@@ -85,7 +85,7 @@ module DbSchema
       end
 
       def read_temporary_table
-        temporary_table = Reader.read_table(temporary_table_name, connection)
+        temporary_table = Reader.reader_for(connection).read_table(temporary_table_name)
 
         temporary_table.with_name(table.name)
           .with_fields(rename_types_back(temporary_table.fields))

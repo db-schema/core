@@ -39,7 +39,8 @@ RSpec.describe DbSchema::Migrator do
     ).run!
   end
 
-  let(:schema)    { DbSchema::Reader.read_schema(database) }
+  let(:reader)    { DbSchema::Reader.reader_for(database) }
+  let(:schema)    { reader.read_schema }
   let(:migration) { DbSchema::Migration.new('Migration name') }
 
   subject { DbSchema::Migrator.new(migration) }
@@ -536,7 +537,7 @@ RSpec.describe DbSchema::Migrator do
       it "doesn't change the schema" do
         expect {
           subject.run!(database)
-        }.not_to change { DbSchema::Reader.read_schema(database) }
+        }.not_to change { reader.read_schema }
       end
     end
   end

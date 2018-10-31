@@ -115,7 +115,7 @@ RSpec.describe DbSchema::Normalizer do
     it 'rolls back all temporary tables' do
       expect {
         DbSchema::Normalizer.new(schema, database).normalize_tables
-      }.not_to change { DbSchema::Reader.read_schema(database).tables.count }
+      }.not_to change { DbSchema::Reader.reader_for(database).read_tables.count }
     end
 
     context 'with enums used inside expressions' do

@@ -7,7 +7,7 @@ RSpec.describe DbSchema do
   end
 
   describe '.describe' do
-    let(:schema) { DbSchema::Reader.read_schema(database) }
+    let(:schema) { DbSchema::Reader.reader_for(database).read_schema }
 
     before(:each) do
       subject.configure(database: 'db_schema_test', log_changes: false)
@@ -230,8 +230,8 @@ UPDATE users SET first_name = split_part(name, ' ', 1),
           end
         end
 
-        expect(DbSchema::Reader.read_table(:users, database).fields.count).to eq(4)
-        expect(DbSchema::Reader.read_table(:users, external_connection).fields.count).to eq(2)
+        expect(DbSchema::Reader.reader_for(database).read_table(:users).fields.count).to eq(4)
+        expect(DbSchema::Reader.reader_for(external_connection).read_table(:users).fields.count).to eq(2)
       end
 
       after(:each) do
@@ -302,7 +302,7 @@ Requested schema is invalid:
               t.index :email
             end
           end
-        }.not_to change { DbSchema::Reader.read_schema(database) }
+        }.not_to change { DbSchema::Reader.reader_for(database).read_schema }
       end
 
       context 'with applicable migrations' do
@@ -337,7 +337,7 @@ Requested schema is invalid:
                 end
               end
             end
-          }.not_to change { DbSchema::Reader.read_schema(database) }
+          }.not_to change { DbSchema::Reader.reader_for(database).read_schema }
         end
       end
 

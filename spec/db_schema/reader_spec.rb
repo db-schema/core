@@ -6,18 +6,10 @@ RSpec.describe DbSchema::Reader do
     end
   end
 
-  describe '.read_schema' do
-    let(:reader) { double('Some reader module') }
-    let(:schema) { double('Some database schema') }
-
-    before(:each) do
-      allow(subject).to receive(:reader_for).and_return(reader)
-    end
-
-    it 'delegates to the reader' do
-      expect(reader).to receive(:read_schema).and_return(schema)
-
-      expect(subject.read_schema(database)).to eq(schema)
+  describe '.reader_for' do
+    it 'returns a reader for a given connection' do
+      reader = subject.reader_for(database)
+      expect(reader.read_schema).to eq(DbSchema::Definitions::Schema.new)
     end
   end
 end

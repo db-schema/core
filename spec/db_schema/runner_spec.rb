@@ -83,7 +83,7 @@ RSpec.describe DbSchema::Runner do
       ]
     end
 
-    let(:schema) { DbSchema::Reader.read_schema(database) }
+    let(:schema) { DbSchema::Reader.reader_for(database).read_schema }
 
     subject { DbSchema::Runner.new(changes, database) }
 
