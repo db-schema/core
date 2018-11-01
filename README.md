@@ -53,7 +53,7 @@ But you would lose it even with manual migrations.
 Add these lines to your application's Gemfile:
 
 ``` ruby
-gem 'db_schema', '~> 0.3.1'
+gem 'db_schema', '~> 0.4.0'
 gem 'db_schema-reader-postgres', '~> 0.1.1'
 ```
 
