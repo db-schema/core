@@ -50,10 +50,11 @@ But you would lose it even with manual migrations.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add these lines to your application's Gemfile:
 
 ``` ruby
 gem 'db_schema', '~> 0.3.1'
+gem 'db_schema-reader-postgres', '~> 0.1.1'
 ```
 
 And then execute:
@@ -65,8 +66,11 @@ $ bundle
 Or install it yourself as:
 
 ``` sh
-$ gem install db_schema
+$ gem install db_schema db_schema-reader-postgres
 ```
+
+The `db_schema-reader-postgres` [gem](https://github.com/db-schema/reader-postgres) is a PostgreSQL adapter
+for `DbSchema::Reader` (a module which is responsible for reading the current database schema).
 
 ## Usage
 
