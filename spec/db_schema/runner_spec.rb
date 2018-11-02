@@ -147,6 +147,23 @@ RSpec.describe DbSchema::Runner do
         expect(users.checks.count).to eq(1)
         expect(users.check(:min_name_length).condition).to eq('character_length(name::text) > 4')
       end
+
+      context 'with a non-integer primary key' do
+        before(:each) do
+          users_fields.shift
+          users_fields.unshift(DbSchema::Definitions::Field::UUID.new(:id, primary_key: true))
+        end
+
+        it 'creates a table with a correct primary key type' do
+          subject.run!
+
+          expect(schema.table(:users)).to have_field(:id)
+
+          id = schema.table(:users).field(:id)
+          expect(id).to be_primary_key
+          expect(id.type).to eq(:uuid)
+        end
+      end
     end
 
     context 'with RenameTable' do
@@ -178,7 +195,7 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Operations::DropColumn.new(:name),
             DbSchema::Operations::DropColumn.new(:id),
             DbSchema::Operations::CreateColumn.new(
-              DbSchema::Definitions::Field::Integer.new(:uid, primary_key: true)
+              DbSchema::Definitions::Field::UUID.new(:uid, primary_key: true)
             ),
             DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, default: :'now()')
@@ -190,7 +207,6 @@ RSpec.describe DbSchema::Runner do
           subject.run!
 
           expect(database.primary_key(:people)).to eq('uid')
-          expect(database.primary_key_sequence(:people)).to eq('"public"."people_uid_seq"')
 
           people = schema.table(:people)
           expect(people).to have_field(:address)
@@ -202,6 +218,7 @@ RSpec.describe DbSchema::Runner do
           expect(people.field(:age).type).to eq(:integer)
           expect(people.field(:age)).not_to be_null
           expect(people.field(:uid)).to be_primary_key
+          expect(people.field(:uid).type).to eq(:uuid)
           expect(people.field(:updated_at).type).to eq(:timestamp)
           expect(people.field(:updated_at).default).to eq(:'now()')
         end

@@ -51,7 +51,7 @@ RSpec.describe DbSchema do
         end
 
         db.table :posts do |t|
-          t.integer :id, primary_key: true
+          t.bigint  :id, primary_key: true
           t.varchar :title, null: false
           t.text    :text
           t.integer :user_id, null: false
@@ -61,14 +61,14 @@ RSpec.describe DbSchema do
         end
 
         db.table :countries do |t|
-          t.primary_key :id
+          t.uuid :id, primary_key: true
           t.varchar :name, null: false
         end
 
         db.table :cities do |t|
           t.integer :id, primary_key: true
           t.varchar :name, null: false
-          t.integer :country_id, references: :countries
+          t.uuid    :country_id, references: :countries
           t.numeric :lat, precision: 6, scale: 3
           t.decimal :lng, precision: 6, scale: 3
         end
@@ -80,7 +80,7 @@ RSpec.describe DbSchema do
 
       users = schema.table(:users)
 
-      expect(users).to have_field(:id)
+      expect(users.field(:id)).to be_primary_key
       expect(users.field(:email).type).to eq(:varchar)
       expect(users.field(:email)).not_to be_null
       expect(users.field(:happiness).type).to eq(:happiness)
@@ -102,7 +102,8 @@ RSpec.describe DbSchema do
       expect(users.index(:users_email_index)).to be_unique
 
       posts = schema.table(:posts)
-      expect(posts).to have_field(:id)
+      expect(posts.field(:id)).to be_primary_key
+      expect(posts.field(:id).type).to eq(:bigint)
       expect(posts.field(:title).type).to eq(:varchar)
       expect(posts.field(:title)).not_to be_null
       expect(posts.field(:text).type).to eq(:text)
@@ -124,7 +125,7 @@ RSpec.describe DbSchema do
       expect(cities.field(:id)).to be_primary_key
       expect(cities.field(:name).type).to eq(:varchar)
       expect(cities.field(:name)).not_to be_null
-      expect(cities.field(:country_id).type).to eq(:integer)
+      expect(cities.field(:country_id).type).to eq(:uuid)
       expect(cities.field(:lat).type).to eq(:numeric)
       expect(cities.field(:lat).options).to eq(precision: 6, scale: 3)
       expect(cities.field(:lng).type).to eq(:numeric)

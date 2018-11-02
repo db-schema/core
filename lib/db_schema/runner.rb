@@ -45,7 +45,11 @@ module DbSchema
       connection.create_table(change.table.name) do
         change.table.fields.each do |field|
           if field.primary_key?
-            primary_key(field.name)
+            if field.type == :integer
+              primary_key(field.name)
+            else
+              primary_key(field.name, type: field.type.capitalize)
+            end
           else
             options = Runner.map_options(field.class.type, field.options)
             column(field.name, field.type.capitalize, options)
@@ -82,7 +86,11 @@ module DbSchema
           case element
           when Operations::CreateColumn
             if element.primary_key?
-              add_primary_key(element.name)
+              if element.type == :integer
+                add_primary_key(element.name)
+              else
+                add_primary_key(element.name, type: element.type.capitalize)
+              end
             else
               options = Runner.map_options(element.type, element.options)
               add_column(element.name, element.type.capitalize, options)
