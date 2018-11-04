@@ -53,7 +53,7 @@ But you would lose it even with manual migrations.
 Add these lines to your application's Gemfile:
 
 ``` ruby
-gem 'db_schema', '~> 0.4.0'
+gem 'db_schema', '~> 0.4.1'
 gem 'db_schema-reader-postgres', '~> 0.1.1'
 ```
 
@@ -230,7 +230,8 @@ Conditional migrations are described [here](https://github.com/db-schema/core/wi
 
 ## Known problems and limitations
 
-* primary keys are hardcoded to a single NOT NULL integer field with a postgres sequence attached
+* composite primary keys are not supported
+* auto-incremented integer field can only be created as a primary key
 * array element type attributes are not supported
 * precision in all date/time types isn't supported
 * no support for databases other than PostgreSQL
