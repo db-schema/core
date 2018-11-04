@@ -163,6 +163,26 @@ RSpec.describe DbSchema::Runner do
           expect(id).to be_primary_key
           expect(id.type).to eq(:uuid)
         end
+
+        context 'that has type attributes' do
+          before(:each) do
+            users_fields.shift
+            users_fields.unshift(
+              DbSchema::Definitions::Field::Varchar.new(:id, length: 255, primary_key: true)
+            )
+          end
+
+          it 'creates a table with primary key having correct type and attributes' do
+            subject.run!
+
+            expect(schema.table(:users)).to have_field(:id)
+
+            id = schema.table(:users).field(:id)
+            expect(id).to be_primary_key
+            expect(id.type).to eq(:varchar)
+            expect(id.options[:length]).to eq(255)
+          end
+        end
       end
     end
 
@@ -221,6 +241,28 @@ RSpec.describe DbSchema::Runner do
           expect(people.field(:uid).type).to eq(:uuid)
           expect(people.field(:updated_at).type).to eq(:timestamp)
           expect(people.field(:updated_at).default).to eq(:'now()')
+        end
+
+        context 'with a new non-integer primary key with attributes' do
+          let(:table_changes) do
+            [
+              DbSchema::Operations::DropColumn.new(:id),
+              DbSchema::Operations::DropColumn.new(:name),
+              DbSchema::Operations::CreateColumn.new(
+                DbSchema::Definitions::Field::Varchar.new(:name, length: 255, primary_key: true)
+              )
+            ]
+          end
+
+          it 'creates a primary key with provided type and attributes' do
+            subject.run!
+
+            expect(database.primary_key(:people)).to eq('name')
+            name = schema.table(:people).field(:name)
+            expect(name).to be_primary_key
+            expect(name.type).to eq(:varchar)
+            expect(name.options[:length]).to eq(255)
+          end
         end
       end
 

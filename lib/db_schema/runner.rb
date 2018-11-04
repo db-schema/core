@@ -44,15 +44,13 @@ module DbSchema
     def create_table(change)
       connection.create_table(change.table.name) do
         change.table.fields.each do |field|
-          if field.primary_key?
-            if field.type == :integer
-              primary_key(field.name)
-            else
-              primary_key(field.name, type: field.type.capitalize)
-            end
+          if field.primary_key? && field.type == :integer
+            primary_key(field.name)
           else
             options = Runner.map_options(field.class.type, field.options)
             column(field.name, field.type.capitalize, options)
+
+            primary_key([field.name]) if field.primary_key?
           end
         end
 
@@ -85,15 +83,13 @@ module DbSchema
         change.changes.each do |element|
           case element
           when Operations::CreateColumn
-            if element.primary_key?
-              if element.type == :integer
-                add_primary_key(element.name)
-              else
-                add_primary_key(element.name, type: element.type.capitalize)
-              end
+            if element.primary_key? && element.type == :integer
+              add_primary_key(element.name)
             else
               options = Runner.map_options(element.type, element.options)
               add_column(element.name, element.type.capitalize, options)
+
+              add_primary_key([element.name]) if element.primary_key?
             end
           when Operations::DropColumn
             drop_column(element.name)
