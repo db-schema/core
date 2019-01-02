@@ -91,6 +91,8 @@ RSpec.describe DbSchema::DSL do
     let(:schema) { subject.schema }
 
     it 'returns fields' do
+      pending 'Rewriting serial and primary keys'
+
       users  = schema.table(:users)
       posts  = schema.table(:posts)
       cities = schema.table(:cities)

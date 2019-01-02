@@ -7,6 +7,8 @@ RSpec.describe DbSchema::Migrator do
   end
 
   before(:each) do
+    pending 'Rewriting serial and primary keys'
+
     DbSchema::Runner.new(
       [
         DbSchema::Operations::CreateTable.new(

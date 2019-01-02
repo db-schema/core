@@ -1,4 +1,8 @@
 RSpec.describe DbSchema::Validator do
+  before(:each) do
+    pending 'Rewriting serial and primary keys'
+  end
+
   describe '.validate' do
     let(:result) { DbSchema::Validator.validate(schema) }
 

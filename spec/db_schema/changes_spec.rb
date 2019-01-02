@@ -238,6 +238,8 @@ RSpec.describe DbSchema::Changes do
       end
 
       it 'returns changes between two schemas' do
+        pending 'Rewriting serial and primary keys'
+
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         drop_group_id, drop_country_id, alter_table, create_city_id, create_group_id = changes
@@ -466,6 +468,8 @@ RSpec.describe DbSchema::Changes do
         end
 
         it 'returns a Operations::AlterEnumValues with existing enum fields' do
+          pending 'Rewriting serial and primary keys'
+
           changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
           expect(changes).to eq([
