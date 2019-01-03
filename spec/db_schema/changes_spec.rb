@@ -3,10 +3,22 @@ RSpec.describe DbSchema::Changes do
     context 'with tables being added and removed' do
       let(:users_fields) do
         [
-          DbSchema::Definitions::Field::Integer.new(:id),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:name, length: 20),
           DbSchema::Definitions::Field::Varchar.new(:email),
           DbSchema::Definitions::Field::Integer.new(:city_id)
+        ]
+      end
+
+      let(:users_indexes) do
+        [
+          DbSchema::Definitions::Index.new(
+            name: :users_pkey,
+            columns: [
+              DbSchema::Definitions::Index::TableField.new(:id)
+            ],
+            primary: true
+          )
         ]
       end
 
@@ -60,6 +72,7 @@ RSpec.describe DbSchema::Changes do
             DbSchema::Definitions::Table.new(
               :users,
               fields:       users_fields,
+              indexes:      users_indexes,
               checks:       users_checks,
               foreign_keys: users_foreign_keys
             ),
@@ -84,22 +97,21 @@ RSpec.describe DbSchema::Changes do
       it 'returns changes between two schemas' do
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
-        expect(changes).to include(
-          DbSchema::Operations::CreateTable.new(
-            DbSchema::Definitions::Table.new(
-              :users,
-              fields:       users_fields,
-              checks:       users_checks,
-              foreign_keys: users_foreign_keys
-            )
-          )
-        )
-        expect(changes).to include(DbSchema::Operations::DropTable.new(:posts))
-        expect(changes).to include(
-          DbSchema::Operations::CreateForeignKey.new(:users, users_foreign_keys.first)
-        )
-        expect(changes).to include(
-          DbSchema::Operations::DropForeignKey.new(:posts, posts_foreign_keys.first.name)
+        expect(changes).to eq(
+          [
+            DbSchema::Operations::DropForeignKey.new(:posts, posts_foreign_keys.first.name),
+            DbSchema::Operations::CreateTable.new(
+              DbSchema::Definitions::Table.new(
+                :users,
+                fields:       users_fields,
+                indexes:      users_indexes,
+                checks:       users_checks,
+                foreign_keys: users_foreign_keys
+              )
+            ),
+            DbSchema::Operations::DropTable.new(:posts),
+            DbSchema::Operations::CreateForeignKey.new(:users, users_foreign_keys.first)
+          ]
         )
       end
 
@@ -113,7 +125,7 @@ RSpec.describe DbSchema::Changes do
     context 'with table changed' do
       let(:desired_schema) do
         fields = [
-          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:name, length: 60),
           DbSchema::Definitions::Field::Varchar.new(:email, null: false),
           DbSchema::Definitions::Field::Varchar.new(:type, null: false, default: 'guest'),
@@ -124,6 +136,11 @@ RSpec.describe DbSchema::Changes do
         ]
 
         indexes = [
+          DbSchema::Definitions::Index.new(
+            name:    :users_pkey,
+            columns: [DbSchema::Definitions::Index::TableField.new(:id)],
+            primary: true
+          ),
           DbSchema::Definitions::Index.new(
             name:      :users_name_index,
             columns:   [DbSchema::Definitions::Index::Expression.new('lower(name)')],
@@ -178,7 +195,7 @@ RSpec.describe DbSchema::Changes do
 
       let(:actual_schema) do
         fields = [
-          DbSchema::Definitions::Field::Integer.new(:id, null: false),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:name),
           DbSchema::Definitions::Field::Integer.new(:age),
           DbSchema::Definitions::Field::Integer.new(:type),
@@ -238,8 +255,6 @@ RSpec.describe DbSchema::Changes do
       end
 
       it 'returns changes between two schemas' do
-        pending 'Rewriting serial and primary keys'
-
         changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
         drop_group_id, drop_country_id, alter_table, create_city_id, create_group_id = changes
@@ -257,6 +272,13 @@ RSpec.describe DbSchema::Changes do
           DbSchema::Operations::DisallowNull.new(:type),
           DbSchema::Operations::AlterColumnDefault.new(:type, new_default: 'guest'),
           DbSchema::Operations::CreateColumn.new(DbSchema::Definitions::Field::Varchar.new(:email, null: false)),
+          DbSchema::Operations::CreateIndex.new(
+            DbSchema::Definitions::Index.new(
+              name:    :users_pkey,
+              columns: [DbSchema::Definitions::Index::TableField.new(:id)],
+              primary: true
+            )
+          ),
           DbSchema::Operations::CreateIndex.new(
             DbSchema::Definitions::Index.new(
               name:      :users_name_index,
@@ -284,8 +306,7 @@ RSpec.describe DbSchema::Changes do
               name:      :location_check,
               condition: 'city_id IS NOT NULL OR country_id IS NOT NULL'
             )
-          ),
-          DbSchema::Operations::CreatePrimaryKey.new(:id)
+          )
         ])
 
         expect(drop_group_id).to eq(
@@ -321,7 +342,7 @@ RSpec.describe DbSchema::Changes do
       context 'with just foreign keys changed' do
         let(:posts_fields) do
           [
-            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Serial.new(:id),
             DbSchema::Definitions::Field::Varchar.new(:title),
             DbSchema::Definitions::Field::Integer.new(:user_id, null: false),
             DbSchema::Definitions::Field::Integer.new(:category_id, null: false)
@@ -468,8 +489,6 @@ RSpec.describe DbSchema::Changes do
         end
 
         it 'returns a Operations::AlterEnumValues with existing enum fields' do
-          pending 'Rewriting serial and primary keys'
-
           changes = DbSchema::Changes.between(desired_schema, actual_schema)
 
           expect(changes).to eq([

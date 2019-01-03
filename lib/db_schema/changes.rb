@@ -72,14 +72,6 @@ module DbSchema
                 )
               end
 
-              if desired.primary_key? && !actual.primary_key?
-                operations << Operations::CreatePrimaryKey.new(actual.name)
-              end
-
-              if actual.primary_key? && !desired.primary_key?
-                operations << Operations::DropPrimaryKey.new(actual.name)
-              end
-
               if desired.null? && !actual.null?
                 operations << Operations::AllowNull.new(actual.name)
               end
@@ -220,7 +212,6 @@ module DbSchema
         Utils.sort_by_class(
           changes,
           [
-            Operations::DropPrimaryKey,
             Operations::DropCheckConstraint,
             Operations::DropIndex,
             Operations::DropColumn,
@@ -230,8 +221,7 @@ module DbSchema
             Operations::AlterColumnDefault,
             Operations::CreateColumn,
             Operations::CreateIndex,
-            Operations::CreateCheckConstraint,
-            Operations::CreatePrimaryKey
+            Operations::CreateCheckConstraint
           ]
         )
       end

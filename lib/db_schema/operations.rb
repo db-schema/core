@@ -95,12 +95,6 @@ module DbSchema
       end
     end
 
-    class CreatePrimaryKey < ColumnOperation
-    end
-
-    class DropPrimaryKey < ColumnOperation
-    end
-
     class AllowNull < ColumnOperation
     end
 
