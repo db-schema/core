@@ -5,7 +5,7 @@ module DbSchema
     class << self
       def validate(schema)
         table_errors = schema.tables.each_with_object([]) do |table, errors|
-          primary_keys_count = table.fields.select(&:primary_key?).count
+          primary_keys_count = table.indexes.select(&:primary?).count
           if primary_keys_count > 1
             error_message = %(Table "#{table.name}" has #{primary_keys_count} primary keys)
             errors << error_message
@@ -60,7 +60,7 @@ module DbSchema
 
             if referenced_table = schema.tables.find { |table| table.name == fkey.table }
               if fkey.references_primary_key?
-                unless referenced_table.fields.any?(&:primary_key?)
+                unless referenced_table.indexes.any?(&:primary?)
                   error_message = %(Foreign key "#{fkey.name}" refers to primary key of table "#{fkey.table}" which does not have a primary key)
                   errors << error_message
                 end

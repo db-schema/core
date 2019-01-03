@@ -1,8 +1,4 @@
 RSpec.describe DbSchema::Validator do
-  before(:each) do
-    pending 'Rewriting serial and primary keys'
-  end
-
   describe '.validate' do
     let(:result) { DbSchema::Validator.validate(schema) }
 
@@ -30,7 +26,7 @@ RSpec.describe DbSchema::Validator do
 
     let(:users_fields) do
       [
-        DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+        DbSchema::Definitions::Field::Serial.new(:id),
         DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
         DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
         DbSchema::Definitions::Field::Integer.new(:age),
@@ -40,14 +36,25 @@ RSpec.describe DbSchema::Validator do
 
     let(:posts_fields) do
       [
-        DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+        DbSchema::Definitions::Field::Serial.new(:id),
         DbSchema::Definitions::Field::Varchar.new(:title, null: false),
         DbSchema::Definitions::Field::Integer.new(:user_id, null: false)
       ]
     end
 
+    let(:users_pkey) do
+      DbSchema::Definitions::Index.new(
+        name: :users_pkey,
+        columns: [
+          DbSchema::Definitions::Index::TableField.new(:id)
+        ],
+        primary: true
+      )
+    end
+
     let(:users_indexes) do
       [
+        users_pkey,
         DbSchema::Definitions::Index.new(
           name: :users_name_index,
           columns: [
@@ -86,15 +93,19 @@ RSpec.describe DbSchema::Validator do
     end
 
     context 'on a schema with multiple primary keys in one table' do
-      let(:users_fields) do
+      let(:users_indexes) do
         [
-          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
-          DbSchema::Definitions::Field::Varchar.new(:email, primary_key: true),
-          DbSchema::Definitions::Field::Varchar.new(:name, null: false)
+          users_pkey,
+          DbSchema::Definitions::Index.new(
+            name: :users_pkey2,
+            columns: [
+              DbSchema::Definitions::Index::TableField.new(:first_name),
+              DbSchema::Definitions::Index::TableField.new(:last_name)
+            ],
+            primary: true
+          )
         ]
       end
-
-      let(:users_indexes) { [] }
 
       it 'returns an invalid result with errors' do
         expect(result).not_to be_valid
@@ -107,6 +118,7 @@ RSpec.describe DbSchema::Validator do
     context 'on a schema with index on unknown field' do
       let(:users_indexes) do
         [
+          users_pkey,
           DbSchema::Definitions::Index.new(
             name: :invalid_index,
             columns: [
@@ -165,7 +177,7 @@ RSpec.describe DbSchema::Validator do
     context 'on a schema with foreign key referencing unknown primary key' do
       let(:posts_fields) do
         [
-          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:title, null: false),
           DbSchema::Definitions::Field::Integer.new(:user_id, null: false),
           DbSchema::Definitions::Field::Integer.new(:city_id, null: false),
@@ -193,7 +205,7 @@ RSpec.describe DbSchema::Validator do
     context 'on a schema with foreign key referencing unknown field' do
       let(:posts_fields) do
         [
-          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:title, null: false),
           DbSchema::Definitions::Field::Integer.new(:user_name, null: false)
         ]
@@ -232,7 +244,7 @@ RSpec.describe DbSchema::Validator do
     context 'on a schema with a field of unknown type' do
       let(:users_fields) do
         [
-          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
           DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
           DbSchema::Definitions::Field::Integer.new(:age),
@@ -250,7 +262,7 @@ RSpec.describe DbSchema::Validator do
       context 'within an array' do
         let(:users_fields) do
           [
-            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Serial.new(:id),
             DbSchema::Definitions::Field::Varchar.new(:first_name, null: false),
             DbSchema::Definitions::Field::Varchar.new(:last_name, null: false),
             DbSchema::Definitions::Field::Integer.new(:age),
@@ -270,13 +282,13 @@ RSpec.describe DbSchema::Validator do
     context 'on a schema with a enum field with invalid default value' do
       let(:users_fields) do
         [
-          DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+          DbSchema::Definitions::Field::Serial.new(:id),
           DbSchema::Definitions::Field::Varchar.new(:name, null: false),
           DbSchema::Definitions::Field::Custom.class_for(:user_happiness).new(:happiness, default: 'crazy')
         ]
       end
 
-      let(:users_indexes) { [] }
+      let(:users_indexes) { [users_pkey] }
 
       it 'returns an invalid result with errors' do
         expect(result).not_to be_valid
@@ -288,7 +300,7 @@ RSpec.describe DbSchema::Validator do
       context 'within an array' do
         let(:users_fields) do
           [
-            DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+            DbSchema::Definitions::Field::Serial.new(:id),
             DbSchema::Definitions::Field::Varchar.new(:name, null: false),
             DbSchema::Definitions::Field::Array.new(:roles, element_type: :user_role, default: '{admin}')
           ]
