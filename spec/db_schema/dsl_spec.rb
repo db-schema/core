@@ -6,7 +6,7 @@ RSpec.describe DbSchema::DSL do
       db.extension :hstore
 
       db.table :users do |t|
-        t.primary_key :id
+        t.serial      :id, primary_key: true
         t.varchar     :name, null: false, unique: true, check: 'char_length(name) > 0'
         t.varchar     :email, default: 'mail@example.com'
         t.char        :sex, index: true
@@ -27,12 +27,12 @@ RSpec.describe DbSchema::DSL do
       db.enum :happiness, [:sad, :ok, :good, :happy]
 
       db.table :cities do |t|
-        t.primary_key :id
+        t.serial  :id,   primary_key: true
         t.varchar :name, null: false
       end
 
       db.table :posts do |t|
-        t.primary_key :id
+        t.serial :id
         t.varchar :title
         t.integer :user_id
         t.varchar :user_name
@@ -41,12 +41,21 @@ RSpec.describe DbSchema::DSL do
         t.integer :col3
         t.integer :col4
 
+        t.primary_key :id
+
         t.index :user_id
         t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
         t.index 'col2 - col1' => :desc, 'col3 + col4' => :asc_nulls_first
 
         t.foreign_key :user_id, references: :users, on_delete: :set_null, deferrable: true
         t.foreign_key :user_name, references: [:users, :name], name: :user_name_fkey, on_update: :cascade
+      end
+
+      db.table :points do |t|
+        t.decimal :lat
+        t.decimal :lng
+
+        t.primary_key :lat, :lng
       end
 
       db.migrate 'Rename people to users' do |migration|
@@ -91,8 +100,6 @@ RSpec.describe DbSchema::DSL do
     let(:schema) { subject.schema }
 
     it 'returns fields' do
-      pending 'Rewriting serial and primary keys'
-
       users  = schema.table(:users)
       posts  = schema.table(:posts)
       cities = schema.table(:cities)
@@ -101,8 +108,7 @@ RSpec.describe DbSchema::DSL do
       expect(posts.fields.count).to eq(8)
       expect(cities.fields.count).to eq(2)
 
-      expect(users.field(:id).type).to eq(:integer)
-      expect(users.field(:id)).to be_primary_key
+      expect(users.field(:id).type).to eq(:serial)
 
       expect(users.field(:name).type).to eq(:varchar)
       expect(users.field(:name)).not_to be_null
@@ -133,11 +139,18 @@ RSpec.describe DbSchema::DSL do
     end
 
     it 'returns indexes' do
-      users = schema.table(:users)
-      posts = schema.table(:posts)
+      users  = schema.table(:users)
+      posts  = schema.table(:posts)
+      points = schema.table(:points)
 
-      expect(users.indexes.count).to eq(6)
-      expect(posts.indexes.count).to eq(3)
+      expect(users.indexes.count).to eq(7)
+      expect(posts.indexes.count).to eq(4)
+      expect(points.indexes.count).to eq(1)
+
+      expect(users.index(:users_pkey).columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:id)
+      ])
+      expect(users.index(:users_pkey)).to be_primary
 
       expect(users.index(:users_name_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:name)
@@ -167,7 +180,11 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::Expression.new('lower(email)')
       ])
 
-      user_id_index, sorted_index, expression_index = posts.indexes
+      expect(posts.index(:posts_pkey).columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:id)
+      ])
+      expect(posts.index(:posts_pkey)).to be_primary
+
       expect(posts.index(:posts_user_id_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:user_id)
       ])
@@ -184,6 +201,12 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::Expression.new('col2 - col1', order: :desc),
         DbSchema::Definitions::Index::Expression.new('col3 + col4', nulls: :first)
       ])
+
+      expect(points.index(:points_pkey).columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:lat),
+        DbSchema::Definitions::Index::TableField.new(:lng)
+      ])
+      expect(points.index(:points_pkey)).to be_primary
     end
 
     it 'returns check constraints' do

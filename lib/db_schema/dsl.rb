@@ -59,8 +59,8 @@ module DbSchema
         field(name, method_name, args.first || {})
       end
 
-      def primary_key(name)
-        field(name, :integer, primary_key: true)
+      def primary_key(*columns)
+        index(*columns, primary: true)
       end
 
       def index(*columns, **index_options)
@@ -83,8 +83,12 @@ module DbSchema
         )
       end
 
-      def field(name, type, unique: false, index: false, references: nil, check: nil, **options)
+      def field(name, type, primary_key: false, unique: false, index: false, references: nil, check: nil, **options)
         fields << Definitions::Field.build(name, type, options)
+
+        if primary_key
+          primary_key(name)
+        end
 
         if unique
           index(name, unique: true)
@@ -118,7 +122,7 @@ module DbSchema
       end
 
       class << self
-        def build_index(columns, table_name:, name: nil, unique: false, using: :btree, where: nil, **ordered_fields)
+        def build_index(columns, table_name:, name: nil, primary: false, unique: false, using: :btree, where: nil, **ordered_fields)
           if columns.last.is_a?(Hash)
             *ascending_columns, ordered_expressions = columns
           else
@@ -151,11 +155,16 @@ module DbSchema
             end
           end
 
-          index_name = name || "#{table_name}_#{index_columns.map(&:index_name_segment).join('_')}_index"
+          index_name = name || if primary
+            "#{table_name}_pkey"
+          else
+            "#{table_name}_#{index_columns.map(&:index_name_segment).join('_')}_index"
+          end
 
           Definitions::Index.new(
             name:      index_name,
             columns:   index_columns,
+            primary:   primary,
             unique:    unique,
             type:      using,
             condition: where
