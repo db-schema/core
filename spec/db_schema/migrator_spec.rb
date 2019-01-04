@@ -7,20 +7,23 @@ RSpec.describe DbSchema::Migrator do
   end
 
   before(:each) do
-    skip 'Rewriting serial and primary keys'
-
     DbSchema::Runner.new(
       [
         DbSchema::Operations::CreateTable.new(
           DbSchema::Definitions::Table.new(
             :people,
             fields: [
-              DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+              DbSchema::Definitions::Field::Serial.new(:id),
               DbSchema::Definitions::Field::Varchar.new(:name, null: false),
               DbSchema::Definitions::Field::Varchar.new(:phone),
               DbSchema::Definitions::Field::Timestamptz.new(:created_at)
             ],
             indexes: [
+              DbSchema::Definitions::Index.new(
+                name: :people_pkey,
+                columns: [DbSchema::Definitions::Index::TableField.new(:id)],
+                primary: true
+              ),
               DbSchema::Definitions::Index.new(
                 name: :people_phone_index,
                 columns: [DbSchema::Definitions::Index::TableField.new(:phone)],
@@ -90,7 +93,7 @@ RSpec.describe DbSchema::Migrator do
       let(:body) do
         -> (migrator, db) do
           migrator.create_table :posts do |t|
-            t.primary_key :id
+            t.serial :id, primary_key: true
             t.varchar :title, null: false
             t.text :body
           end
@@ -202,6 +205,22 @@ RSpec.describe DbSchema::Migrator do
 
           expect(schema.table(:people).field(:name)).to be_a(DbSchema::Definitions::Field::Text)
         end
+
+        context 'changing a column to a serial type' do
+          let(:body) do
+            -> (migrator, db) do
+              migrator.alter_table :people do |t|
+                t.alter_column_type :name, :serial
+              end
+            end
+          end
+
+          it 'raises an ArgumentError' do
+            expect {
+              subject.run!(database)
+            }.to raise_error(NotImplementedError)
+          end
+        end
       end
 
       context 'and an allow_null' do
@@ -249,6 +268,50 @@ RSpec.describe DbSchema::Migrator do
           subject.run!(database)
 
           expect(schema.table(:people).field(:created_at).default).to eq(:'now()')
+        end
+      end
+
+      context 'and an add_primary_key' do
+        before(:each) do
+          DbSchema::Runner.new(
+            [
+              DbSchema::Operations::AlterTable.new(
+                :people,
+                [DbSchema::Operations::DropIndex.new(:people_pkey, true)]
+              )
+            ],
+            database
+          ).run!
+        end
+
+        let(:body) do
+          -> (migrator, db) do
+            migrator.alter_table :people do |t|
+              t.add_primary_key :id
+            end
+          end
+        end
+
+        it 'adds the primary key' do
+          subject.run!(database)
+
+          expect(schema.table(:people)).to have_primary_key
+        end
+      end
+
+      context 'and a drop_primary_key' do
+        let(:body) do
+          -> (migrator, db) do
+            migrator.alter_table :people do |t|
+              t.drop_primary_key
+            end
+          end
+        end
+
+        it 'drops the primary key' do
+          subject.run!(database)
+
+          expect(schema.table(:people)).not_to have_primary_key
         end
       end
 

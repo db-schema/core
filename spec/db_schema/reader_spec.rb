@@ -1,8 +1,4 @@
 RSpec.describe DbSchema::Reader do
-  before(:each) do
-    skip 'Rewriting serial and primary keys'
-  end
-
   let(:database) do
     Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
       db.extension :pg_enum

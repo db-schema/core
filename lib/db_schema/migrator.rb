@@ -86,6 +86,7 @@ module DbSchema
         def alter_column_type(name, new_type, using: nil, **new_attributes)
           alter_table.changes << Operations::AlterColumnType.new(
             name,
+            old_type: nil,
             new_type: new_type,
             using: using,
             **new_attributes
@@ -104,6 +105,16 @@ module DbSchema
           alter_table.changes << Operations::AlterColumnDefault.new(name, new_default: new_default)
         end
 
+        def add_primary_key(*columns)
+          alter_table.changes << Operations::CreateIndex.new(
+            DSL::TableYielder.build_index(columns, table_name: alter_table.table_name, primary: true)
+          )
+        end
+
+        def drop_primary_key
+          alter_table.changes << Operations::DropIndex.new(:"#{alter_table.table_name}_pkey", true)
+        end
+
         def add_index(*columns, **index_options)
           alter_table.changes << Operations::CreateIndex.new(
             DSL::TableYielder.build_index(
@@ -115,7 +126,7 @@ module DbSchema
         end
 
         def drop_index(name)
-          alter_table.changes << Operations::DropIndex.new(name)
+          alter_table.changes << Operations::DropIndex.new(name, false)
         end
 
         def add_check(name, condition)
