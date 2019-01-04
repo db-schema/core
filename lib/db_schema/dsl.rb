@@ -55,6 +55,13 @@ module DbSchema
         field(name, :array, element_type: of, **options)
       end
 
+      %i(smallserial serial bigserial).each do |serial_type|
+        define_method(serial_type) do |name, **options|
+          allowed_options = Utils.filter_by_keys(options, :primary_key, :unique, :index, :references, :check)
+          field(name, serial_type, allowed_options)
+        end
+      end
+
       def method_missing(method_name, name, *args, &block)
         field(name, method_name, args.first || {})
       end

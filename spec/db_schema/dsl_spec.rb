@@ -6,7 +6,7 @@ RSpec.describe DbSchema::DSL do
       db.extension :hstore
 
       db.table :users do |t|
-        t.serial      :id, primary_key: true
+        t.serial      :id, null: false, default: 1, primary_key: true
         t.varchar     :name, null: false, unique: true, check: 'char_length(name) > 0'
         t.varchar     :email, default: 'mail@example.com'
         t.char        :sex, index: true
@@ -109,6 +109,8 @@ RSpec.describe DbSchema::DSL do
       expect(cities.fields.count).to eq(2)
 
       expect(users.field(:id).type).to eq(:serial)
+      expect(users.field(:id)).to be_null
+      expect(users.field(:id).default).to be_nil
 
       expect(users.field(:name).type).to eq(:varchar)
       expect(users.field(:name)).not_to be_null
