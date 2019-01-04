@@ -298,7 +298,7 @@ RSpec.describe DbSchema::Runner do
       context 'containing AlterColumnType' do
         let(:table_changes) do
           [
-            DbSchema::Operations::AlterColumnType.new(:name, new_type: :text)
+            DbSchema::Operations::AlterColumnType.new(:name, old_type: :varchar, new_type: :text)
           ]
         end
 
@@ -311,9 +311,9 @@ RSpec.describe DbSchema::Runner do
         context 'that changes field attributes' do
           let(:table_changes) do
             [
-              DbSchema::Operations::AlterColumnType.new(:address, new_type: :varchar),
-              DbSchema::Operations::AlterColumnType.new(:country_name, new_type: :varchar, length: 40),
-              DbSchema::Operations::AlterColumnType.new(:created_at, new_type: :timestamp)
+              DbSchema::Operations::AlterColumnType.new(:address, old_type: :varchar, new_type: :varchar),
+              DbSchema::Operations::AlterColumnType.new(:country_name, old_type: :varchar, new_type: :varchar, length: 40),
+              DbSchema::Operations::AlterColumnType.new(:created_at, old_type: :timestamptz, new_type: :timestamp)
             ]
           end
 
@@ -333,7 +333,7 @@ RSpec.describe DbSchema::Runner do
         context 'with a :using option' do
           let(:table_changes) do
             [
-              DbSchema::Operations::AlterColumnType.new(:name, new_type: :integer, using: 'name::integer')
+              DbSchema::Operations::AlterColumnType.new(:name, old_type: :varchar, new_type: :integer, using: 'name::integer')
             ]
           end
 
@@ -347,13 +347,11 @@ RSpec.describe DbSchema::Runner do
         context 'changing a serial field to a non-serial' do
           let(:table_changes) do
             [
-              DbSchema::Operations::AlterColumnType.new(:id, new_type: :integer)
+              DbSchema::Operations::AlterColumnType.new(:id, old_type: :serial, new_type: :integer)
             ]
           end
 
           it 'raises a NotImplementedError' do
-            pending 'Rewriting AlterColumnType for serial fields'
-
             expect {
               subject.run!
             }.to raise_error(NotImplementedError)
@@ -363,7 +361,7 @@ RSpec.describe DbSchema::Runner do
         context 'changing a non-serial field to a serial' do
           let(:table_changes) do
             [
-              DbSchema::Operations::AlterColumnType.new(:name, new_type: :serial)
+              DbSchema::Operations::AlterColumnType.new(:name, old_type: :varchar, new_type: :serial)
             ]
           end
 

@@ -80,14 +80,25 @@ module DbSchema
     end
 
     class AlterColumnType
-      include Dry::Equalizer(:name, :new_type, :using, :new_attributes)
-      attr_reader :name, :new_type, :using, :new_attributes
+      SERIAL_TYPES = [:smallserial, :serial, :bigserial].freeze
 
-      def initialize(name, new_type:, using: nil, **new_attributes)
+      include Dry::Equalizer(:name, :old_type, :new_type, :using, :new_attributes)
+      attr_reader :name, :old_type, :new_type, :using, :new_attributes
+
+      def initialize(name, old_type:, new_type:, using: nil, **new_attributes)
         @name           = name
+        @old_type       = old_type
         @new_type       = new_type
         @using          = using
         @new_attributes = new_attributes
+      end
+
+      def from_serial?
+        SERIAL_TYPES.include?(old_type)
+      end
+
+      def to_serial?
+        SERIAL_TYPES.include?(new_type)
       end
     end
 

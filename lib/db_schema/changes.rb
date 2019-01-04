@@ -67,6 +67,7 @@ module DbSchema
               if (actual.type != desired.type) || (actual.attributes != desired.attributes)
                 operations << Operations::AlterColumnType.new(
                   actual.name,
+                  old_type: actual.type,
                   new_type: desired.type,
                   **desired.attributes
                 )

@@ -88,7 +88,11 @@ module DbSchema
           when Operations::RenameColumn
             rename_column(element.old_name, element.new_name)
           when Operations::AlterColumnType
-            if element.new_type == :serial
+            if element.from_serial?
+              raise NotImplementedError, 'Changing a SERIAL column to another type is not supported'
+            end
+
+            if element.to_serial?
               raise NotImplementedError, 'Changing a column type to SERIAL is not supported'
             end
 
