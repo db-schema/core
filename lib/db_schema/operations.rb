@@ -135,7 +135,18 @@ module DbSchema
       end
     end
 
-    class DropIndex < ColumnOperation
+    class DropIndex
+      include Dry::Equalizer(:name, :primary?)
+      attr_reader :name
+
+      def initialize(name, primary)
+        @name    = name
+        @primary = primary
+      end
+
+      def primary?
+        @primary
+      end
     end
 
     class CreateCheckConstraint

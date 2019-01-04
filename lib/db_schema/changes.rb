@@ -94,10 +94,10 @@ module DbSchema
           desired_table.indexes,
           actual_table.indexes,
           create: -> (index) { Operations::CreateIndex.new(index) },
-          drop:   -> (index) { Operations::DropIndex.new(index.name) },
+          drop:   -> (index) { Operations::DropIndex.new(index.name, index.primary?) },
           change: -> (desired, actual) do
             [
-              Operations::DropIndex.new(actual.name),
+              Operations::DropIndex.new(actual.name, actual.primary?),
               Operations::CreateIndex.new(desired)
             ]
           end

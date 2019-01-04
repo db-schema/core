@@ -263,8 +263,8 @@ RSpec.describe DbSchema::Changes do
         expect(alter_table.changes).to eq([
           DbSchema::Operations::DropCheckConstraint.new(:location_check),
           DbSchema::Operations::DropCheckConstraint.new(:min_age_check),
-          DbSchema::Operations::DropIndex.new(:users_name_index),
-          DbSchema::Operations::DropIndex.new(:users_type_index),
+          DbSchema::Operations::DropIndex.new(:users_name_index, false),
+          DbSchema::Operations::DropIndex.new(:users_type_index, false),
           DbSchema::Operations::DropColumn.new(:age),
           DbSchema::Operations::AlterColumnType.new(:name, old_type: :varchar, new_type: :varchar, length: 60),
           DbSchema::Operations::AlterColumnType.new(:type, old_type: :integer, new_type: :varchar),
@@ -337,6 +337,21 @@ RSpec.describe DbSchema::Changes do
             )
           ),
         )
+      end
+
+      context 'with primary key removed' do
+        before(:each) do
+          actual_schema.table(:users).indexes.unshift(desired_schema.table(:users).indexes.shift)
+        end
+
+        it 'returns changes between two schemas' do
+          changes = DbSchema::Changes.between(desired_schema, actual_schema)
+          expect(changes.count).to eq(5)
+
+          alter_table = changes[2]
+          expect(alter_table).to be_a(DbSchema::Operations::AlterTable)
+          expect(alter_table.changes).to include(DbSchema::Operations::DropIndex.new(:users_pkey, true))
+        end
       end
 
       context 'with just foreign keys changed' do

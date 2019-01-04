@@ -430,7 +430,7 @@ RSpec.describe DbSchema::Runner do
                 condition: 'name IS NOT NULL'
               )
             ),
-            DbSchema::Operations::DropIndex.new(:people_address_index),
+            DbSchema::Operations::DropIndex.new(:people_address_index, false),
             DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:    :people_interests_index,
@@ -438,7 +438,7 @@ RSpec.describe DbSchema::Runner do
                 type:    :gin
               )
             ),
-            DbSchema::Operations::DropIndex.new(:people_pkey),
+            DbSchema::Operations::DropIndex.new(:people_pkey, true),
             DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
                 name:    :people_pkey,
@@ -450,7 +450,6 @@ RSpec.describe DbSchema::Runner do
         end
 
         it 'applies all the changes' do
-          pending 'Rewriting DropIndex with a primary index'
           subject.run!
 
           expect(schema.table(:people)).not_to have_index(:people_address_index)
@@ -471,6 +470,9 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Definitions::Index::TableField.new(:interests)
           ])
           expect(interests_index.type).to eq(:gin)
+
+          people_pkey = schema.table(:people).primary_key
+          expect(people_pkey.columns.map(&:name)).to eq([:name])
         end
       end
 
