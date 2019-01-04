@@ -7,7 +7,7 @@ RSpec.describe DbSchema::Migrator do
   end
 
   before(:each) do
-    pending 'Rewriting serial and primary keys'
+    skip 'Rewriting serial and primary keys'
 
     DbSchema::Runner.new(
       [

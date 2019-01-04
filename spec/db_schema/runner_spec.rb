@@ -1,8 +1,4 @@
 RSpec.describe DbSchema::Runner do
-  before(:each) do
-    skip 'Rewriting serial and primary keys'
-  end
-
   let(:database) do
     Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
       db.extension :pg_enum
@@ -34,7 +30,7 @@ RSpec.describe DbSchema::Runner do
 
     let(:users_fields) do
       [
-        DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+        DbSchema::Definitions::Field::Serial.new(:id),
         DbSchema::Definitions::Field::Varchar.new(:name, null: false, length: 50),
         DbSchema::Definitions::Field::Varchar.new(:email, default: 'mail@example.com'),
         DbSchema::Definitions::Field::Integer.new(:country_id, null: false),
@@ -49,6 +45,11 @@ RSpec.describe DbSchema::Runner do
 
     let(:users_indexes) do
       [
+        DbSchema::Definitions::Index.new(
+          name:    :users_pkey,
+          columns: [DbSchema::Definitions::Index::TableField.new(:id)],
+          primary: true
+        ),
         DbSchema::Definitions::Index.new(
           name:    :index_users_on_name,
           columns: [DbSchema::Definitions::Index::Expression.new('lower(name)')]
@@ -106,53 +107,53 @@ RSpec.describe DbSchema::Runner do
         ]
       end
 
-      it 'applies all the changes' do
-        subject.run!
+      context 'with a serial primary key' do
+        it 'applies all the changes' do
+          subject.run!
 
-        expect(schema).not_to have_table(:people)
-        expect(schema).to have_table(:users)
+          expect(schema).not_to have_table(:people)
+          expect(schema).to have_table(:users)
 
-        expect(database.primary_key(:users)).to eq('id')
-        expect(database.primary_key_sequence(:users)).to eq('"public"."users_id_seq"')
+          users = schema.table(:users)
 
-        users = schema.table(:users)
+          expect(users.field(:id).type).to eq(:serial)
+          expect(users.field(:name).type).to eq(:varchar)
+          expect(users.field(:name).options[:length]).to eq(50)
+          expect(users.field(:name)).not_to be_null
+          expect(users.field(:email).type).to eq(:varchar)
+          expect(users.field(:email).default).to eq('mail@example.com')
+          expect(users.field(:created_at).type).to eq(:timestamp)
+          expect(users.field(:created_at)).not_to be_null
+          expect(users.field(:created_at).default).to eq(:'now()')
+          expect(users.field(:period).type).to eq(:interval)
+          expect(users.field(:period).options[:fields]).to eq(:second)
+          expect(users.field(:some_bit).type).to eq(:bit)
+          expect(users.field(:some_bit).options[:length]).to eq(1)
+          expect(users.field(:some_bits).type).to eq(:bit)
+          expect(users.field(:some_bits).options[:length]).to eq(7)
+          expect(users.field(:some_varbit).type).to eq(:varbit)
+          expect(users.field(:some_varbit).options[:length]).to eq(250)
+          expect(users.field(:names)).to be_array
+          expect(users.field(:names).options[:element_type]).to eq(:varchar)
 
-        expect(users.field(:id).type).to eq(:integer)
-        expect(users.field(:id)).to be_primary_key
-        expect(users.field(:name).type).to eq(:varchar)
-        expect(users.field(:name).options[:length]).to eq(50)
-        expect(users.field(:name)).not_to be_null
-        expect(users.field(:email).type).to eq(:varchar)
-        expect(users.field(:email).default).to eq('mail@example.com')
-        expect(users.field(:created_at).type).to eq(:timestamp)
-        expect(users.field(:created_at)).not_to be_null
-        expect(users.field(:created_at).default).to eq(:'now()')
-        expect(users.field(:period).type).to eq(:interval)
-        expect(users.field(:period).options[:fields]).to eq(:second)
-        expect(users.field(:some_bit).type).to eq(:bit)
-        expect(users.field(:some_bit).options[:length]).to eq(1)
-        expect(users.field(:some_bits).type).to eq(:bit)
-        expect(users.field(:some_bits).options[:length]).to eq(7)
-        expect(users.field(:some_varbit).type).to eq(:varbit)
-        expect(users.field(:some_varbit).options[:length]).to eq(250)
-        expect(users.field(:names)).to be_array
-        expect(users.field(:names).options[:element_type]).to eq(:varchar)
+          expect(users.primary_key.name).to eq(:users_pkey)
+          expect(users.primary_key.columns).to eq([DbSchema::Definitions::Index::TableField.new(:id)])
+          expect(users.index(:index_users_on_name).columns).to eq([DbSchema::Definitions::Index::Expression.new('lower(name::text)')])
+          expect(users.index(:index_users_on_name)).not_to be_unique
+          expect(users.index(:index_users_on_name).type).to eq(:btree)
+          expect(users.index(:index_users_on_email).columns).to eq([DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)])
+          expect(users.index(:index_users_on_email)).to be_unique
+          expect(users.index(:index_users_on_email).type).to eq(:btree)
+          expect(users.index(:index_users_on_email).condition).to eq('email IS NOT NULL')
+          expect(users.index(:users_names_index).columns).to eq([DbSchema::Definitions::Index::TableField.new(:names)])
+          expect(users.index(:users_names_index).type).to eq(:gin)
 
-        expect(users.index(:index_users_on_name).columns).to eq([DbSchema::Definitions::Index::Expression.new('lower(name::text)')])
-        expect(users.index(:index_users_on_name)).not_to be_unique
-        expect(users.index(:index_users_on_name).type).to eq(:btree)
-        expect(users.index(:index_users_on_email).columns).to eq([DbSchema::Definitions::Index::TableField.new(:email, order: :desc, nulls: :last)])
-        expect(users.index(:index_users_on_email)).to be_unique
-        expect(users.index(:index_users_on_email).type).to eq(:btree)
-        expect(users.index(:index_users_on_email).condition).to eq('email IS NOT NULL')
-        expect(users.index(:users_names_index).columns).to eq([DbSchema::Definitions::Index::TableField.new(:names)])
-        expect(users.index(:users_names_index).type).to eq(:gin)
-
-        expect(users.checks.count).to eq(1)
-        expect(users.check(:min_name_length).condition).to eq('character_length(name::text) > 4')
+          expect(users.checks.count).to eq(1)
+          expect(users.check(:min_name_length).condition).to eq('character_length(name::text) > 4')
+        end
       end
 
-      context 'with a non-integer primary key' do
+      context 'with a non-serial primary key' do
         before(:each) do
           users_fields.shift
           users_fields.unshift(DbSchema::Definitions::Field::UUID.new(:id, primary_key: true))
@@ -161,10 +162,9 @@ RSpec.describe DbSchema::Runner do
         it 'creates a table with a correct primary key type' do
           subject.run!
 
-          expect(schema.table(:users)).to have_field(:id)
+          expect(schema.table(:users).primary_key.columns.map(&:name)).to eq([:id])
 
           id = schema.table(:users).field(:id)
-          expect(id).to be_primary_key
           expect(id.type).to eq(:uuid)
         end
 
@@ -179,10 +179,9 @@ RSpec.describe DbSchema::Runner do
           it 'creates a table with primary key having correct type and attributes' do
             subject.run!
 
-            expect(schema.table(:users)).to have_field(:id)
+            expect(schema.table(:users).primary_key.columns.map(&:name)).to eq([:id])
 
             id = schema.table(:users).field(:id)
-            expect(id).to be_primary_key
             expect(id.type).to eq(:varchar)
             expect(id.options[:length]).to eq(255)
           end
@@ -219,10 +218,17 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Operations::DropColumn.new(:name),
             DbSchema::Operations::DropColumn.new(:id),
             DbSchema::Operations::CreateColumn.new(
-              DbSchema::Definitions::Field::UUID.new(:uid, primary_key: true)
+              DbSchema::Definitions::Field::Serial.new(:new_id)
             ),
             DbSchema::Operations::CreateColumn.new(
               DbSchema::Definitions::Field::Timestamp.new(:updated_at, null: false, default: :'now()')
+            ),
+            DbSchema::Operations::CreateIndex.new(
+              DbSchema::Definitions::Index.new(
+                name:    :people_pkey,
+                columns: [DbSchema::Definitions::Index::TableField.new(:new_id)],
+                primary: true
+              )
             )
           ]
         end
@@ -230,9 +236,8 @@ RSpec.describe DbSchema::Runner do
         it 'applies all the changes' do
           subject.run!
 
-          expect(database.primary_key(:people)).to eq('uid')
-
           people = schema.table(:people)
+          expect(people.primary_key.columns.map(&:name)).to eq([:new_id])
           expect(people).to have_field(:address)
           expect(people.field(:created_at).type).to eq(:timestamptz)
           expect(people.field(:first_name).type).to eq(:varchar)
@@ -241,19 +246,25 @@ RSpec.describe DbSchema::Runner do
           expect(people.field(:last_name)).not_to be_null
           expect(people.field(:age).type).to eq(:integer)
           expect(people.field(:age)).not_to be_null
-          expect(people.field(:uid)).to be_primary_key
-          expect(people.field(:uid).type).to eq(:uuid)
+          expect(people.field(:new_id).type).to eq(:serial)
           expect(people.field(:updated_at).type).to eq(:timestamp)
           expect(people.field(:updated_at).default).to eq(:'now()')
         end
 
-        context 'with a new non-integer primary key with attributes' do
+        context 'with a new non-serial primary key with attributes' do
           let(:table_changes) do
             [
               DbSchema::Operations::DropColumn.new(:id),
               DbSchema::Operations::DropColumn.new(:name),
               DbSchema::Operations::CreateColumn.new(
-                DbSchema::Definitions::Field::Varchar.new(:name, length: 255, primary_key: true)
+                DbSchema::Definitions::Field::Varchar.new(:name, length: 255)
+              ),
+              DbSchema::Operations::CreateIndex.new(
+                DbSchema::Definitions::Index.new(
+                  name:    :people_pkey,
+                  columns: [DbSchema::Definitions::Index::TableField.new(:name)],
+                  primary: true
+                )
               )
             ]
           end
@@ -261,9 +272,8 @@ RSpec.describe DbSchema::Runner do
           it 'creates a primary key with provided type and attributes' do
             subject.run!
 
-            expect(database.primary_key(:people)).to eq('name')
+            expect(schema.table(:people).primary_key.columns.map(&:name)).to eq([:name])
             name = schema.table(:people).field(:name)
-            expect(name).to be_primary_key
             expect(name.type).to eq(:varchar)
             expect(name.options[:length]).to eq(255)
           end
@@ -333,33 +343,35 @@ RSpec.describe DbSchema::Runner do
             expect(schema.table(:people).field(:name).type).to eq(:integer)
           end
         end
-      end
 
-      context 'containing CreatePrimaryKey' do
-        let(:table_changes) do
-          [
-            DbSchema::Operations::CreatePrimaryKey.new(name: :name)
-          ]
+        context 'changing a serial field to a non-serial' do
+          let(:table_changes) do
+            [
+              DbSchema::Operations::AlterColumnType.new(:id, new_type: :integer)
+            ]
+          end
+
+          it 'raises a NotImplementedError' do
+            pending 'Rewriting AlterColumnType for serial fields'
+
+            expect {
+              subject.run!
+            }.to raise_error(NotImplementedError)
+          end
         end
 
-        it 'raises a NotImplementedError' do
-          expect {
-            subject.run!
-          }.to raise_error(NotImplementedError)
-        end
-      end
+        context 'changing a non-serial field to a serial' do
+          let(:table_changes) do
+            [
+              DbSchema::Operations::AlterColumnType.new(:name, new_type: :serial)
+            ]
+          end
 
-      context 'containing DropPrimaryKey' do
-        let(:table_changes) do
-          [
-            DbSchema::Operations::DropPrimaryKey.new(name: :id)
-          ]
-        end
-
-        it 'raises a NotImplementedError' do
-          expect {
-            subject.run!
-          }.to raise_error(NotImplementedError)
+          it 'raises a NotImplementedError' do
+            expect {
+              subject.run!
+            }.to raise_error(NotImplementedError)
+          end
         end
       end
 
@@ -427,11 +439,20 @@ RSpec.describe DbSchema::Runner do
                 columns: [DbSchema::Definitions::Index::TableField.new(:interests)],
                 type:    :gin
               )
+            ),
+            DbSchema::Operations::DropIndex.new(:people_pkey),
+            DbSchema::Operations::CreateIndex.new(
+              DbSchema::Definitions::Index.new(
+                name:    :people_pkey,
+                columns: [DbSchema::Definitions::Index::TableField.new(:name)],
+                primary: true
+              )
             )
           ]
         end
 
         it 'applies all the changes' do
+          pending 'Rewriting DropIndex with a primary index'
           subject.run!
 
           expect(schema.table(:people)).not_to have_index(:people_address_index)

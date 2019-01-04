@@ -44,24 +44,22 @@ module DbSchema
     def create_table(change)
       connection.create_table(change.table.name) do
         change.table.fields.each do |field|
-          if field.primary_key? && field.type == :integer
-            primary_key(field.name)
-          else
-            options = Runner.map_options(field.class.type, field.options)
-            column(field.name, field.type.capitalize, options)
-
-            primary_key([field.name]) if field.primary_key?
-          end
+          options = Runner.map_options(field.class.type, field.options)
+          column(field.name, field.type.capitalize, options)
         end
 
         change.table.indexes.each do |index|
-          index(
-            index.columns_to_sequel,
-            name:   index.name,
-            unique: index.unique?,
-            type:   index.type,
-            where:  index.condition
-          )
+          if index.primary?
+            primary_key(index.columns.map(&:name))
+          else
+            index(
+              index.columns_to_sequel,
+              name:   index.name,
+              unique: index.unique?,
+              type:   index.type,
+              where:  index.condition
+            )
+          end
         end
 
         change.table.checks.each do |check|
@@ -83,25 +81,19 @@ module DbSchema
         change.changes.each do |element|
           case element
           when Operations::CreateColumn
-            if element.primary_key? && element.type == :integer
-              add_primary_key(element.name)
-            else
-              options = Runner.map_options(element.type, element.options)
-              add_column(element.name, element.type.capitalize, options)
-
-              add_primary_key([element.name]) if element.primary_key?
-            end
+            options = Runner.map_options(element.type, element.options)
+            add_column(element.name, element.type.capitalize, options)
           when Operations::DropColumn
             drop_column(element.name)
           when Operations::RenameColumn
             rename_column(element.old_name, element.new_name)
           when Operations::AlterColumnType
+            if element.new_type == :serial
+              raise NotImplementedError, 'Changing a column type to SERIAL is not supported'
+            end
+
             attributes = Runner.map_options(element.new_type, element.new_attributes)
             set_column_type(element.name, element.new_type.capitalize, using: element.using, **attributes)
-          when Operations::CreatePrimaryKey
-            raise NotImplementedError, 'Converting an existing column to primary key is currently unsupported'
-          when Operations::DropPrimaryKey
-            raise NotImplementedError, 'Removing a primary key while leaving the column is currently unsupported'
           when Operations::AllowNull
             set_column_allow_null(element.name)
           when Operations::DisallowNull
@@ -109,15 +101,23 @@ module DbSchema
           when Operations::AlterColumnDefault
             set_column_default(element.name, Runner.default_to_sequel(element.new_default))
           when Operations::CreateIndex
-            add_index(
-              element.index.columns_to_sequel,
-              name:   element.index.name,
-              unique: element.index.unique?,
-              type:   element.index.type,
-              where:  element.index.condition
-            )
+            if element.primary?
+              add_primary_key(element.columns.map(&:name))
+            else
+              add_index(
+                element.index.columns_to_sequel,
+                name:   element.index.name,
+                unique: element.index.unique?,
+                type:   element.index.type,
+                where:  element.index.condition
+              )
+            end
           when Operations::DropIndex
-            drop_index([], name: element.name)
+            if element.primary?
+              drop_constraint(element.name)
+            else
+              drop_index([], name: element.name)
+            end
           when Operations::CreateCheckConstraint
             add_constraint(element.check.name, element.check.condition)
           when Operations::DropCheckConstraint

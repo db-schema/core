@@ -68,10 +68,6 @@ module DbSchema
         field.type
       end
 
-      def primary_key?
-        field.primary_key?
-      end
-
       def options
         field.options
       end
@@ -117,6 +113,14 @@ module DbSchema
 
       def initialize(index)
         @index = index
+      end
+
+      def primary?
+        index.primary?
+      end
+
+      def columns
+        index.columns
       end
     end
 
