@@ -130,6 +130,10 @@ module DbSchema
         index.primary?
       end
 
+      def name
+        index.name
+      end
+
       def columns
         index.columns
       end

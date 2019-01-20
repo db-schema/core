@@ -66,8 +66,8 @@ module DbSchema
         field(name, method_name, args.first || {})
       end
 
-      def primary_key(*columns)
-        index(*columns, primary: true)
+      def primary_key(*columns, name: nil)
+        index(*columns, name: name, primary: true)
       end
 
       def index(*columns, **index_options)

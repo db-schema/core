@@ -50,7 +50,7 @@ module DbSchema
 
         change.table.indexes.each do |index|
           if index.primary?
-            primary_key(index.columns.map(&:name))
+            primary_key(index.columns.map(&:name), name: index.name)
           else
             index(
               index.columns_to_sequel,
@@ -106,7 +106,7 @@ module DbSchema
             set_column_default(element.name, Runner.default_to_sequel(element.new_default))
           when Operations::CreateIndex
             if element.primary?
-              add_primary_key(element.columns.map(&:name))
+              add_primary_key(element.columns.map(&:name), name: element.name)
             else
               add_index(
                 element.index.columns_to_sequel,

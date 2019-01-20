@@ -41,7 +41,7 @@ RSpec.describe DbSchema::DSL do
         t.integer :col3
         t.integer :col4
 
-        t.primary_key :id
+        t.primary_key :id, name: :my_pkey
 
         t.index :user_id
         t.index col1: :asc, col2: :desc, col3: :asc_nulls_first, col4: :desc_nulls_last
@@ -182,10 +182,10 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::Expression.new('lower(email)')
       ])
 
-      expect(posts.index(:posts_pkey).columns).to eq([
+      expect(posts.index(:my_pkey).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:id)
       ])
-      expect(posts.index(:posts_pkey)).to be_primary
+      expect(posts.index(:my_pkey)).to be_primary
 
       expect(posts.index(:posts_user_id_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:user_id)

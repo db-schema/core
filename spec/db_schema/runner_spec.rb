@@ -46,7 +46,7 @@ RSpec.describe DbSchema::Runner do
     let(:users_indexes) do
       [
         DbSchema::Definitions::Index.new(
-          name:    :users_pkey,
+          name:    :users_pk,
           columns: [DbSchema::Definitions::Index::TableField.new(:id)],
           primary: true
         ),
@@ -136,7 +136,7 @@ RSpec.describe DbSchema::Runner do
           expect(users.field(:names)).to be_array
           expect(users.field(:names).options[:element_type]).to eq(:varchar)
 
-          expect(users.primary_key.name).to eq(:users_pkey)
+          expect(users.primary_key.name).to eq(:users_pk)
           expect(users.primary_key.columns).to eq([DbSchema::Definitions::Index::TableField.new(:id)])
           expect(users.index(:index_users_on_name).columns).to eq([DbSchema::Definitions::Index::Expression.new('lower(name::text)')])
           expect(users.index(:index_users_on_name)).not_to be_unique
@@ -441,7 +441,7 @@ RSpec.describe DbSchema::Runner do
             DbSchema::Operations::DropIndex.new(:people_pkey, true),
             DbSchema::Operations::CreateIndex.new(
               DbSchema::Definitions::Index.new(
-                name:    :people_pkey,
+                name:    :people_pk,
                 columns: [DbSchema::Definitions::Index::TableField.new(:name)],
                 primary: true
               )
@@ -472,6 +472,7 @@ RSpec.describe DbSchema::Runner do
           expect(interests_index.type).to eq(:gin)
 
           people_pkey = schema.table(:people).primary_key
+          expect(people_pkey.name).to eq(:people_pk)
           expect(people_pkey.columns.map(&:name)).to eq([:name])
         end
       end
