@@ -112,6 +112,7 @@ RSpec.describe DbSchema::Normalizer do
       expect(users.field(:roles)).to be_array
       expect(users.field(:roles).attributes[:element_type]).to eq(:user_role)
       expect(users.field(:roles).default).to eq('{user}')
+      expect(users.primary_key.name).to eq(:users_pkey)
       expect(users.primary_key.columns).to eq([DbSchema::Definitions::Index::TableField.new(:id)])
       expect(users.index(:lower_name_index).columns.first.name).to eq('lower(name::text)')
       expect(users.index(:lower_name_index).condition).to eq('age <> 18')
