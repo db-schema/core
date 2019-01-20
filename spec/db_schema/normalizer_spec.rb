@@ -1,8 +1,4 @@
 RSpec.describe DbSchema::Normalizer do
-  before(:each) do
-    pending 'Rewriting serial and primary keys'
-  end
-
   let(:database) do
     Sequel.connect(adapter: 'postgres', database: 'db_schema_test').tap do |db|
       db.extension :pg_enum
@@ -29,7 +25,7 @@ RSpec.describe DbSchema::Normalizer do
     DbSchema::Definitions::Table.new(
       :users,
       fields: [
-        DbSchema::Definitions::Field::Integer.new(:id, primary_key: true),
+        DbSchema::Definitions::Field::Serial.new(:id),
         DbSchema::Definitions::Field::Varchar.new(:name, null: false),
         DbSchema::Definitions::Field::Integer.new(:group_id),
         DbSchema::Definitions::Field::Integer.new(:age, default: :'18 + 5'),
@@ -40,6 +36,13 @@ RSpec.describe DbSchema::Normalizer do
         DbSchema::Definitions::Field::Custom.class_for(:user_status).new(:user_status)
       ],
       indexes: [
+        DbSchema::Definitions::Index.new(
+          name: :users_pkey,
+          columns: [
+            DbSchema::Definitions::Index::TableField.new(:id)
+          ],
+          primary: true
+        ),
         DbSchema::Definitions::Index.new(
           name: :lower_name_index,
           columns: [
@@ -57,7 +60,7 @@ RSpec.describe DbSchema::Normalizer do
     )
   end
 
-  describe '.normalized_tables' do
+  describe '.normalize_tables' do
     let(:field_default)   { 'ok' }
     let(:index_condition) { 'age != 18' }
     let(:check_condition) { 'char_length(name) > 4' }
@@ -103,12 +106,13 @@ RSpec.describe DbSchema::Normalizer do
       expect(schema.tables.count).to eq(1)
       users = schema.table(:users)
 
-      expect(users.field(:id)).to be_primary_key
+      expect(users.field(:id).type).to eq(:serial)
       expect(users.field(:age).default).to eq(:'(18 + 5)')
       expect(users.field(:happiness).type).to eq(:happiness)
       expect(users.field(:roles)).to be_array
       expect(users.field(:roles).attributes[:element_type]).to eq(:user_role)
       expect(users.field(:roles).default).to eq('{user}')
+      expect(users.primary_key.columns).to eq([DbSchema::Definitions::Index::TableField.new(:id)])
       expect(users.index(:lower_name_index).columns.first.name).to eq('lower(name::text)')
       expect(users.index(:lower_name_index).condition).to eq('age <> 18')
       expect(users.check(:name_length).condition).to eq('char_length(name::text) > 4')
