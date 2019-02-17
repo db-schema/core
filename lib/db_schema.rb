@@ -114,8 +114,7 @@ module DbSchema
     end
 
     def run_migrations(migrations, connection)
-      reader = Reader.reader_for(connection)
-      @current_schema = reader.read_schema
+      @current_schema = Reader.reader_for(connection).read_schema
 
       migrations.reduce(@current_schema) do |schema, migration|
         migrator = Migrator.new(migration)
@@ -123,7 +122,7 @@ module DbSchema
         if migrator.applicable?(schema)
           log_migration(migration) if configuration.log_changes?
           migrator.run!(connection)
-          reader.read_schema
+          Reader.reader_for(connection).read_schema
         else
           schema
         end
