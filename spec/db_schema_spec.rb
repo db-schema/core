@@ -10,8 +10,6 @@ RSpec.describe DbSchema do
     let(:schema) { DbSchema::Reader.reader_for(database).read_schema }
 
     before(:each) do
-      pending 'Rewriting serial and primary keys'
-
       subject.configure(database: 'db_schema_test', log_changes: false)
 
       database.create_enum :happiness, %i(good ok bad)
@@ -19,20 +17,20 @@ RSpec.describe DbSchema do
       database.create_table :users do
         primary_key :id
 
-        column :name,      :Varchar, null: false
-        column :email,     :Varchar, size: 100
+        column :name,      :Varchar,   null: false
+        column :email,     :Varchar,   size: 100
         column :happiness, :happiness, default: 'ok'
 
         index :email
       end
 
       database.create_table :posts do
-        primary_key :id
-
+        column :id,      :Bigint
         column :title,   :Varchar
         column :text,    :Varchar
         column :user_id, :Integer, null: false
 
+        primary_key [:id]
         foreign_key [:user_id], :users
       end
     end
@@ -42,19 +40,19 @@ RSpec.describe DbSchema do
         db.enum :happiness, %i(happy ok unhappy)
 
         db.table :users do |t|
-          t.primary_key :id
-          t.varchar :first_name,  null: false, length: 30
-          t.varchar :last_name,   null: false, length: 30
-          t.varchar :email,       null: false
-          t.happiness :happiness, default: 'happy'
+          t.serial    :id,          primary_key: true
+          t.varchar   :first_name,  null: false, length: 30
+          t.varchar   :last_name,   null: false, length: 30
+          t.varchar   :email,       null: false
+          t.happiness :happiness,   default: 'happy'
 
           t.index :first_name, last_name: :desc, name: :users_name_index
           t.index 'lower(email)', name: :users_email_index, unique: true
         end
 
         db.table :posts do |t|
-          t.bigint  :id, primary_key: true
-          t.varchar :title, null: false
+          t.bigint  :id,      primary_key: true
+          t.varchar :title,   null: false
           t.text    :text
           t.integer :user_id, null: false
 
@@ -63,16 +61,16 @@ RSpec.describe DbSchema do
         end
 
         db.table :countries do |t|
-          t.uuid :id, primary_key: true
+          t.uuid    :id,   primary_key: true
           t.varchar :name, null: false
         end
 
         db.table :cities do |t|
-          t.integer :id, primary_key: true
-          t.varchar :name, null: false
+          t.integer :id,         primary_key: true
+          t.varchar :name,       null: false
           t.uuid    :country_id, references: :countries
-          t.numeric :lat, precision: 6, scale: 3
-          t.decimal :lng, precision: 6, scale: 3
+          t.numeric :lat,        precision: 6, scale: 3
+          t.decimal :lng,        precision: 6, scale: 3
         end
       end
 
@@ -82,7 +80,8 @@ RSpec.describe DbSchema do
 
       users = schema.table(:users)
 
-      expect(users.field(:id)).to be_primary_key
+      expect(users.field(:id).type).to eq(:serial)
+      expect(users.field(:id)).not_to be_null
       expect(users.field(:email).type).to eq(:varchar)
       expect(users.field(:email)).not_to be_null
       expect(users.field(:happiness).type).to eq(:happiness)
@@ -94,6 +93,12 @@ RSpec.describe DbSchema do
       expect(users.field(:last_name).options[:length]).to eq(30)
       expect(users.field(:last_name)).not_to be_null
 
+      users_pkey = users.primary_key
+      expect(users_pkey.name).to eq(:users_pkey)
+      expect(users_pkey.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:id)
+      ])
+
       expect(users.index(:users_name_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:first_name),
         DbSchema::Definitions::Index::TableField.new(:last_name, order: :desc)
@@ -104,14 +109,20 @@ RSpec.describe DbSchema do
       expect(users.index(:users_email_index)).to be_unique
 
       posts = schema.table(:posts)
-      expect(posts.field(:id)).to be_primary_key
       expect(posts.field(:id).type).to eq(:bigint)
+      expect(posts.field(:id)).not_to be_null
       expect(posts.field(:title).type).to eq(:varchar)
       expect(posts.field(:title)).not_to be_null
       expect(posts.field(:text).type).to eq(:text)
       expect(posts.field(:text)).to be_null
       expect(posts.field(:user_id).type).to eq(:integer)
       expect(posts.field(:user_id)).not_to be_null
+
+      posts_pkey = posts.primary_key
+      expect(posts_pkey.name).to eq(:posts_pkey)
+      expect(posts_pkey.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:id)
+      ])
 
       expect(posts.index(:posts_author_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:user_id)
@@ -124,7 +135,7 @@ RSpec.describe DbSchema do
 
       cities = schema.table(:cities)
       expect(cities.field(:id).type).to eq(:integer)
-      expect(cities.field(:id)).to be_primary_key
+      expect(cities.field(:id)).not_to be_null
       expect(cities.field(:name).type).to eq(:varchar)
       expect(cities.field(:name)).not_to be_null
       expect(cities.field(:country_id).type).to eq(:uuid)
@@ -133,7 +144,11 @@ RSpec.describe DbSchema do
       expect(cities.field(:lng).type).to eq(:numeric)
       expect(cities.field(:lng).options).to eq(precision: 6, scale: 3)
 
-      expect(cities.indexes).to be_empty
+      cities_pkey = cities.primary_key
+      expect(cities_pkey.name).to eq(:cities_pkey)
+      expect(cities_pkey.columns).to eq([
+        DbSchema::Definitions::Index::TableField.new(:id)
+      ])
 
       expect(cities.foreign_key(:cities_country_id_fkey).fields).to eq([:country_id])
       expect(cities.foreign_key(:cities_country_id_fkey).table).to eq(:countries)
@@ -149,18 +164,18 @@ RSpec.describe DbSchema do
 
         subject.describe do |db|
           db.table :users do |t|
-            t.primary_key :id
-            t.varchar :first_name,  null: false, length: 30
-            t.varchar :last_name,   null: false, length: 30
-            t.varchar :email,       null: false
+            t.serial  :id,         primary_key: true
+            t.varchar :first_name, null: false, length: 30
+            t.varchar :last_name,  null: false, length: 30
+            t.varchar :email,      null: false
 
             t.index :first_name, last_name: :desc, name: :users_name_index
             t.index 'lower(email)', name: :users_email_index, unique: true
           end
 
           db.table :posts do |t|
-            t.integer :id, primary_key: true
-            t.varchar :title, null: false
+            t.integer :id,      primary_key: true
+            t.varchar :title,   null: false
             t.text    :text
             t.integer :user_id, null: false
 
@@ -228,13 +243,13 @@ UPDATE users SET first_name = split_part(name, ' ', 1),
       it 'uses it to setup the database' do
         subject.describe do |db|
           db.table :users do |t|
-            t.primary_key :id
+            t.serial  :id, primary_key: true
             t.varchar :name
           end
         end
 
-        expect(DbSchema::Reader.reader_for(database).read_table(:users).fields.count).to eq(4)
-        expect(DbSchema::Reader.reader_for(external_connection).read_table(:users).fields.count).to eq(2)
+        expect(DbSchema::Reader.reader_for(database).read_schema.table(:users).fields.count).to eq(4)
+        expect(DbSchema::Reader.reader_for(external_connection).read_schema.table(:users).fields.count).to eq(2)
       end
 
       after(:each) do
@@ -261,7 +276,7 @@ Requested schema is invalid:
         expect {
           subject.describe do |db|
             db.table :users do |t|
-              t.primary_key :id
+              t.serial  :id,    primary_key: true
               t.varchar :email, null: false
               t.integer :city_id
 
@@ -278,7 +293,7 @@ Requested schema is invalid:
             end
 
             db.table :posts do |t|
-              t.primary_key :id
+              t.serial  :id, primary_key: true
               t.varchar :title
               t.integer :user_name
 
@@ -298,8 +313,8 @@ Requested schema is invalid:
         expect {
           subject.describe do |db|
             db.table :users do |t|
-              t.primary_key :id
-              t.varchar :name, null: false
+              t.serial  :id,    primary_key: true
+              t.varchar :name,  null: false
               t.varchar :email, length: 100
 
               t.index :email
@@ -315,19 +330,19 @@ Requested schema is invalid:
               db.enum :happiness, %i(good ok bad)
 
               db.table :people do |t|
-                t.primary_key :id
-                t.varchar     :name, null: false
-                t.varchar     :email, length: 100
-                t.happiness   :happiness, default: 'ok'
+                t.serial    :id,        primary_key: true
+                t.varchar   :name,      null: false
+                t.varchar   :email,     length: 100
+                t.happiness :happiness, default: 'ok'
 
                 t.index :email, name: :users_email_index
               end
 
               db.table :posts do |t|
-                t.primary_key :id
-                t.varchar     :title
-                t.varchar     :text
-                t.integer     :user_id, null: false, references: :people
+                t.serial  :id,      primary_key: true
+                t.varchar :title
+                t.varchar :text
+                t.integer :user_id, null: false, references: :people
               end
 
               db.migrate 'Rename users to people' do |migration|
@@ -357,8 +372,8 @@ Requested schema is invalid:
       def apply_schema
         subject.describe do |db|
           db.table :users do |t|
-            t.primary_key :id
-            t.varchar :name, null: false
+            t.serial  :id,    primary_key: true
+            t.varchar :name,  null: false
             t.varchar :email, length: 100
 
             t.index :email
@@ -395,8 +410,8 @@ Requested schema is invalid:
       expect {
         subject.describe do |db|
           db.table :users do |t|
-            t.primary_key :id
-            t.varchar :name, null: false
+            t.serial  :id,    primary_key: true
+            t.varchar :name,  null: false
             t.varchar :email, length: 100
 
             t.index :email
@@ -412,8 +427,6 @@ Requested schema is invalid:
 
   describe '.current_schema' do
     before(:each) do
-      pending 'Rewriting serial and primary keys'
-
       subject.configure(database: 'db_schema_test', log_changes: false)
 
       database.create_table :users do
@@ -427,13 +440,13 @@ Requested schema is invalid:
     def apply_schema
       subject.describe do |db|
         db.table :users do |t|
-          t.primary_key :id
+          t.serial  :id,   primary_key: true
           t.varchar :name, null: false
           t.varchar :email
         end
 
         db.table :posts do |t|
-          t.primary_key :id
+          t.serial  :id,      primary_key: true
           t.varchar :title
           t.text    :body
           t.integer :user_id, references: :users
