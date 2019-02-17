@@ -109,7 +109,7 @@ RSpec.describe DbSchema::DSL do
       expect(cities.fields.count).to eq(2)
 
       expect(users.field(:id).type).to eq(:serial)
-      expect(users.field(:id)).to be_null
+      expect(users.field(:id)).not_to be_null
       expect(users.field(:id).default).to be_nil
 
       expect(users.field(:name).type).to eq(:varchar)
