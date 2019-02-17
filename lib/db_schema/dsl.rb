@@ -16,7 +16,7 @@ module DbSchema
 
       @schema.tables << Definitions::Table.new(
         name,
-        fields:       table_yielder.fields,
+        fields:       prepare_fields(table_yielder),
         indexes:      table_yielder.indexes,
         checks:       table_yielder.checks,
         foreign_keys: table_yielder.foreign_keys
@@ -33,6 +33,20 @@ module DbSchema
 
     def migrate(name, &block)
       migrations << Migration.new(name, block).migration
+    end
+
+  private
+    def prepare_fields(table_yielder)
+      primary_key = table_yielder.indexes.find(&:primary?)
+      return table_yielder.fields if primary_key.nil?
+
+      table_yielder.fields.map do |field|
+        if primary_key.columns.map(&:name).include?(field.name)
+          field.with_null(false)
+        else
+          field
+        end
+      end
     end
 
     class TableYielder

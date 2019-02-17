@@ -103,6 +103,7 @@ RSpec.describe DbSchema::DSL do
       users  = schema.table(:users)
       posts  = schema.table(:posts)
       cities = schema.table(:cities)
+      points = schema.table(:points)
 
       expect(users.fields.count).to eq(10)
       expect(posts.fields.count).to eq(8)
@@ -138,6 +139,9 @@ RSpec.describe DbSchema::DSL do
 
       expect(users.field(:created_at).type).to eq(:timestamptz)
       expect(users.field(:created_at).default).to eq(:'now()')
+
+      expect(points.field(:lat)).not_to be_null
+      expect(points.field(:lng)).not_to be_null
     end
 
     it 'returns indexes' do
