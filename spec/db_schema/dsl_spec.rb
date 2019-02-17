@@ -157,6 +157,7 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::TableField.new(:id)
       ])
       expect(users.index(:users_pkey)).to be_primary
+      expect(users.index(:users_pkey)).to be_unique
 
       expect(users.index(:users_name_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:name)
@@ -190,6 +191,7 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::TableField.new(:id)
       ])
       expect(posts.index(:my_pkey)).to be_primary
+      expect(posts.index(:my_pkey)).to be_unique
 
       expect(posts.index(:posts_user_id_index).columns).to eq([
         DbSchema::Definitions::Index::TableField.new(:user_id)
@@ -213,6 +215,7 @@ RSpec.describe DbSchema::DSL do
         DbSchema::Definitions::Index::TableField.new(:lng)
       ])
       expect(points.index(:points_pkey)).to be_primary
+      expect(points.index(:points_pkey)).to be_unique
     end
 
     it 'returns check constraints' do
