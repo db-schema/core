@@ -31,6 +31,8 @@ if defined?(AwesomePrint)
           :dbschema_alter_column_default
         when ::DbSchema::Operations::CreateIndex
           :dbschema_create_index
+        when ::DbSchema::Operations::DropIndex
+          :dbschema_drop_index
         when ::DbSchema::Operations::CreateCheckConstraint
           :dbschema_create_check_constraint
         when ::DbSchema::Operations::CreateForeignKey
@@ -107,6 +109,13 @@ if defined?(AwesomePrint)
         data << colorize('condition: ', :symbol) + object.index.condition.ai unless object.index.condition.nil?
 
         "#<#{object.class} #{object.index.name.ai} on #{columns}#{using}#{data.join(', ')}>"
+      end
+
+      def awesome_dbschema_drop_index(object)
+        data = [object.name.ai]
+        data << colorize('primary key', :nilclass) if object.primary?
+
+        "#<#{object.class} #{data.join(' ')}>"
       end
 
       def awesome_dbschema_create_check_constraint(object)
