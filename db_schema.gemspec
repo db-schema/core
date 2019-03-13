@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'sequel'
   spec.add_runtime_dependency 'dry-equalizer', '~> 0.2'
-  spec.add_runtime_dependency 'db_schema-definitions', '= 0.2.rc1'
+  spec.add_runtime_dependency 'db_schema-definitions', '~> 0.2.0'
 
   spec.add_development_dependency 'bundler', '~> 1.11'
   spec.add_development_dependency 'rake', '~> 10.0'
@@ -32,5 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'terminal-notifier'
   spec.add_development_dependency 'terminal-notifier-guard'
 
-  spec.add_development_dependency 'db_schema-reader-postgres', '= 0.2.rc1'
+  spec.add_development_dependency 'db_schema-reader-postgres', '~> 0.2.0'
 end

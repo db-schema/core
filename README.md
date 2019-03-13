@@ -53,8 +53,8 @@ But you would lose it even with manual migrations.
 Add these lines to your application's Gemfile:
 
 ``` ruby
-gem 'db_schema', '= 0.5.rc1'
-gem 'db_schema-reader-postgres', '= 0.2.rc1'
+gem 'db_schema', '~> 0.5.0'
+gem 'db_schema-reader-postgres', '~> 0.2.0'
 ```
 
 And then execute:
@@ -71,6 +71,23 @@ $ gem install db_schema db_schema-reader-postgres
 
 The `db_schema-reader-postgres` [gem](https://github.com/db-schema/reader-postgres) is a PostgreSQL adapter
 for `DbSchema::Reader` (a module which is responsible for reading the current database schema).
+
+## Upgrading to 0.5
+
+Version 0.5 introduced full support for serial fields and primary keys slightly changing the DSL for
+defining the primary key:
+
+``` ruby
+db.table :users do |t|
+  # before 0.5
+  t.primary_key :id
+  # since 0.5
+  t.serial :id, primary_key: true
+end
+```
+
+So if you get an `Index "users_pkey" refers to a missing field "users.id"` error you should change
+your schema definition to the new syntax.
 
 ## Usage
 
@@ -101,14 +118,14 @@ load application_root.join('db/schema.rb')
 This `db/schema.rb` file will contain a description of your database structure
 (you can choose any filename you want). When you load this file it instantly
 applies the described structure to your database. Be sure to keep this file
-under version control as it will be a single source of truth about
+under version control as it will be the single source of truth about
 the database structure.
 
 ``` ruby
 # db/schema.rb
 DbSchema.describe do |db|
   db.table :users do |t|
-    t.primary_key :id
+    t.serial      :id,              primary_key: true
     t.varchar     :email,           null: false, unique: true
     t.varchar     :password_digest, length: 40
     t.timestamptz :created_at
@@ -230,8 +247,6 @@ Conditional migrations are described [here](https://github.com/db-schema/core/wi
 
 ## Known problems and limitations
 
-* composite primary keys are not supported
-* auto-incremented integer field can only be created as a primary key
 * array element type attributes are not supported
 * precision in all date/time types isn't supported
 * no support for databases other than PostgreSQL
