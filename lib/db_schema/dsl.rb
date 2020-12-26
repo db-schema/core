@@ -61,7 +61,7 @@ module DbSchema
         next if type == :array
 
         define_method(type) do |name, **options|
-          field(name, type, options)
+          field(name, type, **options)
         end
       end
 
@@ -77,7 +77,8 @@ module DbSchema
       end
 
       def method_missing(method_name, name, *args, &block)
-        field(name, method_name, args.first || {})
+        options = args.first || {}
+        field(name, method_name, **options)
       end
 
       def primary_key(*columns, name: nil)
@@ -105,7 +106,7 @@ module DbSchema
       end
 
       def field(name, type, primary_key: false, unique: false, index: false, references: nil, check: nil, **options)
-        fields << Definitions::Field.build(name, type, options)
+        fields << Definitions::Field.build(name, type, **options)
 
         if primary_key
           primary_key(name)

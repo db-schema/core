@@ -71,7 +71,7 @@ module DbSchema
 
         def add_column(name, type, **options)
           alter_table.changes << Operations::CreateColumn.new(
-            Definitions::Field.build(name, type, options)
+            Definitions::Field.build(name, type, **options)
           )
         end
 
